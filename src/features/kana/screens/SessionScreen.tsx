@@ -95,7 +95,7 @@ export function SessionScreen() {
                     in {SYLLABARY_LABELS[scope.syllabary]}
                   </p>
                 )}
-                <PromptView prompt={state.question.prompt} />
+                <Stage prompt={state.question.prompt} />
               </div>
 
               {/* Lo spazio dell'esito e' sempre occupato, anche quando non c'e'
@@ -356,16 +356,53 @@ function Meter({ tally }: { tally: Tally }) {
   )
 }
 
-function PromptView({ prompt }: { prompt: Prompt }) {
-  if (prompt.script === 'japanese') {
-    return (
-      <p className="font-jp text-8xl leading-none" lang="ja">
-        {prompt.text}
-      </p>
-    )
-  }
+/**
+ * Il palco dello stimolo: un blocco a tinta piena del colore della categoria, col
+ * segno grande e bianco in mezzo.
+ *
+ * # Perche' un blocco
+ *
+ * Il carattere e' l'elemento primario di ogni schermata di studio, e il colore del
+ * blocco dice a quale categoria appartiene quello che si sta allenando (sezione 4,
+ * regole 1 e 2). Il colore porta informazione: non e' decorazione.
+ *
+ * Il blocco c'e' **in entrambe le modalita'**, anche scrivendo, dove lo stimolo e'
+ * una trascrizione e non un kana. Il colore dice «stai facendo kana» e questo vale
+ * comunque; farlo comparire e sparire a seconda della modalita' farebbe sembrare due
+ * app diverse invece di due modi di esercitarsi sulla stessa materia.
+ *
+ * # Perche' le misure sono in `vh`
+ *
+ * Quando si apre la tastiera lo spazio verticale si dimezza, ed e' proprio il momento
+ * in cui lo stimolo deve restare visibile (regola 5, che vince su qualsiasi scelta
+ * estetica). Un blocco di dimensione fissa lo spingerebbe fuori dallo schermo.
+ * Legando blocco e segno alla stessa unita' si rimpiccioliscono insieme e restano in
+ * proporzione: con la tastiera aperta il blocco scende a circa 128 px e il segno a
+ * 64, sopra i 209 e 105 di quando la tastiera non c'e'. I limiti di `clamp` evitano i
+ * due eccessi, illeggibile sugli schermi bassi e smisurato sul desktop.
+ *
+ * Perche' `vh` segua davvero lo spazio utile serve che la WebView si restringa con la
+ * tastiera: lo fa `MainActivity.kt`, vedi la nota sugli insets.
+ */
+function Stage({ prompt }: { prompt: Prompt }) {
+  const japanese = prompt.script === 'japanese'
 
-  return <p className="text-6xl leading-none tracking-wide">{prompt.text}</p>
+  return (
+    <div className="bg-type-kana flex aspect-square h-[clamp(5.5rem,24vh,17rem)] items-center justify-center rounded-3xl px-3">
+      {japanese ? (
+        <p
+          className="font-jp text-[clamp(2.75rem,12vh,8.5rem)] leading-none text-paper"
+          lang="ja"
+        >
+          {prompt.text}
+        </p>
+      ) : (
+        <p className="text-[clamp(1.75rem,10.5vh,6rem)] leading-none tracking-wide text-paper">
+          {prompt.text}
+        </p>
+      )}
+    </div>
+  )
 }
 
 function Centered({ children }: { children: React.ReactNode }) {

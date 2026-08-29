@@ -78,8 +78,10 @@
      blocco, perche' sono lo stesso sillabario in due grafie e l'ambito si sceglie
      comunque prima di cominciare.
      Il valore e' misurato, non scelto a occhio:
-       bianco sopra    4,89x   (serve 3,00x per il testo grande, 4,50x per quello
-                                normale: passa anche la soglia piu' severa)
+       `paper` sopra   4,37x   (il segno e' sempre grande, da 44 a 136 px, e per il
+                                testo grande ne servono 3,00x; il bianco puro darebbe
+                                4,89x, ma due bianchi nell'app per mezzo punto di
+                                margine non valgono la confusione)
        contro `ink`    3,81x   (il blocco stacca dalla pagina)
        distanza da `ok` 0,153 in OKLab
      L'ultima riga e' quella che conta davvero. `ok` e' verde e dice «giusto»: un
