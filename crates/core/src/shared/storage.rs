@@ -19,7 +19,7 @@ use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::{FromRow, SqlitePool};
+use sqlx::{FromRow, QueryBuilder, SqlitePool};
 use uuid::Uuid;
 
 use crate::shared::error::{CoreError, Result};
@@ -100,6 +100,16 @@ pub struct NewAnswer<'a> {
     /// Il nuovo stato della carta. Lo decide lo scheduler, non l'archivio: qui arriva
     /// gia' calcolato.
     pub next: Scheduled,
+}
+
+/// Come restringere la ricerca delle carte dovute.
+///
+/// Un campo a `None` non filtra.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CardFilter<'a> {
+    /// Gli elementi che fanno parte dell'ambito scelto.
+    pub items: Option<&'a [String]>,
+    pub exercise_type: Option<&'a str>,
 }
 
 /// Il database locale dell'utente.
@@ -207,26 +217,119 @@ impl Database {
             })
     }
 
+    /// Introduce in blocco un elenco di carte, in una sola transazione.
+    ///
+    /// E' quello che serve all'inizio di una sessione: l'ambito scelto puo' contenere
+    /// centinaia di elementi, e farne una scrittura per uno sarebbe altrettanto
+    /// corretto ma inutilmente lento.
+    pub async fn ensure_cards(
+        &self,
+        items: &[String],
+        exercise_type: &str,
+        now: DateTime<Utc>,
+    ) -> Result<u64> {
+        let mut tx = self.pool.begin().await?;
+        let mut nuove = 0;
+
+        for item_id in items {
+            let esito = sqlx::query(
+                "INSERT INTO cards (
+                     item_id, exercise_type, due_at, reps, lapses, created_at, updated_at, rev
+                 )
+                 VALUES (?, ?, NULL, 0, 0, ?, ?, 1)
+                 ON CONFLICT (item_id, exercise_type) DO NOTHING",
+            )
+            .bind(item_id.as_str())
+            .bind(exercise_type)
+            .bind(now)
+            .bind(now)
+            .execute(&mut *tx)
+            .await?;
+
+            nuove += esito.rows_affected();
+        }
+
+        tx.commit().await?;
+        Ok(nuove)
+    }
+
     /// Le carte da studiare adesso, le piu' arretrate per prime.
     ///
     /// Le carte mai studiate hanno `due_at` a NULL e SQLite le ordina prima di tutte
     /// le altre. Se e quanto mescolare le nuove tra le arretrate e' una decisione
     /// della sessione, non dell'archivio.
-    pub async fn due_cards(&self, now: DateTime<Utc>, limit: i64) -> Result<Vec<Card>> {
-        let cards = sqlx::query_as::<_, Card>(
+    ///
+    /// Il filtro serve a restare dentro l'ambito scelto: senza, il limite taglierebbe
+    /// prima di escludere le carte fuori ambito e la sessione si ritroverebbe con meno
+    /// carte di quelle che ha chiesto.
+    pub async fn due_cards(
+        &self,
+        filter: CardFilter<'_>,
+        now: DateTime<Utc>,
+        limit: i64,
+    ) -> Result<Vec<Card>> {
+        // La query si costruisce pezzo per pezzo perche' il numero di elementi da
+        // filtrare non e' noto in anticipo. `QueryBuilder` e' lo strumento che sqlx
+        // offre per farlo: i valori entrano sempre come parametri, mai concatenati
+        // nella stringa.
+        let mut query = QueryBuilder::new(
             "SELECT item_id, exercise_type, due_at, last_reviewed_at, reps, lapses,
                     stability, difficulty, updated_at, rev
              FROM cards
-             WHERE deleted_at IS NULL AND (due_at IS NULL OR due_at <= ?)
-             ORDER BY due_at ASC
-             LIMIT ?",
-        )
-        .bind(now)
-        .bind(limit)
-        .fetch_all(&self.pool)
-        .await?;
+             WHERE deleted_at IS NULL AND (due_at IS NULL OR due_at <= ",
+        );
+        query.push_bind(now).push(")");
 
-        Ok(cards)
+        if let Some(exercise) = filter.exercise_type {
+            query.push(" AND exercise_type = ").push_bind(exercise);
+        }
+
+        if let Some(items) = filter.items {
+            // Un ambito vuoto non e' un ambito che comprende tutto: e' un ambito senza
+            // niente dentro.
+            if items.is_empty() {
+                return Ok(Vec::new());
+            }
+            query.push(" AND item_id IN (");
+            let mut elenco = query.separated(", ");
+            for item in items {
+                elenco.push_bind(item.as_str());
+            }
+            query.push(")");
+        }
+
+        query.push(" ORDER BY due_at ASC LIMIT ").push_bind(limit);
+
+        Ok(query.build_query_as::<Card>().fetch_all(&self.pool).await?)
+    }
+
+    /// Quante carte sono dovute nell'ambito indicato.
+    ///
+    /// Serve a dire all'utente quanto gli resta senza caricare le carte stesse.
+    pub async fn count_due(&self, filter: CardFilter<'_>, now: DateTime<Utc>) -> Result<i64> {
+        let mut query = QueryBuilder::new(
+            "SELECT COUNT(*) FROM cards
+             WHERE deleted_at IS NULL AND (due_at IS NULL OR due_at <= ",
+        );
+        query.push_bind(now).push(")");
+
+        if let Some(exercise) = filter.exercise_type {
+            query.push(" AND exercise_type = ").push_bind(exercise);
+        }
+        if let Some(items) = filter.items {
+            if items.is_empty() {
+                return Ok(0);
+            }
+            query.push(" AND item_id IN (");
+            let mut elenco = query.separated(", ");
+            for item in items {
+                elenco.push_bind(item.as_str());
+            }
+            query.push(")");
+        }
+
+        let (count,): (i64,) = query.build_query_as().fetch_one(&self.pool).await?;
+        Ok(count)
     }
 
     /// Registra una risposta e aggiorna la carta corrispondente.
@@ -349,7 +452,12 @@ mod tests {
     async fn un_database_nuovo_e_vuoto_ma_gia_migrato() {
         let db = Database::in_memory().await.unwrap();
         assert_eq!(db.card(ITEM, EXERCISE).await.unwrap(), None);
-        assert!(db.due_cards(Utc::now(), 10).await.unwrap().is_empty());
+        assert!(
+            db.due_cards(CardFilter::default(), Utc::now(), 10)
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[tokio::test]
@@ -429,7 +537,13 @@ mod tests {
         assert_eq!(card.reps, 0);
         assert_eq!(card.memory(), None);
 
-        assert_eq!(db.due_cards(now, 10).await.unwrap().len(), 1);
+        assert_eq!(
+            db.due_cards(CardFilter::default(), now, 10)
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
     }
 
     #[tokio::test]
@@ -472,7 +586,7 @@ mod tests {
             .await
             .unwrap();
 
-        let dovute = db.due_cards(now, 10).await.unwrap();
+        let dovute = db.due_cards(CardFilter::default(), now, 10).await.unwrap();
         let ids: Vec<&str> = dovute.iter().map(|c| c.item_id.as_str()).collect();
 
         // La mai studiata viene prima, poi la scaduta. Quella futura resta fuori.
@@ -488,7 +602,13 @@ mod tests {
             db.ensure_card(c, EXERCISE, now).await.unwrap();
         }
 
-        assert_eq!(db.due_cards(now, 2).await.unwrap().len(), 2);
+        assert_eq!(
+            db.due_cards(CardFilter::default(), now, 2)
+                .await
+                .unwrap()
+                .len(),
+            2
+        );
     }
 
     #[tokio::test]

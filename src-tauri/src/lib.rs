@@ -1,3 +1,19 @@
+//! La shell Tauri: apre il database, tiene lo stato dell'app e registra i comandi.
+//!
+//! Tutto il resto sta in `tanren-core`.
+
+mod commands;
+
+use tanren_core::shared::srs::Scheduler;
+use tanren_core::shared::storage::Database;
+use tauri::Manager;
+
+/// Quello che ogni comando ha bisogno di avere sottomano.
+pub struct AppState {
+    pub db: Database,
+    pub scheduler: Scheduler,
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -9,8 +25,30 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // Il database vive nella cartella dati dell'app, quella che il sistema
+            // assegna a questo identificatore: su Android e' privata all'app, su
+            // desktop sta sotto la home dell'utente.
+            let path = app.path().app_data_dir()?.join("tanren.db");
+            log::info!("database utente: {}", path.display());
+
+            let db = tauri::async_runtime::block_on(Database::open(&path))?;
+
+            app.manage(AppState {
+                db,
+                scheduler: Scheduler::default(),
+            });
+
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![
+            commands::kana_catalogue,
+            commands::normalize_reading,
+            commands::prepare_session,
+            commands::session_progress,
+            commands::next_question,
+            commands::submit_answer,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

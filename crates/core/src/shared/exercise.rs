@@ -99,6 +99,7 @@ pub enum AnswerFormat {
 
 /// Una domanda pronta da mostrare.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Question {
     pub exercise_type: ExerciseTypeId,
     pub item: ItemId,

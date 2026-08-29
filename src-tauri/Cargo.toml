@@ -21,6 +21,8 @@ tanren-core = { workspace = true }
 
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
+chrono = { workspace = true }
+rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }

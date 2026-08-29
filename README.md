@@ -5,7 +5,7 @@
 <h1>Tanren</h1>
 
 <p>
-  <b>Allenamento del giapponese: kana, kanji, grammatica.</b>
+  <b>Japanese training: kana, kanji, grammar.</b>
 </p>
 
 <p>
@@ -17,8 +17,8 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/stato-in%20sviluppo-d94436?style=flat-square" alt="In sviluppo">
-  <img src="https://img.shields.io/badge/local--first-nessun%20account-1c1c2e?style=flat-square" alt="Local-first">
+  <img src="https://img.shields.io/badge/status-in%20development-d94436?style=flat-square" alt="In development">
+  <img src="https://img.shields.io/badge/local--first-no%20account-1c1c2e?style=flat-square" alt="Local-first">
 </p>
 
 </div>
@@ -27,40 +27,39 @@
 
 <div align="center">
 
-## 鍛 Il nome
+## 鍛 The name
 
-I due ideogrammi <b>鍛錬</b> che compongono questa parola rappresentano il concetto di<br>
-lavoro costante necessario per raffinare e consolidare un metallo per la sua forgiatura.
+The two characters <b>鍛錬</b> that form this word carry the idea of the steady work<br>
+it takes to refine and consolidate a metal before it can be forged.
 
-Nell'ambito dell'apprendimento di una disciplina fisica, <i>tanren</i> non è riferito tanto<br>
-allo sviluppo di un'abilità tecnica specifica, ma piuttosto alla necessaria<br>
-preparazione di base preliminare.
+In the learning of a physical discipline, <i>tanren</i> does not refer to developing<br>
+one specific technique, but rather to the groundwork that has to come first.
 
 <br>
 
-## 錬 Il progetto
+## 錬 The project
 
-<b>Tanren</b> è un'app open-source per l'allenamento del giapponese: hiragana,<br>
-katakana, kanji e, in una fase successiva, grammatica.
+<b>Tanren</b> is an open-source Japanese training app: hiragana, katakana,<br>
+kanji and, in a later phase, grammar.
 
-Ogni argomento si allena in due modi complementari.
+Every subject is trained in two complementary ways.
 
 <table>
 <tr>
 <td align="center" width="50%">
 
 ### 認識
-**Riconoscimento**
+**Recognition**
 
-Esercizi di matching a scelta multipla, per costruire la lettura immediata.
+Multiple choice matching, to build immediate reading.
 
 </td>
 <td align="center" width="50%">
 
 ### 入力
-**Input diretto**
+**Direct input**
 
-Digitazione della risposta con l'IME giapponese reale del dispositivo.
+Typing the answer with the device's real Japanese IME.
 
 </td>
 </tr>
@@ -68,7 +67,7 @@ Digitazione della risposta con l'IME giapponese reale del dispositivo.
 
 <br>
 
-## 稽古 Come funziona
+## 稽古 How it works
 
 <table>
 <tr>
@@ -76,21 +75,21 @@ Digitazione della risposta con l'IME giapponese reale del dispositivo.
 
 **Local-first**
 
-Nessun account, nessun server. I dati restano sul dispositivo.
+No account, no server. Your data stays on the device.
 
 </td>
 <td align="center" width="33%">
 
-**Ripetizione spaziata**
+**Spaced repetition**
 
-Un algoritmo SRS decide cosa ripassare, poco prima che venga dimenticato.
+An SRS algorithm decides what to review, just before you would forget it.
 
 </td>
 <td align="center" width="33%">
 
 **Mobile-first**
 
-Pensata per lo schermo piccolo e l'uso con il pollice. Anche su desktop.
+Built for a small screen and thumb reach. Desktop works too.
 
 </td>
 </tr>
@@ -102,67 +101,67 @@ Pensata per lo schermo piccolo e l'uso con il pollice. Anche su desktop.
 
 <div align="center">
 
-## 開発 Sviluppo
+## 開発 Development
 
 </div>
 
-### Prerequisiti
+### Prerequisites
 
-- **Node** 20.19+ oppure 22.12+, come richiede Vite 8.
-- **Rust** stabile 1.85+, servito dall'edizione 2024.
-- Su Linux, le librerie di sistema di Tauri. Su Ubuntu 24.04:
+- **Node** 20.19+ or 22.12+, as required by Vite 8.
+- **Rust** stable 1.85+, required by edition 2024.
+- On Linux, Tauri's system libraries. On Ubuntu 24.04:
 
 ```bash
 sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
   libxdo-dev libssl-dev libdbus-1-dev pkg-config
 ```
 
-Su macOS servono gli strumenti da riga di comando di Xcode, su Windows i Build Tools
-di Visual Studio con il carico C++ e WebView2.
+On macOS you need the Xcode command line tools, on Windows the Visual Studio Build
+Tools with the C++ workload, plus WebView2.
 
-### Avviare l'app
+### Running the app
 
 ```bash
 npm install
 npm run tauri dev
 ```
 
-Il primo avvio compila l'intero albero delle dipendenze Rust e richiede qualche
-minuto. Quelli successivi sono immediati. La finestra si apre in formato verticale,
-perché il design è pensato prima per il telefono.
+The first run compiles the whole Rust dependency tree and takes a few minutes. Later
+runs are immediate. The window opens in portrait shape, because the design targets the
+phone first.
 
-### Comandi utili
+### Useful commands
 
-| Comando | Cosa fa |
+| Command | What it does |
 |---|---|
-| `npm run tauri dev` | app completa, shell Tauri più frontend |
-| `npm run dev` | solo il frontend nel browser, senza il core Rust |
-| `npm run build` | build di produzione del frontend |
-| `npm run lint` | oxlint, comprese le regole di confine tra le feature |
-| `npm run tauri build` | eseguibile desktop |
-| `cargo check --workspace` | compila tutto il lato Rust |
-| `cargo test -p tanren-core` | test del dominio, senza avviare Tauri |
+| `npm run tauri dev` | the full app, Tauri shell plus frontend |
+| `npm run dev` | frontend only in the browser, without the Rust core |
+| `npm run build` | production build of the frontend |
+| `npm run lint` | oxlint, including the cross feature import rules |
+| `npm run tauri build` | desktop executable |
+| `cargo check --workspace` | compile everything on the Rust side |
+| `cargo test -p tanren-core` | domain tests, without starting Tauri |
 
 <details>
-<summary>L'app compila ma crasha all'avvio su Linux</summary>
+<summary>The app builds but crashes on startup on Linux</summary>
 
 <br>
 
-Se l'errore assomiglia a questo:
+If the error looks like this:
 
 ```
 symbol lookup error: /snap/core20/.../libpthread.so.0:
 undefined symbol: __libc_pthread_init, version GLIBC_PRIVATE
 ```
 
-il terminale sta ereditando l'ambiente di un editor installato come **snap**.
-`GTK_PATH` punta ai moduli GTK dello snap, GTK carica `canberra-gtk-module` da lì,
-e quel modulo si trascina dietro la glibc di `/snap/core20`. La stessa cosa succede
-al processo di rete di WebKit attraverso `GIO_MODULE_DIR`.
+your terminal is inheriting the environment of an editor installed as a **snap**.
+`GTK_PATH` points at the snap's GTK modules, GTK loads `canberra-gtk-module` from
+there, and that module drags in the glibc under `/snap/core20`. The same thing
+happens to WebKit's network process through `GIO_MODULE_DIR`.
 
-Lo snap salva i valori originali in variabili `*_VSCODE_SNAP_ORIG`, quindi la
-soluzione pulita è ripristinarli. Funziona in bash e in zsh, e va bene anche nel
-proprio file di avvio della shell:
+The snap keeps the original values in `*_VSCODE_SNAP_ORIG` variables, so the clean
+fix is to restore them. This works in both bash and zsh, and is safe to keep in your
+shell startup file:
 
 ```bash
 while IFS='=' read -r var val; do
@@ -171,13 +170,13 @@ while IFS='=' read -r var val; do
 done < <(env | grep '_VSCODE_SNAP_ORIG=')
 ```
 
-Per una singola esecuzione bastano le due variabili colpevoli:
+For a single run, clearing the two variables at fault is enough:
 
 ```bash
 env -u GTK_PATH -u GIO_MODULE_DIR npm run tauri dev
 ```
 
-Da un terminale di sistema normale il problema non si presenta.
+From a regular system terminal the problem does not occur.
 
 </details>
 
@@ -185,6 +184,6 @@ Da un terminale di sistema normale il problema non si presenta.
 
 <div align="center">
 
-<sub>🚧 Progetto in fase iniziale di sviluppo.</sub>
+<sub>🚧 Early stage project, under active development.</sub>
 
 </div>
