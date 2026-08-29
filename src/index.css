@@ -29,23 +29,30 @@
   --color-ink: #12121c; /* la pagina */
   --color-ink-soft: #1c1c2e; /* una superficie sollevata sopra la pagina */
 
-  /* --- La rampa del testo ---
-     Quattro gradini, dal primario allo spento. Prima erano due colori piu'
-     opacita' sparse a mano nei componenti (`text-muted/60`, `/40`), che e' lo
-     stesso valore scritto in posti diversi senza un nome: chi legge non sa se
-     due `/60` distanti significano la stessa cosa. Ora il nome dice il ruolo, e
-     i valori sono identici a prima. */
+  /* --- Il testo ---
+     Due colori pieni, non una scala di opacita'. La regola, che scioglie il punto
+     aperto della sezione 4 fra gerarchia per peso e rampa a opacita':
+
+       l'opacita' dice **inattivo**; la gerarchia fra testi vivi la fanno
+       **dimensione e peso**, sul colore pieno.
+
+     C'era un terzo gradino a opacita' (`faint`) sotto `muted`, ed e' stato tolto:
+     i suoi tre usi erano gia' distinti dal contesto per dimensione (`text-xs`
+     accanto a `text-sm`), quindi l'opacita' raddoppiava un segnale che c'era gia'.
+     Due segnali per la stessa cosa non la rendono piu' chiara, rendono solo piu'
+     facile che uno dei due si sganci, ed e' esattamente cosi' che erano nate le
+     derive fra `Chip` e `Card`. */
   --color-paper: #f2f2f2; /* primario: lo si legge */
   --color-muted: #9a9ab0; /* secondario: etichette, testo di servizio */
-  --color-faint: rgb(154 154 176 / 0.6); /* terziario: contorno, ancora leggibile */
-  --color-dim: rgb(154 154 176 / 0.4); /* spento di proposito: scartato, segnaposto */
+  --color-inactive: rgb(154 154 176 / 0.4); /* non attivo: scartato, segnaposto */
 
   /* --- Bordi ---
      Tenuti fuori dalla rampa del testo anche se derivano dallo stesso colore:
      un bordo e un testo debole hanno ruoli diversi e cambieranno per ragioni
      diverse. */
   --color-hairline: rgb(154 154 176 / 0.2); /* il bordo normale */
-  --color-hairline-soft: rgb(154 154 176 / 0.1); /* bordo di cio' che e' spento */
+  --color-hairline-soft: rgb(154 154 176 / 0.1); /* il bordo di cio' che e' inattivo,
+                                                    fa coppia con `inactive` */
 
   /* --- I colori che significano qualcosa ---
      Qui il colore porta informazione e non decora. `accent` dice "sbagliato"

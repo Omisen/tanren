@@ -99,12 +99,12 @@ export function AnswerField({
           e.preventDefault()
           submit()
         }}
-        className="font-jp border-hairline bg-ink-soft text-paper placeholder:text-dim disabled:text-muted min-h-14 w-full rounded-xl border px-4 text-center text-3xl outline-none focus:border-focus"
+        className="font-jp border-hairline bg-ink-soft text-paper placeholder:text-inactive disabled:text-muted min-h-14 w-full rounded-xl border px-4 text-center text-3xl outline-none focus:border-focus"
       />
 
       {/* Lo spazio dell'anteprima e' sempre occupato, cosi' il campo non si sposta
           quando l'IME produce qualcosa da ripulire. */}
-      <p className="text-faint min-h-5 text-center text-xs">
+      <p className="text-muted min-h-5 text-center text-xs">
         {normalized && normalized !== shown && (
           <>
             vale come{' '}

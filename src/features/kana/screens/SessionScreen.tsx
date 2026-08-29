@@ -91,7 +91,7 @@ export function SessionScreen() {
                     sia per カ: senza dire quale sillabario la domanda avrebbe due
                     risposte, e il core ne accetta una sola. */}
                 {state.question.format.mode === 'input' && (
-                  <p className="text-faint text-xs tracking-[0.2em] uppercase">
+                  <p className="text-muted text-xs font-medium tracking-[0.2em] uppercase">
                     in {SYLLABARY_LABELS[scope.syllabary]}
                   </p>
                 )}
@@ -238,7 +238,7 @@ const OPTION_STYLES: Record<OptionState, string> = {
   open: 'border-hairline bg-ink-soft text-paper',
   right: 'border-ok bg-ok-wash text-ok',
   wrong: 'border-accent bg-accent-wash text-accent',
-  other: 'border-hairline-soft text-dim',
+  other: 'border-hairline-soft text-inactive',
 }
 
 const OPTION_MARKS: Record<OptionState, string> = {
@@ -309,12 +309,12 @@ function Feedback({
 function Summary({ tally }: { tally: Tally }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-      <p className="text-muted text-xs tracking-[0.2em] uppercase">Giro finito</p>
+      <p className="text-muted text-xs font-medium tracking-[0.2em] uppercase">Giro finito</p>
       <p className="text-5xl tabular-nums">
         <span className={tally.correct === tally.answered ? 'text-ok' : 'text-paper'}>
           {tally.correct}
         </span>
-        <span className="text-dim">/{tally.answered}</span>
+        <span className="text-muted">/{tally.answered}</span>
       </p>
       <p className="text-muted mt-2 text-sm">
         {tally.correct === tally.answered
@@ -349,7 +349,7 @@ function Meter({ tally }: { tally: Tally }) {
           style={{ width: `${ratio * 100}%` }}
         />
       </div>
-      <span className="text-faint text-xs tabular-nums">
+      <span className="text-muted text-xs tabular-nums">
         {tally.correct}/{tally.total}
       </span>
     </div>
