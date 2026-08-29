@@ -15,7 +15,11 @@ dist-ssr/
 # Rust / Tauri
 target/
 **/target/
-src-tauri/gen/
+# Solo gli schemi generati: il progetto Android in gen/android e' versionato,
+# perche' le modifiche al manifest (per esempio la tastiera IME) sono codice
+# e non devono vivere solo su un disco. Gli artefatti di build li escludono i
+# .gitignore che Tauri stesso mette dentro gen/android.
+src-tauri/gen/schemas/
 
 # Android
 .gradle/
