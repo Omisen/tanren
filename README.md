@@ -155,16 +155,29 @@ symbol lookup error: /snap/core20/.../libpthread.so.0:
 undefined symbol: __libc_pthread_init, version GLIBC_PRIVATE
 ```
 
-il terminale sta ereditando l'ambiente di un editor installato come **snap**, che
-inietta percorsi GTK e GIO dentro `/snap`. Il binario finisce per caricare le
-librerie sbagliate. Da un terminale di sistema normale non succede. Per lanciarlo
-comunque da lì dentro:
+il terminale sta ereditando l'ambiente di un editor installato come **snap**.
+`GTK_PATH` punta ai moduli GTK dello snap, GTK carica `canberra-gtk-module` da lì,
+e quel modulo si trascina dietro la glibc di `/snap/core20`. La stessa cosa succede
+al processo di rete di WebKit attraverso `GIO_MODULE_DIR`.
+
+Lo snap salva i valori originali in variabili `*_VSCODE_SNAP_ORIG`, quindi la
+soluzione pulita è ripristinarli. Funziona in bash e in zsh, e va bene anche nel
+proprio file di avvio della shell:
 
 ```bash
-env -u GTK_PATH -u GTK_EXE_PREFIX -u GTK_IM_MODULE_FILE -u GIO_MODULE_DIR \
-    -u GSETTINGS_SCHEMA_DIR -u LOCPATH -u XDG_DATA_HOME \
-    npm run tauri dev
+while IFS='=' read -r var val; do
+  name="${var%_VSCODE_SNAP_ORIG}"
+  if [ -n "$val" ]; then export "$name=$val"; else unset "$name"; fi
+done < <(env | grep '_VSCODE_SNAP_ORIG=')
 ```
+
+Per una singola esecuzione bastano le due variabili colpevoli:
+
+```bash
+env -u GTK_PATH -u GIO_MODULE_DIR npm run tauri dev
+```
+
+Da un terminale di sistema normale il problema non si presenta.
 
 </details>
 

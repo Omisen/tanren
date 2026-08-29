@@ -12,3 +12,4 @@ name = "tanren_core"
 [dependencies]
 serde = { workspace = true }
 thiserror = { workspace = true }
+unicode-normalization = { workspace = true }
