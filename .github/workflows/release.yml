@@ -1,0 +1,134 @@
+# Compila l'APK di release e lo allega alla release GitHub.
+#
+# Si innesca quando pubblichi una release dall'interfaccia di GitHub. La versione
+# non viene scritta dal workflow: viene **verificata**. La fonte unica e'
+# `Cargo.toml`, e se il tag non corrisponde il lavoro fallisce subito invece di
+# produrre un APK che dichiara una versione diversa da quella pubblicata.
+#
+# `workflow_dispatch` serve a provarlo senza pubblicare niente: compila e lascia
+# l'APK fra gli artefatti, senza allegarlo a nessuna release.
+
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NDK_VERSION: 28.2.13676358
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Leggi la versione e controlla che il tag corrisponda
+        id: v
+        run: |
+          set -euo pipefail
+          version=$(sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml \
+                    | sed -n 's/^version = "\(.*\)"/\1/p')
+          [ -n "$version" ] || { echo "::error::versione non trovata in Cargo.toml"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Cargo.toml dichiara $version"
+
+          # La versione vive in tre posti e non si puo' ridurre a uno: togliendola da
+          # tauri.conf.json, Tauri **non** la eredita da Cargo.toml per Android, non
+          # scrive tauri.properties e l'APK esce come 1.0. Verificato. Quindi si
+          # controlla che i tre coincidano, invece di fidarsi.
+          npm_version=$(node -p "require('./package.json').version")
+          tauri_version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          for pair in "package.json:$npm_version" "tauri.conf.json:$tauri_version"; do
+            name="${pair%%:*}"; got="${pair#*:}"
+            if [ "$got" != "$version" ]; then
+              echo "::error::$name dice $got, Cargo.toml dice $version"
+              exit 1
+            fi
+          done
+          echo "le tre versioni coincidono"
+
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+            if [ "${tag#v}" != "$version" ]; then
+              echo "::error::il tag $tag non corrisponde alla versione $version in Cargo.toml"
+              exit 1
+            fi
+            echo "il tag $tag corrisponde"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: NDK
+        run: |
+          sdkmanager --install "ndk;${NDK_VERSION}"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+
+      - run: npm ci
+
+      - name: Portachiavi di firma
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "::error::manca il segreto ANDROID_KEYSTORE_BASE64: senza firma l'APK non e' installabile"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/tanren.jks"
+          cat > src-tauri/gen/android/keystore.properties <<PROPS
+          storeFile=$RUNNER_TEMP/tanren.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEYSTORE_PASSWORD
+          PROPS
+
+      - name: Compila l'APK
+        run: npm run tauri android build -- --target aarch64 armv7 --apk
+
+      - name: Raccogli l'APK col nome della versione
+        id: apk
+        run: |
+          set -euo pipefail
+          src=$(find src-tauri/gen/android/app/build/outputs/apk -name '*-release*.apk' | head -1)
+          [ -n "$src" ] || { echo "::error::nessun APK di release prodotto"; exit 1; }
+          out="Tanren-${{ steps.v.outputs.version }}.apk"
+          cp "$src" "$out"
+          echo "path=$out" >> "$GITHUB_OUTPUT"
+          ls -lh "$out"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.path }}
+          path: ${{ steps.apk.outputs.path }}
+
+      - name: Allega alla release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.apk.outputs.path }}" --clobber
