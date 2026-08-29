@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "Japanese training app: kana, kanji and grammar.",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",

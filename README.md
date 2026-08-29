@@ -184,6 +184,18 @@ From a regular system terminal the problem does not occur.
 
 <div align="center">
 
+## License
+
+**[MIT](LICENSE)** &nbsp;&middot;&nbsp; Copyright &copy; 2026 Omisen
+
+<sub>
+Tanren bundles <b>M PLUS Rounded 1c</b>, subset to the characters the app displays.<br>
+The font stays under the <b>SIL Open Font License 1.1</b>, whose text ships alongside it
+in <code>public/fonts/OFL.txt</code>.
+</sub>
+
+<br><br>
+
 <sub>🚧 Early stage project, under active development.</sub>
 
 </div>
