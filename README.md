@@ -1,14 +1,8 @@
 <div align="center">
 
-<table bgcolor="#f0f0f0">
-  <tr>
-    <td>
-      <img src=".github/assets/tanren-logo.png" alt="Tanren" width="300">
-    </td>
-  </tr>
-</table>
+<img src=".github/assets/tanren-logo.png" alt="Tanren 鍛錬" width="340">
 
-<h1>鍛錬 &nbsp;Tanren</h1>
+<h1>Tanren</h1>
 
 <p>
   <b>Allenamento del giapponese: kana, kanji, grammatica.</b>
