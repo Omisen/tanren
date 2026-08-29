@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/tanren-logo.png" alt="Tanren 鍛錬" width="240">
+<img src=".github/assets/logo-artwork.jpg" alt="Tanren 鍛錬" width="170">
 
 <h1>Tanren</h1>
 
@@ -9,16 +9,16 @@
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/Rust-1c1c2e?style=flat-square&logo=rust&logoColor=white" alt="Rust">
-  <img src="https://img.shields.io/badge/Tauri%20v2-1c1c2e?style=flat-square&logo=tauri&logoColor=white" alt="Tauri v2">
-  <img src="https://img.shields.io/badge/React-1c1c2e?style=flat-square&logo=react&logoColor=white" alt="React">
-  <img src="https://img.shields.io/badge/TypeScript-1c1c2e?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/SQLite-1c1c2e?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite">
+  <img src="https://img.shields.io/badge/Rust-201e1c?style=flat-square&logo=rust&logoColor=white" alt="Rust">
+  <img src="https://img.shields.io/badge/Tauri%20v2-201e1c?style=flat-square&logo=tauri&logoColor=white" alt="Tauri v2">
+  <img src="https://img.shields.io/badge/React-201e1c?style=flat-square&logo=react&logoColor=white" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-201e1c?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/SQLite-201e1c?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite">
 </p>
 
 <p>
   <img src="https://img.shields.io/badge/status-in%20development-d94436?style=flat-square" alt="In development">
-  <img src="https://img.shields.io/badge/local--first-no%20account-1c1c2e?style=flat-square" alt="Local-first">
+  <img src="https://img.shields.io/badge/local--first-no%20account-201e1c?style=flat-square" alt="Local-first">
 </p>
 
 </div>

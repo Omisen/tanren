@@ -22,12 +22,15 @@
   font-display: block;
 }
 
-/* Palette e font del progetto, ripresi dal logo a pennello: inchiostro scudo
-   e un solo accento rosso. Diventano utility Tailwind (bg-ink, text-accent...). */
+/* Palette e font del progetto. Diventano utility Tailwind (bg-ink, text-accent...). */
 @theme {
-  
-  --color-ink: #12121c; /* la pagina */
-  --color-ink-soft: #1c1c2e; /* una superficie sollevata sopra la pagina */
+  /* Neutri appena caldi (croma 0,005 in OKLCh). Erano blu-violacei, tutti e tre
+     sui 284 gradi, e si vedeva. Quel viola non veniva dal logo, che campionato e'
+     neutro puro. Il caldo sta all'opposto del verde-azzurro della categoria e lo
+     fa risaltare; il passo pieno virava al seppia. Luminosita' invariate, quindi
+     i contrasti di prima valgono ancora. */
+  --color-ink: #141311; /* la pagina */
+  --color-ink-soft: #201e1c; /* una superficie sollevata sopra la pagina */
 
   /* --- Il testo ---
      Due colori pieni, non una scala di opacita'. La regola, che scioglie il punto
@@ -43,15 +46,15 @@
      facile che uno dei due si sganci, ed e' esattamente cosi' che erano nate le
      derive fra `Chip` e `Card`. */
   --color-paper: #f2f2f2; /* primario: lo si legge */
-  --color-muted: #9a9ab0; /* secondario: etichette, testo di servizio */
-  --color-inactive: rgb(154 154 176 / 0.4); /* non attivo: scartato, segnaposto */
+  --color-muted: #9e9c99; /* secondario: etichette, testo di servizio */
+  --color-inactive: rgb(158 156 153 / 0.4); /* non attivo: scartato, segnaposto */
 
   /* --- Bordi ---
      Tenuti fuori dalla rampa del testo anche se derivano dallo stesso colore:
      un bordo e un testo debole hanno ruoli diversi e cambieranno per ragioni
      diverse. */
-  --color-hairline: rgb(154 154 176 / 0.2); /* il bordo normale */
-  --color-hairline-soft: rgb(154 154 176 / 0.1); /* il bordo di cio' che e' inattivo,
+  --color-hairline: rgb(158 156 153 / 0.2); /* il bordo normale */
+  --color-hairline-soft: rgb(158 156 153 / 0.1); /* il bordo di cio' che e' inattivo,
                                                     fa coppia con `inactive` */
 
   /* --- I colori che significano qualcosa ---
@@ -68,7 +71,7 @@
   --color-focus: rgb(217 68 54 / 0.6);
 
   /* Il velo sotto un pannello modale. */
-  --color-scrim: rgb(18 18 28 / 0.8);
+  --color-scrim: rgb(20 19 17 / 0.8);
 
   /* --- La famiglia semantica: un colore per tipo di item ---
      Regola 1 della sezione 4. Tenuti separati dal nucleo qui sopra perche'

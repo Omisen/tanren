@@ -11,5 +11,5 @@
          della finestra: la WebView e' rientrata rispetto alle barre di sistema, e
          dietro a quelle si vede questo. Se non combaciasse col fondo della pagina si
          vedrebbero due strisce di colore diverso ai bordi. -->
-    <color name="ink">#FF12121C</color>
+    <color name="ink">#FF141311</color>
 </resources>
