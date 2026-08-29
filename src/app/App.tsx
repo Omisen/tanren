@@ -1,14 +1,21 @@
-function App() {
-  return (
-    <main className="flex h-full flex-col items-center justify-center gap-2 text-center">
-      <p className="font-jp text-6xl font-semibold tracking-[0.1em]" lang="ja">
-        鍛錬
-      </p>
-      <h1 className="text-muted text-base font-medium tracking-[0.35em] uppercase">
-        Tanren
-      </h1>
-    </main>
-  )
-}
+import { HomeScreen } from '@/features/kana/screens/HomeScreen'
+import { SessionScreen } from '@/features/kana/screens/SessionScreen'
+import { useUi } from '@/shared/store/ui'
 
-export default App
+/**
+ * La radice dell'app: sceglie quale schermata mostrare.
+ *
+ * Non c'e' un router. Le schermate sono poche, l'app non ha indirizzi da condividere
+ * ne' cronologia del browser da rispettare, e la schermata corrente e' gia' stato
+ * effimero dell'interfaccia: tenerla nello store basta e non aggiunge dipendenze.
+ */
+export default function App() {
+  const screen = useUi((s) => s.screen)
+
+  switch (screen) {
+    case 'home':
+      return <HomeScreen />
+    case 'session':
+      return <SessionScreen />
+  }
+}
