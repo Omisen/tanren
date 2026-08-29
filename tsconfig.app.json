@@ -16,6 +16,12 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Alias: @ punta a src, per non avere import a scalini.
+       Senza baseUrl, deprecato da TypeScript 6: i path sono relativi a questo file. */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,

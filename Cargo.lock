@@ -2935,9 +2935,18 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
+ "tanren-core",
  "tauri",
  "tauri-build",
  "tauri-plugin-log",
+]
+
+[[package]]
+name = "tanren-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

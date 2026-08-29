@@ -1,0 +1,14 @@
+[package]
+name = "tanren-core"
+description = "Domain core of Tanren: exercises, validation, scheduling and content."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[lib]
+name = "tanren_core"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }

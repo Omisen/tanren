@@ -1,10 +1,10 @@
 [package]
 name = "tanren-app"
-version = "0.1.0"
-description = "Japanese training app: kana, kanji and grammar."
-authors = ["Omisen"]
-edition = "2024"
-rust-version = "1.85"
+description = "Tauri shell for Tanren: exposes the domain core to the frontend."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
 
 [lib]
 # Il nome della libreria e' usato da main.rs su desktop e dal punto di ingresso
@@ -13,11 +13,14 @@ name = "tanren_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.6.3" }
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
-tauri = { version = "2.11.3" }
+# Il dominio vive qui dentro: questa crate si limita a esporlo.
+tanren-core = { workspace = true }
+
+tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-log = "0.4"
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }

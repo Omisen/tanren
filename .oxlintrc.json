@@ -4,5 +4,23 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/features/**", "src/shared/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/*", "@/features/*/**"],
+                "message": "Le feature non si importano tra loro e shared non dipende dalle feature: cio' che serve a piu' di una sale in src/shared."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }
