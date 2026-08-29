@@ -1,0 +1,30 @@
+/* Base mobile-first: nessun ingrandimento accidentale, area sicura rispettata
+   sui telefoni con notch, altezza piena anche con la barra del browser. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #f2f2f2;
+  background-color: #12121c;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}

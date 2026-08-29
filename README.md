@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/tanren-logo.png" alt="Tanren 鍛錬" width="340">
+<img src=".github/assets/tanren-logo.png" alt="Tanren 鍛錬" width="240">
 
 <h1>Tanren</h1>
 

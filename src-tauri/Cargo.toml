@@ -1,0 +1,23 @@
+[package]
+name = "tanren-app"
+version = "0.1.0"
+description = "Japanese training app: kana, kanji and grammar."
+authors = ["Omisen"]
+edition = "2024"
+rust-version = "1.85"
+
+[lib]
+# Il nome della libreria e' usato da main.rs su desktop e dal punto di ingresso
+# mobile generato da Tauri.
+name = "tanren_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3" }
+
+[dependencies]
+tauri = { version = "2.11.3" }
+tauri-plugin-log = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4"
