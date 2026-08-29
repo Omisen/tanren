@@ -17,8 +17,9 @@
 //! database, e l'ambito arriva insieme alla richiesta. Cosi' chiudere l'app a meta'
 //! ripasso non perde niente e non c'e' niente da far scadere.
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use rand::Rng;
+use rand::seq::IndexedRandom;
 use serde::{Deserialize, Serialize};
 
 use crate::features::kana::data::{KanaGroup, Syllabary, table};
@@ -32,6 +33,12 @@ use crate::shared::storage::{CardFilter, Database, NewAnswer};
 
 /// Quante opzioni mostrare nella scelta multipla, risposta giusta compresa.
 const CHOICES: usize = 4;
+
+/// Entro quanti minuti due scadenze contano come ugualmente urgenti.
+///
+/// Sotto quella soglia dire che una carta viene prima dell'altra e' una precisione
+/// finta: sono scadute praticamente insieme, e l'ordine puo' deciderlo la sorte.
+const SAME_URGENCY_MINUTES: i64 = 60;
 
 static RECOGNITION: KanaRecognition = KanaRecognition;
 static INPUT: KanaInput = KanaInput;
@@ -132,29 +139,73 @@ pub async fn progress(db: &Database, scope: &Scope, now: DateTime<Utc>) -> Resul
     })
 }
 
-/// Il prossimo segno da ripassare, o `None` se per adesso non c'e' piu' niente.
+/// Un segno che si potrebbe chiedere adesso.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Candidate {
+    pub item: ItemId,
+    /// Quando era dovuto. `None` se non e' mai stato studiato.
+    pub due_at: Option<DateTime<Utc>>,
+}
+
+/// I segni che si potrebbero chiedere adesso, dal piu' arretrato in giu'.
 ///
-/// La scelta di quale segno studiare e' gia' stata fatta dallo scheduler quando ha
-/// messo la scadenza: qui si prende semplicemente il piu' arretrato.
-pub async fn next_due_item(
-    db: &Database,
-    scope: &Scope,
-    now: DateTime<Utc>,
-) -> Result<Option<ItemId>> {
+/// Restituisce tutto l'ambito e non solo la prima carta perche' la scelta vera la fa
+/// [`pick`], e per sorteggiare bisogna conoscere tutti quelli che se lo meritano. Sono
+/// al massimo un centinaio di righe.
+pub async fn due_items(db: &Database, scope: &Scope, now: DateTime<Utc>) -> Result<Vec<Candidate>> {
     let items = ids(scope);
     let exercise = scope.mode.exercise_id();
+    let limit = items.len() as i64;
 
     Ok(db
-        .due_cards(scope.filter(&items, exercise.as_str()), now, 1)
+        .due_cards(scope.filter(&items, exercise.as_str()), now, limit)
         .await?
         .into_iter()
-        .next()
-        .map(|card| ItemId::new(card.item_id)))
+        .map(|card| Candidate {
+            item: ItemId::new(card.item_id),
+            due_at: card.due_at,
+        })
+        .collect())
+}
+
+/// Sceglie a sorte tra i candidati piu' urgenti.
+///
+/// # Perche' non si prende semplicemente il primo
+///
+/// L'urgenza non e' un ordine totale. Le carte mai viste hanno tutte la stessa
+/// scadenza, cioe' nessuna, e l'archivio le restituisce nell'ordine in cui sono state
+/// scritte, che e' quello tradizionale del gojuon. Prendendo sempre la prima, una
+/// sessione nuova chiederebbe あ, い, う, え, お, か, き... tutte le volte: dopo due
+/// giri non si riconosce piu' il segno, si indovina la posizione nella sequenza. E'
+/// esattamente il contrario di quello che questa app deve allenare.
+///
+/// Quindi tra chi e' ugualmente urgente si tira a sorte, mentre chi e' davvero piu'
+/// arretrato continua a passare avanti: la pianificazione di FSRS resta intatta,
+/// perche' quello che si rompe qui e' solo un ordine che FSRS non aveva mai stabilito.
+pub fn pick(candidates: &[Candidate], rng: &mut dyn Rng) -> Option<ItemId> {
+    let head = candidates.first()?;
+    let tolerance = TimeDelta::minutes(SAME_URGENCY_MINUTES);
+
+    // I candidati arrivano ordinati, quindi quelli urgenti quanto il primo stanno in
+    // testa: basta contare fin dove arrivano.
+    let tied = candidates
+        .iter()
+        .take_while(|c| match (head.due_at, c.due_at) {
+            // Mai studiate: nessuna e' piu' urgente di un'altra.
+            (None, None) => true,
+            (Some(primo), Some(altro)) => altro - primo <= tolerance,
+            // Una carta mai vista e una gia' pianificata non si equivalgono, e
+            // l'ordine tra le due lo ha gia' deciso l'archivio.
+            _ => false,
+        })
+        .count();
+
+    candidates[..tied].choose(rng).map(|c| c.item.clone())
 }
 
 /// Costruisce la domanda su un segno.
 ///
-/// E' separata da [`next_due_item`] perche' non tocca il database: scegliere cosa
+/// E' separata da [`due_items`] perche' non tocca il database: scegliere cosa
 /// chiedere richiede una lettura, formulare la domanda no. Tenerle distinte lascia
 /// questa parte pura e verificabile con un seme fisso, e evita che il generatore di
 /// numeri casuali debba attraversare un'attesa asincrona.
@@ -226,6 +277,7 @@ mod tests {
     use crate::shared::exercise::{AnswerFormat, Prompt};
     use rand::SeedableRng;
     use rand::rngs::StdRng;
+    use std::collections::HashSet;
 
     fn rng() -> StdRng {
         StdRng::seed_from_u64(7)
@@ -243,16 +295,24 @@ mod tests {
         Database::in_memory().await.unwrap()
     }
 
-    /// Scorciatoia per i test: i due passi che il comando fa uno dopo l'altro.
+    /// Scorciatoia per i test: i tre passi che il comando fa uno dopo l'altro.
     async fn next_question(
         db: &Database,
         scope: &Scope,
         now: DateTime<Utc>,
         rng: &mut dyn Rng,
     ) -> Result<Option<Question>> {
-        match next_due_item(db, scope, now).await? {
+        let candidates = due_items(db, scope, now).await?;
+        match pick(&candidates, rng) {
             Some(item) => Ok(Some(question_for(scope, &item, rng)?)),
             None => Ok(None),
+        }
+    }
+
+    fn candidate(id: &str, due_at: Option<DateTime<Utc>>) -> Candidate {
+        Candidate {
+            item: ItemId::new(id),
+            due_at,
         }
     }
 
@@ -426,5 +486,90 @@ mod tests {
                 .is_none()
         );
         assert_eq!(progress(&db, &scope, now).await.unwrap().due, 0);
+    }
+
+    #[test]
+    fn senza_candidati_non_si_sceglie_niente() {
+        assert_eq!(pick(&[], &mut rng()), None);
+    }
+
+    #[test]
+    fn tra_le_carte_mai_viste_si_tira_a_sorte() {
+        let candidati: Vec<_> = ["a", "b", "c", "d", "e"]
+            .into_iter()
+            .map(|id| candidate(id, None))
+            .collect();
+
+        let usciti: HashSet<_> = (0..12)
+            .filter_map(|seme| pick(&candidati, &mut StdRng::seed_from_u64(seme)))
+            .collect();
+
+        assert!(
+            usciti.len() > 1,
+            "l'ordine di scrittura non deve diventare l'ordine delle domande: {usciti:?}"
+        );
+    }
+
+    #[test]
+    fn una_carta_molto_arretrata_passa_avanti() {
+        let now = Utc::now();
+        let candidati = vec![
+            candidate("arretrata", Some(now - TimeDelta::days(2))),
+            candidate("appena scaduta", Some(now - TimeDelta::minutes(1))),
+            candidate("scaduta ora", Some(now)),
+        ];
+
+        // Qui la sorte non c'entra: chi aspetta da due giorni non aspetta un giro in
+        // piu' perche' e' uscito un numero.
+        for seme in 0..12 {
+            let scelta = pick(&candidati, &mut StdRng::seed_from_u64(seme)).unwrap();
+            assert_eq!(scelta.as_str(), "arretrata");
+        }
+    }
+
+    #[test]
+    fn le_scadenze_vicine_contano_come_pari() {
+        let now = Utc::now();
+        let candidati = vec![
+            candidate("novanta", Some(now - TimeDelta::minutes(90))),
+            candidate("ottanta", Some(now - TimeDelta::minutes(80))),
+            candidate("dieci", Some(now - TimeDelta::minutes(10))),
+        ];
+
+        let usciti: HashSet<_> = (0..12)
+            .filter_map(|seme| pick(&candidati, &mut StdRng::seed_from_u64(seme)))
+            .map(|i| i.as_str().to_owned())
+            .collect();
+
+        assert!(
+            usciti.contains("novanta") && usciti.contains("ottanta"),
+            "dieci minuti di scarto non sono una precedenza: {usciti:?}"
+        );
+        assert!(
+            !usciti.contains("dieci"),
+            "un'ora e mezzo di ritardo invece conta: {usciti:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn una_sessione_nuova_non_segue_l_ordine_della_tabella() {
+        let db = db().await;
+        let now = Utc::now();
+        let scope = base(Mode::Recognition);
+        prepare(&db, &scope, now).await.unwrap();
+
+        let candidati = due_items(&db, &scope, now).await.unwrap();
+        assert_eq!(candidati.len(), 46, "vanno guardate tutte, non solo la prima");
+
+        let primi: HashSet<_> = (0..12)
+            .filter_map(|seme| pick(&candidati, &mut StdRng::seed_from_u64(seme)))
+            .map(|i| i.as_str().to_owned())
+            .collect();
+
+        assert!(
+            primi.len() > 1,
+            "la prima domanda sarebbe sempre あ, e la sequenza del gojuon diventerebbe \
+             piu' facile da ricordare dei segni: {primi:?}"
+        );
     }
 }

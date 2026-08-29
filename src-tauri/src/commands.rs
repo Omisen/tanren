@@ -72,12 +72,16 @@ pub async fn next_question(
     state: State<'_, AppState>,
     scope: Scope,
 ) -> Result<Option<Question>, CoreError> {
-    let Some(item) = session::next_due_item(&state.db, &scope, Utc::now()).await? else {
+    let candidates = session::due_items(&state.db, &scope, Utc::now()).await?;
+
+    // La casualita' vera entra qui, al bordo: il dominio la riceve, non se la prende.
+    // Serve due volte, per scegliere il segno tra quelli ugualmente urgenti e per
+    // mescolare le opzioni della domanda.
+    let mut rng = rand::rng();
+    let Some(item) = session::pick(&candidates, &mut rng) else {
         return Ok(None);
     };
 
-    // La casualita' vera entra qui, al bordo: il dominio la riceve, non se la prende.
-    let mut rng = rand::rng();
     Ok(Some(session::question_for(&scope, &item, &mut rng)?))
 }
 
