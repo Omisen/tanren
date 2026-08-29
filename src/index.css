@@ -8,6 +8,9 @@
   --color-paper: #f2f2f2;
   --color-muted: #9a9ab0;
   --color-accent: #d94436;
+  /* L'unico colore fuori dalla palette del logo: serve a dire "giusto" senza
+     riusare l'accento, che nella correzione vuol dire l'opposto. */
+  --color-ok: #4caf7d;
 
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-jp: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
