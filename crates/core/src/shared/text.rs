@@ -16,6 +16,16 @@
 //! - **Spazi.** Vengono tolti tutti, non solo quelli ai bordi: dentro una lettura
 //!   sono sempre rumore, e alcuni IME lasciano uno spazio dopo la conversione.
 //!
+//! # Due livelli di normalizzazione
+//!
+//! [`normalize_input`] fa la pulizia Unicode ma **non tocca il sillabario**: serve
+//! quando la domanda e' scritta in un sillabario preciso, come nell'esercizio in cui
+//! si chiede di scrivere un segno in katakana. Se ripiegasse tutto sull'hiragana,
+//! rispondere か a una domanda su カ risulterebbe corretto.
+//!
+//! [`normalize_reading`] aggiunge la conversione verso l'hiragana: serve quando conta
+//! la lettura e non la grafia, come per le letture di un kanji.
+//!
 //! # Cosa viene lasciato stare
 //!
 //! - Il prolungamento `ー`, che appartiene alla lettura e distingue `らーめん` da
@@ -37,14 +47,31 @@ use unicode_normalization::UnicodeNormalization;
 /// assert_eq!(normalize_reading(" ﾆﾎﾝ "), "にほん");
 /// ```
 pub fn normalize_reading(input: &str) -> String {
-    // NFKC fa tre cose in un colpo solo: porta la larghezza piena a quella normale,
-    // ricompone i katakana a mezza larghezza con il loro segno di sonorizzazione, e
-    // unisce i segni combinanti alla sillaba che li precede.
-    input
-        .nfkc()
-        .filter(|c| !c.is_whitespace())
-        .map(to_hiragana)
-        .collect()
+    normalize(input).map(to_hiragana).collect()
+}
+
+/// Ripulisce il testo lasciando intatto il sillabario in cui e' scritto.
+///
+/// Fa la stessa pulizia di [`normalize_reading`] ma senza la conversione verso
+/// l'hiragana, quindi `カ` resta `カ` e non diventa `か`.
+///
+/// ```
+/// use tanren_core::shared::text::normalize_input;
+///
+/// assert_eq!(normalize_input(" ﾆﾎﾝ "), "ニホン");
+/// assert_ne!(normalize_input("カ"), normalize_input("か"));
+/// ```
+pub fn normalize_input(input: &str) -> String {
+    normalize(input).collect()
+}
+
+/// La parte comune: NFKC e via gli spazi.
+///
+/// NFKC fa tre cose in un colpo solo: porta la larghezza piena a quella normale,
+/// ricompone i katakana a mezza larghezza con il loro segno di sonorizzazione, e
+/// unisce i segni combinanti alla sillaba che li precede.
+fn normalize(input: &str) -> impl Iterator<Item = char> + '_ {
+    input.nfkc().filter(|c| !c.is_whitespace())
 }
 
 /// Porta un singolo carattere katakana al corrispondente hiragana.
@@ -167,11 +194,23 @@ mod tests {
     }
 
     #[test]
+    fn la_normalizzazione_dell_input_non_tocca_il_sillabario() {
+        // La domanda "scrivi カ" non deve accettare か.
+        assert_eq!(normalize_input("カ"), "カ");
+        assert_ne!(normalize_input("カ"), normalize_input("か"));
+        // La pulizia Unicode pero' la fa lo stesso.
+        assert_eq!(normalize_input(" ﾆﾎﾝ "), "ニホン");
+        assert_eq!(normalize_input("ｶ\u{FF9E}"), "ガ");
+    }
+
+    #[test]
     fn e_idempotente() {
         for input in ["ﾆﾎﾝ", "カタカナ", " ラーメン ", "か\u{3099}", "ＡＢＣ"] {
             let once = normalize_reading(input);
-            let twice = normalize_reading(&once);
-            assert_eq!(once, twice, "input: {input}");
+            assert_eq!(once, normalize_reading(&once), "reading: {input}");
+
+            let once = normalize_input(input);
+            assert_eq!(once, normalize_input(&once), "input: {input}");
         }
     }
 }

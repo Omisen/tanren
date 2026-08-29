@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Palette e font del progetto, ripresi dal logo a pennello: inchiostro scuro
+/* Palette e font del progetto, ripresi dal logo a pennello: inchiostro scudo
    e un solo accento rosso. Diventano utility Tailwind (bg-ink, text-accent...). */
 @theme {
   --color-ink: #12121c;
