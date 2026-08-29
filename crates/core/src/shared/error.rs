@@ -29,6 +29,10 @@ pub enum CoreError {
     /// arriverebbe.
     #[error("errore di archiviazione: {message}")]
     Storage { message: String },
+
+    /// La pianificazione della ripetizione non e' andata a buon fine.
+    #[error("errore di pianificazione: {message}")]
+    Scheduling { message: String },
 }
 
 impl From<sqlx::Error> for CoreError {

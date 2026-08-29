@@ -18,6 +18,7 @@ unicode-normalization = { workspace = true }
 sqlx = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
+fsrs = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
