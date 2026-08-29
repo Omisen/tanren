@@ -70,17 +70,34 @@
   /* Il velo sotto un pannello modale. */
   --color-scrim: rgb(18 18 28 / 0.8);
 
-  /* --- Riservato: la famiglia semantica ---
-     La regola 1 della sezione 4 chiede un colore fisso per tipo di item e una
-     scala per lo stato SRS. I nomi saranno `--color-type-radical`,
-     `--color-type-kanji`, `--color-type-vocab`, `--color-srs-learning`,
-     `--color-srs-review` e seguenti, tenuti separati dal nucleo qui sopra
-     perche' portano significato e non devono colare nella cornice.
-     Vanno **ricalibrati per il fondo scuro**: un colore di categoria scelto per
-     stare su bianco, come quelli dei riferimenti, su nero non regge.
-     Non sono ancora definiti di proposito: oggi esistono solo i kana, quindi non
-     c'e' nessun tipo di item da distinguere ne' nessuno stato SRS da graduare, e
-     inventarli adesso vorrebbe dire indovinare. */
+  /* --- La famiglia semantica: un colore per tipo di item ---
+     Regola 1 della sezione 4. Tenuti separati dal nucleo qui sopra perche'
+     portano significato e non devono colare nella cornice. */
+
+  /* I kana sono **una** categoria sola: hiragana e katakana condividono il
+     blocco, perche' sono lo stesso sillabario in due grafie e l'ambito si sceglie
+     comunque prima di cominciare.
+     Il valore e' misurato, non scelto a occhio:
+       bianco sopra    4,89x   (serve 3,00x per il testo grande, 4,50x per quello
+                                normale: passa anche la soglia piu' severa)
+       contro `ink`    3,81x   (il blocco stacca dalla pagina)
+       distanza da `ok` 0,153 in OKLab
+     L'ultima riga e' quella che conta davvero. `ok` e' verde e dice «giusto»: un
+     colore di categoria verde-azzurro gli finisce addosso, e due significati
+     diversi non possono somigliarsi. La prima ipotesi era `#2AA79B`, che distava
+     0,058 da `ok`, cioe' cinque volte meno di quanto `ok` disti da `accent`, e
+     per giunta reggeva il bianco solo a 2,96x, sotto la soglia. Scurendo si sono
+     risolte tutte e due le cose senza cambiare tinta. */
+  --color-type-kana: #0e7f72;
+
+  /* Ancora da definire: `--color-type-radical`, `--color-type-kanji`,
+     `--color-type-vocab` e la scala `--color-srs-*`. Si scelgono quando quei tipi
+     e quegli stati esisteranno davvero, perche' inventarli adesso vuol dire
+     indovinare.
+     Quando sara' il momento: il rosso e' occupato da `accent`, il verde da `ok` e
+     ora il verde-azzurro dai kana, quindi lo spazio libero e' **blu, viola e
+     magenta**. E vanno **ricalibrati per il fondo scuro**: un colore di categoria
+     scelto per stare su bianco, come quelli dei riferimenti, su nero non regge. */
 
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   /* I ripieghi restano dietro a quello imbarcato: servono solo se il woff2 non
