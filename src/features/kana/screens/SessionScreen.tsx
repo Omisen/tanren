@@ -1,17 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
-import type { Mode, Progress, Prompt, Verdict } from '@/shared/bridge'
+import type { Mode, Prompt, Verdict } from '@/shared/bridge'
 import { Button } from '@/shared/ui/Button'
+import { Confirm } from '@/shared/ui/Confirm'
 import { Screen } from '@/shared/ui/Screen'
 import { useUi } from '@/shared/store/ui'
 
-import { useSession, type SessionState } from '../useSession'
+import { useSession, type SessionState, type Tally } from '../useSession'
 
 /**
- * La sessione di studio.
+ * La sessione di studio: un giro completo sull'ambito scelto, in ordine casuale, dove
+ * un segno esce dalla coda solo quando lo si indovina.
  *
  * Tutto quello che conta lo decide il core: quale segno tocca, se la risposta e'
- * giusta e quando il segno tornera'. Qui si mostra e si raccoglie il tocco.
+ * giusta e cosa registrare. Qui si mostra e si raccoglie il tocco.
  *
  * Le opzioni stanno in fondo, nella fascia delle azioni, perche' sono la cosa che si
  * tocca decine di volte di fila: il pollice deve trovarle senza spostare la mano. Il
@@ -28,96 +30,112 @@ const MODE_LABELS: Record<Mode, string> = {
 
 export function SessionScreen() {
   const { scope, goTo } = useUi()
-  const { state, progress, busy, answer, next, retry } = useSession(scope)
+  const { state, tally, busy, dirty, answer, next, restart } = useSession(scope)
+  const [leaving, setLeaving] = useState(false)
 
   // Una risposta giusta non ha niente da leggere: si va avanti da soli dopo un
   // istante, quel tanto che basta a vedere il verde. Una sbagliata invece aspetta,
   // perche' la lettura corretta va letta.
-  const correct = state.phase === 'answered' && state.outcome.verdict.outcome === 'correct'
+  // Con la conferma di uscita aperta il giro sta fermo: il conteggio di cui parla la
+  // domanda non deve cambiare mentre la si legge.
+  const correct = state.phase === 'answered' && state.verdict.outcome === 'correct'
   useEffect(() => {
-    if (!correct) return
+    if (!correct || leaving) return
     const timer = setTimeout(next, ADVANCE_MS)
     return () => clearTimeout(timer)
-  }, [correct, next])
+  }, [correct, leaving, next])
 
   return (
-    <Screen
-      title={MODE_LABELS[scope.mode]}
-      onBack={() => goTo('home')}
-      action={
-        <Actions
-          state={state}
-          busy={busy}
-          onAnswer={answer}
-          onNext={next}
-          onRetry={retry}
-          onHome={() => goTo('home')}
-        />
-      }
-    >
-      {state.phase === 'loading' && <Centered>Preparo la sessione…</Centered>}
+    <>
+      <Screen
+        title={MODE_LABELS[scope.mode]}
+        onBack={() => (dirty ? setLeaving(true) : goTo('home'))}
+        action={
+          <Actions
+            state={state}
+            tally={tally}
+            busy={busy}
+            onAnswer={answer}
+            onNext={next}
+            onRestart={restart}
+            onHome={() => goTo('home')}
+          />
+        }
+      >
+        {state.phase === 'loading' && <Centered>Preparo il giro…</Centered>}
 
-      {state.phase === 'failed' && (
-        <Centered>Il core non ha risposto: la sessione non è partita.</Centered>
-      )}
+        {state.phase === 'failed' && (
+          <Centered>Il core non ha risposto: la sessione non è partita.</Centered>
+        )}
 
-      {state.phase === 'done' && (
-        <Centered>
-          <p className="font-jp text-ok text-6xl" lang="ja">
-            了
-          </p>
-          <p className="mt-4">Per adesso hai finito.</p>
-          {progress && (
-            <p className="text-muted/60 mt-1 text-xs">
-              {progress.total} segni in ripasso, nessuno in scadenza.
-            </p>
-          )}
-        </Centered>
-      )}
+        {state.phase === 'done' && <Summary tally={tally} />}
 
-      {(state.phase === 'asking' || state.phase === 'answered') && (
-        <div className="flex h-full flex-col">
-          <Meter progress={progress} />
+        {(state.phase === 'asking' || state.phase === 'answered') && (
+          <div className="flex h-full flex-col">
+            <Meter tally={tally} />
 
-          <div className="flex flex-1 flex-col items-center justify-center gap-6">
-            <PromptView prompt={state.question.prompt} />
+            <div className="flex flex-1 flex-col items-center justify-center gap-6">
+              <PromptView prompt={state.question.prompt} />
 
-            {/* Lo spazio dell'esito e' sempre occupato, anche quando non c'e'
-                niente da dire: il segno non deve saltare quando si risponde. */}
-            <div className="flex min-h-14 flex-col items-center gap-1 text-center">
-              {state.phase === 'answered' && (
-                <Feedback verdict={state.outcome.verdict} days={state.outcome.intervalDays} />
-              )}
+              {/* Lo spazio dell'esito e' sempre occupato, anche quando non c'e'
+                  niente da dire: il segno non deve saltare quando si risponde. */}
+              <div className="flex min-h-14 flex-col items-center gap-1 text-center">
+                {state.phase === 'answered' && <Feedback verdict={state.verdict} />}
+              </div>
             </div>
           </div>
-        </div>
+        )}
+      </Screen>
+
+      {leaving && (
+        <Confirm
+          title="Torni alla scelta?"
+          confirmLabel="Esci comunque"
+          cancelLabel="Continua la sessione"
+          onConfirm={() => goTo('home')}
+          onCancel={() => setLeaving(false)}
+        >
+          I {tally.correct} segni indovinati in questo giro vanno persi: ogni sessione
+          riparte da zero.
+        </Confirm>
       )}
-    </Screen>
+    </>
   )
 }
 
 /** La fascia in fondo: cambia con la fase, ma tiene sempre la stessa altezza. */
 function Actions({
   state,
+  tally,
   busy,
   onAnswer,
   onNext,
-  onRetry,
+  onRestart,
   onHome,
 }: {
   state: SessionState
+  tally: Tally
   busy: boolean
   onAnswer: (value: string) => void
   onNext: () => void
-  onRetry: () => void
+  onRestart: () => void
   onHome: () => void
 }) {
   if (state.phase === 'failed') {
-    return <Button onClick={onRetry}>Riprova</Button>
+    return <Button onClick={onRestart}>Riprova</Button>
   }
 
   if (state.phase === 'done') {
-    return <Button onClick={onHome}>Torna alla scelta</Button>
+    return (
+      <div className="flex flex-col gap-2">
+        <Button onClick={onRestart}>
+          {tally.total > 0 ? `Rifai i ${tally.total} segni` : 'Rifai il giro'}
+        </Button>
+        <Button variant="quiet" onClick={onHome}>
+          Cambia ambito
+        </Button>
+      </div>
+    )
   }
 
   if (state.phase !== 'asking' && state.phase !== 'answered') return null
@@ -142,7 +160,7 @@ function Actions({
           <Option
             key={option}
             value={option}
-            state={answered ? judge(option, answered.answer, answered.outcome.verdict) : 'open'}
+            state={answered ? judge(option, answered.answer, answered.verdict) : 'open'}
             disabled={answered !== null || busy}
             onClick={() => onAnswer(option)}
           />
@@ -216,14 +234,9 @@ function Option({
   )
 }
 
-function Feedback({ verdict, days }: { verdict: Verdict; days: number }) {
+function Feedback({ verdict }: { verdict: Verdict }) {
   if (verdict.outcome === 'correct') {
-    return (
-      <>
-        <p className="text-ok text-base">Giusto</p>
-        <p className="text-muted/60 text-xs">{whenAgain(days)}</p>
-      </>
-    )
+    return <p className="text-ok text-base">Giusto</p>
   }
 
   return (
@@ -234,37 +247,43 @@ function Feedback({ verdict, days }: { verdict: Verdict; days: number }) {
   )
 }
 
-/**
- * L'intervallo di FSRS detto a parole.
- *
- * Arriva in giorni con la virgola e puo' valere meno di uno: una risposta sbagliata
- * torna in giornata, non domani.
- */
-function whenAgain(days: number): string {
-  if (days < 1 / 24) return 'torna tra poco'
-  if (days < 1) {
-    const hours = Math.round(days * 24)
-    return hours <= 1 ? 'torna tra un’ora' : `torna tra ${hours} ore`
-  }
-
-  const rounded = Math.round(days)
-  return rounded <= 1 ? 'torna domani' : `torna tra ${rounded} giorni`
+/** Com'è andato il giro appena finito. Non viene salvato da nessuna parte. */
+function Summary({ tally }: { tally: Tally }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+      <p className="text-muted text-xs tracking-[0.2em] uppercase">Giro finito</p>
+      <p className="text-5xl tabular-nums">
+        <span className={tally.correct === tally.answered ? 'text-ok' : 'text-paper'}>
+          {tally.correct}
+        </span>
+        <span className="text-muted/40">/{tally.answered}</span>
+      </p>
+      <p className="text-muted mt-2 text-sm">
+        {tally.correct === tally.answered
+          ? 'Nessun errore.'
+          : `${tally.answered - tally.correct} errori, tutti recuperati.`}
+      </p>
+    </div>
+  )
 }
 
-/** Quanti segni dell'ambito non sono piu' in scadenza. */
-function Meter({ progress }: { progress: Progress | null }) {
-  const total = progress?.total ?? 0
-  const done = progress ? progress.total - progress.due : 0
-  const ratio = total > 0 ? done / total : 0
+/**
+ * A che punto è il giro. Vale solo per questa sessione.
+ *
+ * Avanza sui segni indovinati, non sulle risposte date: sbagliando si risponde di più
+ * senza avvicinarsi alla fine, ed è giusto che la barra lo dica.
+ */
+function Meter({ tally }: { tally: Tally }) {
+  const ratio = tally.total > 0 ? tally.correct / tally.total : 0
 
   return (
     <div className="flex items-center gap-3 pt-1">
       <div
         role="progressbar"
         aria-valuemin={0}
-        aria-valuemax={total}
-        aria-valuenow={done}
-        aria-label="Segni completati"
+        aria-valuemax={tally.total}
+        aria-valuenow={tally.correct}
+        aria-label="Segni indovinati in questo giro"
         className="bg-ink-soft h-1 flex-1 overflow-hidden rounded-full"
       >
         <div
@@ -273,7 +292,7 @@ function Meter({ progress }: { progress: Progress | null }) {
         />
       </div>
       <span className="text-muted/60 text-xs tabular-nums">
-        {done}/{total}
+        {tally.correct}/{tally.total}
       </span>
     </div>
   )

@@ -48,6 +48,15 @@ export type AnswerFormat =
   /** Digitazione libera con l'IME del dispositivo. */
   | { mode: 'input' }
 
+/**
+ * Cosa resta da fare in una sessione.
+ *
+ * E' **opaca**: si conserva e si rimanda indietro al core alla chiamata successiva,
+ * non si guarda dentro e non si modifica. Chi esce, chi rientra e dove lo decide il
+ * core, perche' e' la regola dell'esercizio e non un dettaglio di presentazione.
+ */
+export type Queue = string[]
+
 export interface Question {
   exerciseType: string
   /** L'identificatore del segno, da rimandare indietro con la risposta. */
@@ -56,25 +65,22 @@ export interface Question {
   format: AnswerFormat
 }
 
+/** Una domanda aperta e la coda che resta. `question` a `null` vuol dire giro finito. */
+export interface Step {
+  question: Question | null
+  queue: Queue
+}
+
+/**
+ * Com'e' andata una risposta.
+ *
+ * Non porta nessuna scadenza: sui kana non c'e' ripetizione spaziata, il segno torna
+ * al prossimo giro e basta.
+ */
 export type Verdict =
   | { outcome: 'correct' }
   /** Le risposte che sarebbero state accettate, da mostrare invece di un secco no. */
   | { outcome: 'incorrect'; accepted: string[] }
-
-export interface Outcome {
-  verdict: Verdict
-  /** Quando il segno tornera', in formato ISO 8601. */
-  dueAt: string
-  /** Fra quanti giorni tornera'. Puo' essere minore di uno. */
-  intervalDays: number
-}
-
-export interface Progress {
-  /** Quanti segni comprende l'ambito. */
-  total: number
-  /** Quanti sono da studiare adesso. */
-  due: number
-}
 
 /** Un errore arrivato dal core. Il campo `kind` dice di che si tratta. */
 export type CoreError =

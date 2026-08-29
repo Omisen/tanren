@@ -1,35 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
-  nextQuestion,
-  prepareSession,
-  sessionProgress,
+  nextStep,
+  startSession,
   submitAnswer,
-  type Outcome,
-  type Progress,
+  type Queue,
   type Question,
   type Scope,
+  type Step,
+  type Verdict,
 } from '@/shared/bridge'
 
 /**
  * Il giro di una sessione, visto dall'interfaccia.
  *
- * Qui non si decide niente di dominio: cosa chiedere, se la risposta e' giusta e
- * quando il segno tornera' lo stabilisce il core. Questo modulo si limita a mettere
- * in fila le chiamate e a ricordare a che punto e' il giro, che e' stato effimero
- * quanto la schermata che lo mostra.
+ * Una sessione e' un giro completo sull'ambito scelto, mescolato, e un segno esce
+ * dalla coda solo quando lo si indovina. La coda arriva dal core a ogni passo e
+ * questo hook la conserva **senza guardarci dentro**: chi esce, chi rientra e dove lo
+ * decide il core, perche' e' la regola dell'esercizio.
  *
- * Non sta nello store globale proprio per questo: uscire dalla sessione deve
- * dimenticare tutto, e non c'e' niente da salvare che il database non abbia gia'.
+ * # Perche' il conteggio vive qui e non nel database
+ *
+ * Perche' deve morire uscendo. Ogni sessione riparte da zero: quello che si e' fatto
+ * l'ultima volta non deve avanzare la barra di oggi ne' togliere segni dal giro. Le
+ * risposte finiscono comunque nell'archivio, ma sono storico, non stato della
+ * sessione, e nessuna schermata le rilegge.
  */
 
 /** Dove si trova la sessione in questo momento. */
 export type SessionState =
-  /** Prima domanda ancora in arrivo. */
+  /** Piano o domanda ancora in arrivo. */
   | { phase: 'loading' }
   /** Il core non ha risposto. */
   | { phase: 'failed' }
-  /** Per adesso non c'e' altro da ripassare. */
+  /** Il giro e' finito: resta il riepilogo. */
   | { phase: 'done' }
   /** C'e' una domanda aperta. */
   | { phase: 'asking'; question: Question }
@@ -39,26 +43,45 @@ export type SessionState =
       question: Question
       /** Quello che l'utente ha risposto, per poterlo evidenziare. */
       answer: string
-      outcome: Outcome
+      verdict: Verdict
     }
+
+/**
+ * Come sta andando il giro. Vale solo per questa sessione.
+ *
+ * `answered` puo' superare `total`, ed e' il punto: un segno sbagliato torna, quindi
+ * si risponde piu' volte di quanti siano i segni. Quello che avanza davvero e'
+ * `correct`, perche' un segno esce dalla coda solo quando lo si indovina.
+ */
+export interface Tally {
+  /** Quante risposte sono state date, ritentativi compresi. */
+  answered: number
+  /** Quanti segni sono stati indovinati, cioe' tolti dalla coda. */
+  correct: number
+  /** Quanti segni conta il giro. */
+  total: number
+}
 
 export interface Session {
   state: SessionState
-  /** A che punto e' l'ambito, o `null` finche' non lo si sa. */
-  progress: Progress | null
+  tally: Tally
   /** Vero mentre una chiamata al core e' in volo. */
   busy: boolean
+  /** Vero se uscire adesso butterebbe via qualcosa. */
+  dirty: boolean
   /** Manda la risposta scelta. Ignorata se non c'e' una domanda aperta. */
   answer: (value: string) => void
   /** Passa alla domanda successiva. Ignorata se non si e' appena risposto. */
   next: () => void
-  /** Ricomincia da capo, dopo un errore. */
-  retry: () => void
+  /** Ricomincia: un piano nuovo sullo stesso ambito, conteggio azzerato. */
+  restart: () => void
 }
+
+const EMPTY: Tally = { answered: 0, correct: 0, total: 0 }
 
 export function useSession(scope: Scope): Session {
   const [state, write] = useState<SessionState>({ phase: 'loading' })
-  const [progress, setProgress] = useState<Progress | null>(null)
+  const [tally, setTally] = useState<Tally>(EMPTY)
   const [busy, showBusy] = useState(false)
 
   // Lo stato serve anche fuori dal render, per rifiutare i tocchi che arrivano
@@ -78,29 +101,21 @@ export function useSession(scope: Scope): Session {
     showBusy(value)
   }, [])
 
-  // Ogni avvio ha il suo numero. Cambiando ambito, o uscendo dalla schermata, le
+  // Ogni avvio ha il suo numero. Ricominciando, o uscendo dalla schermata, le
   // risposte ancora in volo appartengono a un giro che non esiste piu' e vanno
   // lasciate cadere invece che scritte sopra quello nuovo.
   const run = useRef(0)
 
-  const ask = useCallback(
-    async (token: number) => {
-      mark(true)
-      try {
-        const [question, p] = await Promise.all([
-          nextQuestion(scope),
-          sessionProgress(scope),
-        ])
-        if (run.current !== token) return
-        setProgress(p)
-        setState(question ? { phase: 'asking', question } : { phase: 'done' })
-      } catch {
-        if (run.current === token) setState({ phase: 'failed' })
-      } finally {
-        if (run.current === token) mark(false)
-      }
+  // La coda non si disegna mai: quello che si vede e' la domanda, e quella e' gia'
+  // nello stato. Qui si tiene solo per poterla rimandare al core.
+  const queue = useRef<Queue>([])
+
+  const install = useCallback(
+    (step: Step) => {
+      queue.current = step.queue
+      setState(step.question ? { phase: 'asking', question: step.question } : { phase: 'done' })
     },
-    [scope, mark, setState],
+    [setState],
   )
 
   const start = useCallback(async () => {
@@ -108,23 +123,19 @@ export function useSession(scope: Scope): Session {
     pending.current = true
 
     try {
-      // Preparare crea le carte mancanti: un ambito mai studiato non avrebbe
-      // altrimenti nessuna domanda da dare. E' anche la prima cosa che accade, prima
-      // di qualunque aggiornamento di stato, perche' l'effetto che avvia la sessione
-      // non deve far ripartire un render appena montato.
-      const p = await prepareSession(scope)
+      // Il primo passo arriva prima di qualunque aggiornamento di stato, cosi'
+      // l'effetto che avvia la sessione non fa ripartire un render appena montato.
+      const step = await startSession(scope)
       if (run.current !== token) return
-      setProgress(p)
-    } catch {
-      if (run.current === token) {
-        setState({ phase: 'failed' })
-        mark(false)
-      }
-      return
-    }
 
-    await ask(token)
-  }, [scope, ask, mark, setState])
+      setTally({ ...EMPTY, total: step.queue.length })
+      install(step)
+    } catch {
+      if (run.current === token) setState({ phase: 'failed' })
+    } finally {
+      if (run.current === token) mark(false)
+    }
+  }, [scope, install, mark, setState])
 
   useEffect(() => {
     // La sessione vive nel core: montare la schermata e' proprio il momento in cui
@@ -150,9 +161,14 @@ export function useSession(scope: Scope): Session {
       mark(true)
 
       submitAnswer(scope, question.item, value)
-        .then((outcome) => {
+        .then((verdict) => {
           if (run.current !== token) return
-          setState({ phase: 'answered', question, answer: value, outcome })
+          setState({ phase: 'answered', question, answer: value, verdict })
+          setTally((t) => ({
+            ...t,
+            answered: t.answered + 1,
+            correct: t.correct + (verdict.outcome === 'correct' ? 1 : 0),
+          }))
         })
         .catch(() => {
           if (run.current === token) setState({ phase: 'failed' })
@@ -165,14 +181,39 @@ export function useSession(scope: Scope): Session {
   )
 
   const next = useCallback(() => {
-    if (current.current.phase !== 'answered' || pending.current) return
-    void ask(run.current)
-  }, [ask])
+    const now = current.current
+    if (now.phase !== 'answered' || pending.current) return
 
-  const retry = useCallback(() => {
+    const token = run.current
+    const correct = now.verdict.outcome === 'correct'
+    mark(true)
+
+    nextStep(scope, queue.current, correct)
+      .then((step) => {
+        if (run.current !== token) return
+        install(step)
+      })
+      .catch(() => {
+        if (run.current === token) setState({ phase: 'failed' })
+      })
+      .finally(() => {
+        if (run.current === token) mark(false)
+      })
+  }, [scope, install, mark, setState])
+
+  const restart = useCallback(() => {
     setState({ phase: 'loading' })
     void start()
   }, [start, setState])
 
-  return { state, progress, busy, answer, next, retry }
+  return {
+    state,
+    tally,
+    busy,
+    // Finito il giro non c'e' piu' niente da difendere: il riepilogo e' l'uscita.
+    dirty: tally.answered > 0 && state.phase !== 'done',
+    answer,
+    next,
+    restart,
+  }
 }

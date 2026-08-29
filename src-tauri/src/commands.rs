@@ -6,9 +6,9 @@
 
 use chrono::Utc;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, table};
-use tanren_core::features::kana::session::{self, Outcome, Progress, Scope};
+use tanren_core::features::kana::session::{self, Scope, Step};
 use tanren_core::shared::error::CoreError;
-use tanren_core::shared::exercise::{Answer, ItemId, Question};
+use tanren_core::shared::exercise::{Answer, ItemId, Verdict};
 use tanren_core::shared::text;
 use tauri::State;
 
@@ -48,54 +48,37 @@ pub fn normalize_reading(input: String) -> String {
     text::normalize_input(&input)
 }
 
-/// Prepara l'ambito scelto e riporta a che punto si e'.
+/// Comincia una sessione: la coda mescolata e la prima domanda.
+///
+/// Non serve il database: una sessione e' un giro completo sull'ambito scelto, e cosa
+/// ci sia dentro l'ambito lo dice il contenuto, non i progressi.
 #[tauri::command]
-pub async fn prepare_session(
-    state: State<'_, AppState>,
-    scope: Scope,
-) -> Result<Progress, CoreError> {
-    session::prepare(&state.db, &scope, Utc::now()).await
-}
-
-/// A che punto e' l'ambito, senza modificare niente.
-#[tauri::command]
-pub async fn session_progress(
-    state: State<'_, AppState>,
-    scope: Scope,
-) -> Result<Progress, CoreError> {
-    session::progress(&state.db, &scope, Utc::now()).await
-}
-
-/// La prossima domanda, o niente se per adesso non c'e' altro da ripassare.
-#[tauri::command]
-pub async fn next_question(
-    state: State<'_, AppState>,
-    scope: Scope,
-) -> Result<Option<Question>, CoreError> {
-    let candidates = session::due_items(&state.db, &scope, Utc::now()).await?;
-
+pub fn start_session(scope: Scope) -> Result<Step, CoreError> {
     // La casualita' vera entra qui, al bordo: il dominio la riceve, non se la prende.
-    // Serve due volte, per scegliere il segno tra quelli ugualmente urgenti e per
-    // mescolare le opzioni della domanda.
     let mut rng = rand::rng();
-    let Some(item) = session::pick(&candidates, &mut rng) else {
-        return Ok(None);
-    };
-
-    Ok(Some(session::question_for(&scope, &item, &mut rng)?))
+    session::start(&scope, &mut rng)
 }
 
-/// Corregge una risposta, ripianifica il segno e registra tutto.
+/// Come continua il giro dopo una risposta.
+///
+/// La coda torna indietro com'era arrivata: e' il core a decidere chi esce e chi
+/// rientra, il frontend la conserva soltanto.
+#[tauri::command]
+pub fn next_step(scope: Scope, queue: Vec<ItemId>, correct: bool) -> Result<Step, CoreError> {
+    let mut rng = rand::rng();
+    session::advance(&scope, &queue, correct, &mut rng)
+}
+
+/// Corregge una risposta e la registra.
 #[tauri::command]
 pub async fn submit_answer(
     state: State<'_, AppState>,
     scope: Scope,
     item: String,
     answer: String,
-) -> Result<Outcome, CoreError> {
+) -> Result<Verdict, CoreError> {
     session::submit(
         &state.db,
-        &state.scheduler,
         &scope,
         &ItemId::new(item),
         &Answer::new(answer),

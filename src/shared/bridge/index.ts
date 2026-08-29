@@ -8,7 +8,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 
-import type { KanaSet, Outcome, Progress, Question, Scope, Syllabary } from './types'
+import type { KanaSet, Queue, Scope, Step, Syllabary, Verdict } from './types'
 
 export * from './types'
 
@@ -27,26 +27,25 @@ export function normalizeReading(input: string): Promise<string> {
   return invoke('normalize_reading', { input })
 }
 
-/** Prepara l'ambito scelto, creando le carte che ancora non esistono. */
-export function prepareSession(scope: Scope): Promise<Progress> {
-  return invoke('prepare_session', { scope })
+/** Comincia una sessione: la coda mescolata e la prima domanda. */
+export function startSession(scope: Scope): Promise<Step> {
+  return invoke('start_session', { scope })
 }
 
-/** A che punto e' l'ambito, senza modificare niente. */
-export function sessionProgress(scope: Scope): Promise<Progress> {
-  return invoke('session_progress', { scope })
+/**
+ * Come continua il giro dopo una risposta.
+ *
+ * La coda torna al core com'era arrivata: chi esce e chi rientra lo decide lui.
+ */
+export function nextStep(scope: Scope, queue: Queue, correct: boolean): Promise<Step> {
+  return invoke('next_step', { scope, queue, correct })
 }
 
-/** La prossima domanda, o `null` se per adesso non c'e' altro da ripassare. */
-export function nextQuestion(scope: Scope): Promise<Question | null> {
-  return invoke('next_question', { scope })
-}
-
-/** Corregge una risposta, ripianifica il segno e registra tutto. */
+/** Corregge una risposta e la registra nello storico. */
 export function submitAnswer(
   scope: Scope,
   item: string,
   answer: string,
-): Promise<Outcome> {
+): Promise<Verdict> {
   return invoke('submit_answer', { scope, item, answer })
 }

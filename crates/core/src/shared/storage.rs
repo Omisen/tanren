@@ -95,10 +95,22 @@ pub struct NewAnswer<'a> {
     /// sapere soltanto che c'e' stato.
     pub answer: &'a str,
     pub answered_at: DateTime<Utc>,
+    /// Come aggiornare la carta, per le materie che usano la ripetizione spaziata.
+    ///
+    /// `None` per quelle che non la usano: la risposta entra comunque nello storico,
+    /// `rating` resta NULL perche' nessuno ha dato un giudizio a quattro gradini, e la
+    /// carta non viene toccata. Vale oggi per i kana, vedi la nota su FSRS in
+    /// CLAUDE.md.
+    pub scheduling: Option<Scheduling>,
+}
+
+/// Come lo scheduler vuole aggiornare la carta dopo una risposta.
+///
+/// Lo decide lo scheduler, non l'archivio: qui arriva gia' calcolato.
+#[derive(Debug, Clone, Copy)]
+pub struct Scheduling {
     /// La valutazione data alla risposta.
     pub grade: Grade,
-    /// Il nuovo stato della carta. Lo decide lo scheduler, non l'archivio: qui arriva
-    /// gia' calcolato.
     pub next: Scheduled,
 }
 
@@ -339,7 +351,7 @@ impl Database {
     /// a raccontare due storie diverse.
     ///
     /// La carta viene creata se e' la prima volta che quell'elemento viene studiato.
-    pub async fn record_answer(&self, answer: NewAnswer<'_>) -> Result<Card> {
+    pub async fn record_answer(&self, answer: NewAnswer<'_>) -> Result<Option<Card>> {
         let mut tx = self.pool.begin().await?;
 
         // UUID versione 7: contiene l'istante di creazione, quindi e' unico tra
@@ -356,44 +368,52 @@ impl Database {
         .bind(answer.answered_at)
         .bind(answer.correct)
         .bind(answer.answer)
-        .bind(answer.grade.as_i64())
+        .bind(answer.scheduling.map(|s| s.grade.as_i64()))
         .execute(&mut *tx)
         .await?;
 
-        // Alla prima risposta la riga nasce con reps a 1; dalla seconda in poi
-        // `excluded` porta i valori che avremmo inserito e si sommano a quelli gia'
-        // presenti.
-        let lapse = i64::from(!answer.correct);
-        let card = sqlx::query_as::<_, Card>(
-            "INSERT INTO cards (
-                 item_id, exercise_type, due_at, last_reviewed_at, reps, lapses,
-                 stability, difficulty, created_at, updated_at, rev
-             )
-             VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 1)
-             ON CONFLICT (item_id, exercise_type) DO UPDATE SET
-                 due_at           = excluded.due_at,
-                 last_reviewed_at = excluded.last_reviewed_at,
-                 reps             = cards.reps + 1,
-                 lapses           = cards.lapses + excluded.lapses,
-                 stability        = excluded.stability,
-                 difficulty       = excluded.difficulty,
-                 updated_at       = excluded.updated_at,
-                 rev              = cards.rev + 1,
-                 deleted_at       = NULL
-             RETURNING item_id, exercise_type, due_at, last_reviewed_at, reps, lapses,
-                       stability, difficulty, updated_at, rev",
-        )
-        .bind(answer.item_id)
-        .bind(answer.exercise_type)
-        .bind(answer.next.due_at)
-        .bind(answer.answered_at)
-        .bind(lapse)
-        .bind(answer.next.memory.stability)
-        .bind(answer.next.memory.difficulty)
-        .bind(answer.answered_at)
-        .bind(answer.answered_at)
-        .fetch_one(&mut *tx)
-        .await?;
+        // Senza pianificazione non c'e' niente da aggiornare: la carta esiste per
+        // tenere lo stato della ripetizione spaziata, e chi non la usa non ne ha una.
+        let card = match answer.scheduling {
+            None => None,
+            Some(scheduling) => {
+                // Alla prima risposta la riga nasce con reps a 1; dalla seconda in poi
+                // `excluded` porta i valori che avremmo inserito e si sommano a quelli
+                // gia' presenti.
+                let lapse = i64::from(!answer.correct);
+                let card = sqlx::query_as::<_, Card>(
+                    "INSERT INTO cards (
+                         item_id, exercise_type, due_at, last_reviewed_at, reps, lapses,
+                         stability, difficulty, created_at, updated_at, rev
+                     )
+                     VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 1)
+                     ON CONFLICT (item_id, exercise_type) DO UPDATE SET
+                         due_at           = excluded.due_at,
+                         last_reviewed_at = excluded.last_reviewed_at,
+                         reps             = cards.reps + 1,
+                         lapses           = cards.lapses + excluded.lapses,
+                         stability        = excluded.stability,
+                         difficulty       = excluded.difficulty,
+                         updated_at       = excluded.updated_at,
+                         rev              = cards.rev + 1,
+                         deleted_at       = NULL
+                     RETURNING item_id, exercise_type, due_at, last_reviewed_at, reps,
+                               lapses, stability, difficulty, updated_at, rev",
+                )
+                .bind(answer.item_id)
+                .bind(answer.exercise_type)
+                .bind(scheduling.next.due_at)
+                .bind(answer.answered_at)
+                .bind(lapse)
+                .bind(scheduling.next.memory.stability)
+                .bind(scheduling.next.memory.difficulty)
+                .bind(answer.answered_at)
+                .bind(answer.answered_at)
+                .fetch_one(&mut *tx)
+                .await?;
+                Some(card)
+            }
+        };
 
         tx.commit().await?;
         Ok(card)
@@ -443,9 +463,19 @@ mod tests {
             correct,
             answer: if correct { "か" } else { "き" },
             answered_at,
-            grade: Grade::from_correct(correct),
-            next: pianificata(answered_at + TimeDelta::days(1)),
+            scheduling: Some(Scheduling {
+                grade: Grade::from_correct(correct),
+                next: pianificata(answered_at + TimeDelta::days(1)),
+            }),
         }
+    }
+
+    /// Le materie con ripetizione spaziata aggiornano sempre la carta.
+    async fn registra(db: &Database, answer: NewAnswer<'_>) -> Card {
+        db.record_answer(answer)
+            .await
+            .unwrap()
+            .expect("con la pianificazione la carta si aggiorna")
     }
 
     #[tokio::test]
@@ -461,11 +491,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn una_risposta_senza_pianificazione_resta_solo_nello_storico() {
+        let db = Database::in_memory().await.unwrap();
+        let now = Utc::now();
+
+        let card = db
+            .record_answer(NewAnswer {
+                scheduling: None,
+                ..risposta(false, now)
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(card, None, "non c'e' nessuna carta da aggiornare");
+        assert_eq!(db.card(ITEM, EXERCISE).await.unwrap(), None);
+
+        // Lo storico invece la registra, con `rating` vuoto: nessuno ha dato un
+        // giudizio a quattro gradini, e inventarne uno racconterebbe a un futuro
+        // riaddestramento una storia mai avvenuta.
+        let storico = db.answers(ITEM, EXERCISE).await.unwrap();
+        assert_eq!(storico.len(), 1);
+        assert!(!storico[0].correct);
+        assert_eq!(storico[0].rating, None);
+    }
+
+    #[tokio::test]
     async fn la_prima_risposta_crea_la_carta() {
         let db = Database::in_memory().await.unwrap();
         let now = Utc::now();
 
-        let card = db.record_answer(risposta(true, now)).await.unwrap();
+        let card = registra(&db, risposta(true, now)).await;
 
         assert_eq!(card.item_id, ITEM);
         assert_eq!(card.reps, 1);
@@ -488,14 +543,9 @@ mod tests {
         let db = Database::in_memory().await.unwrap();
         let t0 = Utc::now();
 
-        db.record_answer(risposta(true, t0)).await.unwrap();
-        db.record_answer(risposta(false, t0 + TimeDelta::minutes(1)))
-            .await
-            .unwrap();
-        let card = db
-            .record_answer(risposta(true, t0 + TimeDelta::minutes(2)))
-            .await
-            .unwrap();
+        registra(&db, risposta(true, t0)).await;
+        registra(&db, risposta(false, t0 + TimeDelta::minutes(1))).await;
+        let card = registra(&db, risposta(true, t0 + TimeDelta::minutes(2))).await;
 
         assert_eq!(card.reps, 3);
         // Un solo errore su tre risposte.
@@ -510,10 +560,8 @@ mod tests {
         let db = Database::in_memory().await.unwrap();
         let t0 = Utc::now();
 
-        db.record_answer(risposta(true, t0)).await.unwrap();
-        db.record_answer(risposta(false, t0 + TimeDelta::minutes(1)))
-            .await
-            .unwrap();
+        registra(&db, risposta(true, t0)).await;
+        registra(&db, risposta(false, t0 + TimeDelta::minutes(1))).await;
 
         let log = db.answers(ITEM, EXERCISE).await.unwrap();
         assert_eq!(log.len(), 2);
@@ -551,7 +599,7 @@ mod tests {
         let db = Database::in_memory().await.unwrap();
         let now = Utc::now();
 
-        db.record_answer(risposta(true, now)).await.unwrap();
+        registra(&db, risposta(true, now)).await;
         let card = db.ensure_card(ITEM, EXERCISE, now).await.unwrap();
 
         assert_eq!(card.reps, 1);
@@ -564,22 +612,32 @@ mod tests {
         let now = Utc::now();
 
         // Scaduta ieri.
-        db.record_answer(NewAnswer {
-            item_id: "kana:hiragana:あ",
-            next: pianificata(now - TimeDelta::days(1)),
-            ..risposta(true, now - TimeDelta::days(2))
-        })
-        .await
-        .unwrap();
+        registra(
+            &db,
+            NewAnswer {
+                item_id: "kana:hiragana:あ",
+                scheduling: Some(Scheduling {
+                    grade: Grade::Good,
+                    next: pianificata(now - TimeDelta::days(1)),
+                }),
+                ..risposta(true, now - TimeDelta::days(2))
+            },
+        )
+        .await;
 
         // Da rivedere domani.
-        db.record_answer(NewAnswer {
-            item_id: "kana:hiragana:い",
-            next: pianificata(now + TimeDelta::days(1)),
-            ..risposta(true, now)
-        })
-        .await
-        .unwrap();
+        registra(
+            &db,
+            NewAnswer {
+                item_id: "kana:hiragana:い",
+                scheduling: Some(Scheduling {
+                    grade: Grade::Good,
+                    next: pianificata(now + TimeDelta::days(1)),
+                }),
+                ..risposta(true, now)
+            },
+        )
+        .await;
 
         // Introdotta e mai studiata.
         db.ensure_card("kana:hiragana:う", EXERCISE, now)
@@ -620,7 +678,7 @@ mod tests {
 
         {
             let db = Database::open(&path).await.unwrap();
-            db.record_answer(risposta(true, now)).await.unwrap();
+            registra(&db, risposta(true, now)).await;
         }
 
         // Riaprire applica di nuovo le migrazioni, che devono accorgersi di essere
@@ -644,18 +702,21 @@ mod tests {
         let primo = scheduler
             .schedule(card.memory(), card.last_reviewed_at, Grade::Good, t0)
             .unwrap();
-        let card = db
-            .record_answer(NewAnswer {
+        let card = registra(
+            &db,
+            NewAnswer {
                 item_id: ITEM,
                 exercise_type: EXERCISE,
                 correct: true,
                 answer: "か",
                 answered_at: t0,
-                grade: Grade::Good,
-                next: primo,
-            })
-            .await
-            .unwrap();
+                scheduling: Some(Scheduling {
+                    grade: Grade::Good,
+                    next: primo,
+                }),
+            },
+        )
+        .await;
 
         // Lo stato di memoria e' stato salvato e riletto.
         let memoria = card.memory().expect("la carta ha ora uno stato");

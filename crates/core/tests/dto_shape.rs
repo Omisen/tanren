@@ -10,10 +10,9 @@
 //! allora questi test diventerebbero superflui. Finche' i tipi si scrivono a mano,
 //! sono il guardrail.
 
-use chrono::{TimeZone, Utc};
 use serde_json::json;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary};
-use tanren_core::features::kana::session::{Mode, Outcome, Progress, Scope};
+use tanren_core::features::kana::session::{Mode, Scope, Step};
 use tanren_core::shared::error::CoreError;
 use tanren_core::shared::exercise::{
     AnswerFormat, ExerciseTypeId, ItemId, Prompt, Question, Verdict,
@@ -63,37 +62,52 @@ fn una_domanda_a_input_libero() {
 
 #[test]
 fn un_esito_giusto_e_uno_sbagliato() {
-    let due_at = Utc.with_ymd_and_hms(2026, 8, 29, 12, 0, 0).unwrap();
-
-    let giusto = Outcome {
-        verdict: Verdict::Correct,
-        due_at,
-        interval_days: 3.5,
-    };
     assert_eq!(
-        serde_json::to_value(&giusto).unwrap(),
-        json!({
-            "verdict": { "outcome": "correct" },
-            "dueAt": "2026-08-29T12:00:00Z",
-            "intervalDays": 3.5
-        })
+        serde_json::to_value(Verdict::Correct).unwrap(),
+        json!({ "outcome": "correct" })
     );
 
-    let sbagliato = Outcome {
-        verdict: Verdict::Incorrect {
-            accepted: vec!["shi".into(), "si".into()],
-        },
-        due_at,
-        interval_days: 0.01,
-    };
     assert_eq!(
-        serde_json::to_value(&sbagliato).unwrap()["verdict"],
+        serde_json::to_value(Verdict::Incorrect {
+            accepted: vec!["shi".into(), "si".into()],
+        })
+        .unwrap(),
         json!({ "outcome": "incorrect", "accepted": ["shi", "si"] })
     );
 }
 
 #[test]
-fn l_ambito_e_l_avanzamento() {
+fn un_passo_della_sessione() {
+    let step = Step {
+        question: Some(Question {
+            exercise_type: ExerciseTypeId::new("kana.recognition"),
+            item: ItemId::new("kana:hiragana:か"),
+            prompt: Prompt::Japanese("か".into()),
+            format: AnswerFormat::Choice {
+                options: vec!["ka".into()],
+            },
+        }),
+        queue: vec![ItemId::new("kana:hiragana:か"), ItemId::new("kana:hiragana:き")],
+    };
+
+    assert_eq!(
+        serde_json::to_value(&step).unwrap()["queue"],
+        json!(["kana:hiragana:か", "kana:hiragana:き"])
+    );
+
+    // A giro finito la domanda manca, e il frontend lo riconosce da qui.
+    assert_eq!(
+        serde_json::to_value(Step {
+            question: None,
+            queue: Vec::new(),
+        })
+        .unwrap(),
+        json!({ "question": null, "queue": [] })
+    );
+}
+
+#[test]
+fn l_ambito_attraversa_il_confine_nei_due_versi() {
     let scope = Scope {
         syllabary: Syllabary::Hiragana,
         groups: vec![KanaGroup::Base, KanaGroup::Yoon],
@@ -111,11 +125,6 @@ fn l_ambito_e_l_avanzamento() {
     // L'ambito arriva dal frontend, quindi deve anche potersi rileggere.
     let riletto: Scope = serde_json::from_value(serde_json::to_value(&scope).unwrap()).unwrap();
     assert_eq!(riletto, scope);
-
-    assert_eq!(
-        serde_json::to_value(Progress { total: 46, due: 12 }).unwrap(),
-        json!({ "total": 46, "due": 12 })
-    );
 }
 
 #[test]

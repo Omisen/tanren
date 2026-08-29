@@ -1,8 +1,31 @@
 //! Il giro di una sessione di studio sui kana.
 //!
-//! Tiene insieme i tre pezzi che finora vivevano separati: l'esercizio sa costruire e
-//! correggere le domande, lo scheduler sa quando ripresentarle, l'archivio sa cosa e'
-//! gia' successo. Qui si decide in che ordine parlano.
+//! Tiene insieme i pezzi che vivono separati: l'esercizio sa costruire e correggere le
+//! domande, l'archivio sa cosa e' gia' successo, lo scheduler sa quando un segno
+//! andrebbe ripresentato. Qui si decide in che ordine parlano.
+//!
+//! # Cos'e' una sessione
+//!
+//! Un giro completo sull'ambito scelto, mescolato: si vedono tutti i segni delle
+//! famiglie selezionate, in ordine casuale, e **un segno esce dal giro solo quando lo
+//! si indovina**. Chi sbaglia se lo ritrova poco piu' avanti, finche' non lo azzecca.
+//! Finito il giro se ne puo' cominciare subito un altro, con un ordine nuovo.
+//!
+//! # La coda
+//!
+//! Il core non tiene viva nessuna sessione: la coda e' un **valore** che viene
+//! restituito insieme a ogni domanda e che l'interfaccia si limita a conservare e a
+//! rimandare indietro. Non la interpreta e non la manipola: cosa esce, cosa rientra e
+//! dove, lo decide [`advance`]. Cosi' lo stato sta dove deve stare, cioe' in una cosa
+//! che muore quando si esce, e la regola sta dove deve stare, cioe' qui.
+//!
+//! **Sui kana non c'e' ripetizione spaziata.** Non e' solo che le scadenze non
+//! decidono cosa entra in una sessione: non vengono proprio calcolate. I kana sono
+//! l'alfabeto di base, e far riaspettare due giorni una lettera appena sbagliata la fa
+//! dimenticare del tutto invece di fissarla: all'inizio la memoria ha bisogno di
+//! stimoli ravvicinati, di minuti o ore, non di giorni. FSRS resta nel core per i
+//! kanji, dove gli intervalli lunghi hanno senso. Le risposte finiscono comunque nello
+//! storico, che e' in sola aggiunta e non ha niente a che vedere con le scadenze.
 //!
 //! # Perche' sta nella feature e non nel livello condiviso
 //!
@@ -11,15 +34,16 @@
 //! `shared`. Quando arriveranno i kanji si vedra' cosa e' davvero comune e lo si
 //! sposta: generalizzare adesso significherebbe indovinare.
 //!
-//! # Niente stato di sessione
+//! # Niente stato di sessione nel core
 //!
-//! Non c'e' nessun oggetto sessione da tenere vivo. Ogni chiamata riparte dal
-//! database, e l'ambito arriva insieme alla richiesta. Cosi' chiudere l'app a meta'
-//! ripasso non perde niente e non c'e' niente da far scadere.
+//! Il core non tiene viva nessuna sessione. Produce l'ordine da seguire ([`plan`]) e
+//! poi risponde a domande singole: quale domanda per questo segno, com'e' andata
+//! questa risposta. A che punto e' il giro lo sa solo l'interfaccia, ed e' giusto
+//! cosi', perche' e' informazione che deve morire quando si esce.
 
-use chrono::{DateTime, TimeDelta, Utc};
+use chrono::{DateTime, Utc};
 use rand::Rng;
-use rand::seq::IndexedRandom;
+use rand::seq::{IndexedRandom, SliceRandom};
 use serde::{Deserialize, Serialize};
 
 use crate::features::kana::data::{KanaGroup, Syllabary, table};
@@ -28,17 +52,19 @@ use crate::shared::error::Result;
 use crate::shared::exercise::{
     Answer, ExerciseType, ExerciseTypeId, ItemId, Question, QuestionRequest, Verdict,
 };
-use crate::shared::srs::{Grade, Scheduler};
-use crate::shared::storage::{CardFilter, Database, NewAnswer};
+use crate::shared::storage::{Database, NewAnswer};
 
 /// Quante opzioni mostrare nella scelta multipla, risposta giusta compresa.
 const CHOICES: usize = 4;
 
-/// Entro quanti minuti due scadenze contano come ugualmente urgenti.
+/// Dopo quanti altri segni torna quello sbagliato.
 ///
-/// Sotto quella soglia dire che una carta viene prima dell'altra e' una precisione
-/// finta: sono scadute praticamente insieme, e l'ordine puo' deciderlo la sorte.
-const SAME_URGENCY_MINUTES: i64 = 60;
+/// Deve tornare presto, perche' la correzione va fissata mentre l'errore e' ancora
+/// fresco: e' esattamente il motivo per cui sui kana non si usa la ripetizione
+/// spaziata. Ma non subito: rispondere di nuovo un istante dopo aver letto la
+/// soluzione non e' ricordare, e' copiare. La distanza varia perche' un ritorno a
+/// scadenza fissa si impara come ritmo.
+const RETRY_GAP: [usize; 3] = [2, 3, 4];
 
 static RECOGNITION: KanaRecognition = KanaRecognition;
 static INPUT: KanaInput = KanaInput;
@@ -86,130 +112,91 @@ impl Scope {
             .map(|k| item_id(self.syllabary, &k.character))
             .collect()
     }
+}
 
-    fn filter<'a>(&self, items: &'a [String], exercise: &'a str) -> CardFilter<'a> {
-        CardFilter {
-            items: Some(items),
-            exercise_type: Some(exercise),
-        }
+/// Una domanda aperta e la coda che resta da fare.
+///
+/// La coda e' opaca per chi la riceve: si conserva e si rimanda indietro alla chiamata
+/// dopo, non si guarda dentro. `question` a `None` significa che il giro e' finito.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Step {
+    pub question: Option<Question>,
+    pub queue: Vec<ItemId>,
+}
+
+/// Comincia il giro: l'ambito mescolato, e la prima domanda.
+pub fn start(scope: &Scope, rng: &mut dyn Rng) -> Result<Step> {
+    open(scope, plan(scope, rng), rng)
+}
+
+/// Come continua il giro dopo una risposta.
+///
+/// Indovinato, il segno esce dalla coda. Sbagliato, ci rientra qualche domanda piu'
+/// avanti: e' l'unico modo di uscirne, quindi una sessione finisce solo quando ogni
+/// segno e' stato azzeccato almeno una volta.
+pub fn advance(
+    scope: &Scope,
+    queue: &[ItemId],
+    correct: bool,
+    rng: &mut dyn Rng,
+) -> Result<Step> {
+    open(scope, requeue(queue, correct, rng), rng)
+}
+
+/// Formula la domanda in cima alla coda, se ce n'e' una.
+fn open(scope: &Scope, queue: Vec<ItemId>, rng: &mut dyn Rng) -> Result<Step> {
+    let question = match queue.first() {
+        Some(item) => Some(question_for(scope, item, rng)?),
+        None => None,
+    };
+
+    Ok(Step { question, queue })
+}
+
+/// L'ordine in cui affrontare l'ambito all'inizio di una sessione.
+///
+/// # Perche' mescolato
+///
+/// L'ordine naturale della tabella e' quello del gojuon: あ, い, う, え, お, か, き...
+/// Seguirlo significa insegnare la sequenza invece dei segni, perche' dopo due giri la
+/// posizione nella filastrocca si ricorda meglio del carattere. Qui si allena il
+/// riconoscimento, quindi l'ordine deve essere imprevedibile.
+///
+/// La casualita' arriva da fuori, come per i distrattori: i test fissano un seme e
+/// ottengono sempre lo stesso giro.
+fn plan(scope: &Scope, rng: &mut dyn Rng) -> Vec<ItemId> {
+    let mut items = scope.items();
+    items.shuffle(rng);
+    items
+}
+
+/// Toglie dalla coda il segno appena chiesto, e lo rimette dentro se e' andato male.
+fn requeue(queue: &[ItemId], correct: bool, rng: &mut dyn Rng) -> Vec<ItemId> {
+    let mut rest = queue.to_vec();
+    if rest.is_empty() {
+        return rest;
     }
-}
 
-/// A che punto e' la sessione.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Progress {
-    /// Quanti segni comprende l'ambito.
-    pub total: i64,
-    /// Quanti sono da studiare adesso.
-    pub due: i64,
-}
+    let asked = rest.remove(0);
+    if !correct {
+        // `choose` torna un'opzione perche' una fetta puo' essere vuota, e questa e'
+        // una costante di tre elementi. Se davanti non c'e' abbastanza roba il segno
+        // finisce in fondo: piu' lontano di cosi' non si puo' metterlo.
+        let gap = RETRY_GAP.choose(rng).copied().unwrap_or(RETRY_GAP[0]);
+        let at = gap.min(rest.len());
+        rest.insert(at, asked);
+    }
 
-fn ids(scope: &Scope) -> Vec<String> {
-    scope
-        .items()
-        .into_iter()
-        .map(|i| i.as_str().to_owned())
-        .collect()
-}
-
-/// Prepara l'ambito: crea le carte che ancora non esistono e riporta a che punto si e'.
-///
-/// Va chiamata all'inizio di una sessione. Non tocca le carte gia' presenti, quindi
-/// ripeterla e' innocuo.
-pub async fn prepare(db: &Database, scope: &Scope, now: DateTime<Utc>) -> Result<Progress> {
-    let items = ids(scope);
-    let exercise = scope.mode.exercise_id();
-    let exercise = exercise.as_str();
-
-    db.ensure_cards(&items, exercise, now).await?;
-
-    progress(db, scope, now).await
-}
-
-/// A che punto e' l'ambito, senza modificare nulla.
-pub async fn progress(db: &Database, scope: &Scope, now: DateTime<Utc>) -> Result<Progress> {
-    let items = ids(scope);
-    let exercise = scope.mode.exercise_id();
-
-    Ok(Progress {
-        total: items.len() as i64,
-        due: db
-            .count_due(scope.filter(&items, exercise.as_str()), now)
-            .await?,
-    })
-}
-
-/// Un segno che si potrebbe chiedere adesso.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Candidate {
-    pub item: ItemId,
-    /// Quando era dovuto. `None` se non e' mai stato studiato.
-    pub due_at: Option<DateTime<Utc>>,
-}
-
-/// I segni che si potrebbero chiedere adesso, dal piu' arretrato in giu'.
-///
-/// Restituisce tutto l'ambito e non solo la prima carta perche' la scelta vera la fa
-/// [`pick`], e per sorteggiare bisogna conoscere tutti quelli che se lo meritano. Sono
-/// al massimo un centinaio di righe.
-pub async fn due_items(db: &Database, scope: &Scope, now: DateTime<Utc>) -> Result<Vec<Candidate>> {
-    let items = ids(scope);
-    let exercise = scope.mode.exercise_id();
-    let limit = items.len() as i64;
-
-    Ok(db
-        .due_cards(scope.filter(&items, exercise.as_str()), now, limit)
-        .await?
-        .into_iter()
-        .map(|card| Candidate {
-            item: ItemId::new(card.item_id),
-            due_at: card.due_at,
-        })
-        .collect())
-}
-
-/// Sceglie a sorte tra i candidati piu' urgenti.
-///
-/// # Perche' non si prende semplicemente il primo
-///
-/// L'urgenza non e' un ordine totale. Le carte mai viste hanno tutte la stessa
-/// scadenza, cioe' nessuna, e l'archivio le restituisce nell'ordine in cui sono state
-/// scritte, che e' quello tradizionale del gojuon. Prendendo sempre la prima, una
-/// sessione nuova chiederebbe あ, い, う, え, お, か, き... tutte le volte: dopo due
-/// giri non si riconosce piu' il segno, si indovina la posizione nella sequenza. E'
-/// esattamente il contrario di quello che questa app deve allenare.
-///
-/// Quindi tra chi e' ugualmente urgente si tira a sorte, mentre chi e' davvero piu'
-/// arretrato continua a passare avanti: la pianificazione di FSRS resta intatta,
-/// perche' quello che si rompe qui e' solo un ordine che FSRS non aveva mai stabilito.
-pub fn pick(candidates: &[Candidate], rng: &mut dyn Rng) -> Option<ItemId> {
-    let head = candidates.first()?;
-    let tolerance = TimeDelta::minutes(SAME_URGENCY_MINUTES);
-
-    // I candidati arrivano ordinati, quindi quelli urgenti quanto il primo stanno in
-    // testa: basta contare fin dove arrivano.
-    let tied = candidates
-        .iter()
-        .take_while(|c| match (head.due_at, c.due_at) {
-            // Mai studiate: nessuna e' piu' urgente di un'altra.
-            (None, None) => true,
-            (Some(primo), Some(altro)) => altro - primo <= tolerance,
-            // Una carta mai vista e una gia' pianificata non si equivalgono, e
-            // l'ordine tra le due lo ha gia' deciso l'archivio.
-            _ => false,
-        })
-        .count();
-
-    candidates[..tied].choose(rng).map(|c| c.item.clone())
+    rest
 }
 
 /// Costruisce la domanda su un segno.
 ///
-/// E' separata da [`due_items`] perche' non tocca il database: scegliere cosa
-/// chiedere richiede una lettura, formulare la domanda no. Tenerle distinte lascia
-/// questa parte pura e verificabile con un seme fisso, e evita che il generatore di
-/// numeri casuali debba attraversare un'attesa asincrona.
-pub fn question_for(scope: &Scope, item: &ItemId, rng: &mut dyn Rng) -> Result<Question> {
+/// E' pura e non tocca il database, quindi e' verificabile con un seme fisso. Serve
+/// anche tecnicamente: il generatore di numeri casuali non deve attraversare
+/// un'attesa asincrona, altrimenti il future non e' `Send` e Tauri non lo accetta.
+fn question_for(scope: &Scope, item: &ItemId, rng: &mut dyn Rng) -> Result<Question> {
     scope.mode.exercise().question(
         QuestionRequest {
             item,
@@ -220,38 +207,30 @@ pub fn question_for(scope: &Scope, item: &ItemId, rng: &mut dyn Rng) -> Result<Q
     )
 }
 
-/// L'esito di una risposta, con quando si rivedra' il segno.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Outcome {
-    pub verdict: Verdict,
-    pub due_at: DateTime<Utc>,
-    /// Fra quanti giorni tornera'. Puo' essere minore di uno.
-    pub interval_days: f32,
-}
-
-/// Corregge una risposta, ripianifica il segno e registra tutto.
+/// Corregge una risposta e la registra.
+///
+/// # Perche' qui non si pianifica niente
+///
+/// I kana sono l'alfabeto di base, e la ripetizione spaziata su un alfabeto lavora
+/// contro chi impara: far riaspettare due giorni una lettera appena sbagliata la fa
+/// dimenticare del tutto. All'inizio la memoria ha bisogno di stimoli ravvicinati, di
+/// minuti o ore, non di giorni. FSRS resta nel core ([`crate::shared::srs`]) per i
+/// kanji, dove gli intervalli lunghi hanno senso.
+///
+/// La risposta entra comunque nello storico: `answers` e' in sola aggiunta e sapere
+/// quante volte un segno e' stato sbagliato serve a prescindere dalle scadenze. La
+/// carta invece non viene toccata, perche' esiste per tenere lo stato della
+/// ripetizione spaziata e qui non ce n'e' nessuno.
 pub async fn submit(
     db: &Database,
-    scheduler: &Scheduler,
     scope: &Scope,
     item: &ItemId,
     answer: &Answer,
     now: DateTime<Utc>,
-) -> Result<Outcome> {
+) -> Result<Verdict> {
     let exercise = scope.mode.exercise();
     let exercise_id = exercise.id();
     let verdict = exercise.grade(item, answer)?;
-
-    // Lo stato da cui riparte lo scheduler e' quello salvato: se la carta non c'e'
-    // ancora, e' la prima volta che si vede questo segno.
-    let card = db.card(item.as_str(), exercise_id.as_str()).await?;
-    let scheduled = scheduler.schedule(
-        card.as_ref().and_then(|c| c.memory()),
-        card.as_ref().and_then(|c| c.last_reviewed_at),
-        Grade::from_correct(verdict.is_correct()),
-        now,
-    )?;
 
     db.record_answer(NewAnswer {
         item_id: item.as_str(),
@@ -259,16 +238,11 @@ pub async fn submit(
         correct: verdict.is_correct(),
         answer: answer.as_str(),
         answered_at: now,
-        grade: Grade::from_correct(verdict.is_correct()),
-        next: scheduled,
+        scheduling: None,
     })
     .await?;
 
-    Ok(Outcome {
-        verdict,
-        due_at: scheduled.due_at,
-        interval_days: scheduled.interval_days,
-    })
+    Ok(verdict)
 }
 
 #[cfg(test)]
@@ -295,66 +269,70 @@ mod tests {
         Database::in_memory().await.unwrap()
     }
 
-    /// Scorciatoia per i test: i tre passi che il comando fa uno dopo l'altro.
-    async fn next_question(
-        db: &Database,
-        scope: &Scope,
-        now: DateTime<Utc>,
-        rng: &mut dyn Rng,
-    ) -> Result<Option<Question>> {
-        let candidates = due_items(db, scope, now).await?;
-        match pick(&candidates, rng) {
-            Some(item) => Ok(Some(question_for(scope, &item, rng)?)),
-            None => Ok(None),
-        }
+    #[test]
+    fn il_piano_copre_l_ambito_una_volta_sola() {
+        let scope = base(Mode::Recognition);
+        let giro = plan(&scope, &mut rng());
+
+        assert_eq!(giro.len(), 46, "la famiglia di base ha 46 segni");
+
+        let unici: HashSet<_> = giro.iter().collect();
+        assert_eq!(unici.len(), giro.len(), "nessun segno chiesto due volte");
+
+        let ambito: HashSet<_> = scope.items().into_iter().collect();
+        assert_eq!(
+            giro.into_iter().collect::<HashSet<_>>(),
+            ambito,
+            "e nessuno lasciato fuori"
+        );
     }
 
-    fn candidate(id: &str, due_at: Option<DateTime<Utc>>) -> Candidate {
-        Candidate {
-            item: ItemId::new(id),
-            due_at,
-        }
-    }
-
-    #[tokio::test]
-    async fn preparare_crea_le_carte_dell_ambito_e_solo_quelle() {
-        let db = db().await;
-        let now = Utc::now();
-
-        let p = prepare(&db, &base(Mode::Recognition), now).await.unwrap();
-
-        assert_eq!(p.total, 46, "la famiglia di base ha 46 segni");
-        assert_eq!(p.due, 46, "appena introdotte sono tutte da studiare");
-
-        // L'altro esercizio sullo stesso ambito non e' stato toccato: sono carte
-        // distinte.
-        let altro = progress(&db, &base(Mode::Input), now).await.unwrap();
-        assert_eq!(altro.due, 0);
-    }
-
-    #[tokio::test]
-    async fn preparare_due_volte_non_raddoppia_niente() {
-        let db = db().await;
-        let now = Utc::now();
+    #[test]
+    fn il_piano_non_segue_l_ordine_della_tabella() {
         let scope = base(Mode::Recognition);
 
-        prepare(&db, &scope, now).await.unwrap();
-        let p = prepare(&db, &scope, now).await.unwrap();
+        let primi: HashSet<_> = (0..12)
+            .filter_map(|seme| {
+                plan(&scope, &mut StdRng::seed_from_u64(seme))
+                    .first()
+                    .map(|i| i.as_str().to_owned())
+            })
+            .collect();
 
-        assert_eq!(p.due, 46);
+        assert!(
+            primi.len() > 1,
+            "la prima domanda sarebbe sempre あ, e la sequenza del gojuon diventerebbe \
+             piu' facile da ricordare dei segni: {primi:?}"
+        );
     }
 
-    #[tokio::test]
-    async fn la_domanda_resta_dentro_l_ambito() {
-        let db = db().await;
-        let now = Utc::now();
-        let scope = base(Mode::Recognition);
-        prepare(&db, &scope, now).await.unwrap();
+    #[test]
+    fn un_mix_di_famiglie_le_comprende_tutte() {
+        let scope = Scope {
+            syllabary: Syllabary::Katakana,
+            groups: vec![KanaGroup::Handakuten, KanaGroup::Dakuten],
+            mode: Mode::Recognition,
+        };
 
-        let q = next_question(&db, &scope, now, &mut rng())
-            .await
-            .unwrap()
-            .expect("c'e' da studiare");
+        assert_eq!(plan(&scope, &mut rng()).len(), 25, "20 sonori e 5 semisonori");
+    }
+
+    #[test]
+    fn senza_famiglie_scelte_si_allena_tutto_il_sillabario() {
+        let scope = Scope {
+            syllabary: Syllabary::Hiragana,
+            groups: Vec::new(),
+            mode: Mode::Recognition,
+        };
+
+        assert_eq!(plan(&scope, &mut rng()).len(), 107);
+    }
+
+    #[test]
+    fn la_domanda_resta_dentro_l_ambito() {
+        let scope = base(Mode::Recognition);
+        let step = start(&scope, &mut rng()).unwrap();
+        let q = step.question.expect("il giro comincia con una domanda");
 
         let Prompt::Japanese(segno) = &q.prompt else {
             panic!("il riconoscimento mostra il segno");
@@ -370,101 +348,166 @@ mod tests {
         assert_eq!(options.len(), CHOICES);
     }
 
-    #[tokio::test]
-    async fn senza_carte_dovute_non_c_e_nessuna_domanda() {
-        let db = db().await;
-        let now = Utc::now();
-        let scope = base(Mode::Recognition);
+    fn handakuten() -> Scope {
+        Scope {
+            syllabary: Syllabary::Katakana,
+            groups: vec![KanaGroup::Handakuten],
+            mode: Mode::Recognition,
+        }
+    }
 
-        // Nessun `prepare`: non esiste ancora nessuna carta.
+    #[test]
+    fn un_segno_indovinato_esce_dalla_coda() {
+        let scope = handakuten();
+        let mut rng = rng();
+        let step = start(&scope, &mut rng).unwrap();
+        let chiesto = step.queue[0].clone();
+
+        let dopo = advance(&scope, &step.queue, true, &mut rng).unwrap();
+
+        assert_eq!(dopo.queue.len(), step.queue.len() - 1);
+        assert!(!dopo.queue.contains(&chiesto), "indovinato, non torna piu'");
+    }
+
+    #[test]
+    fn un_segno_sbagliato_rientra_poco_piu_avanti() {
+        let scope = base(Mode::Recognition);
+        let mut rng = rng();
+        let step = start(&scope, &mut rng).unwrap();
+        let chiesto = step.queue[0].clone();
+
+        let dopo = advance(&scope, &step.queue, false, &mut rng).unwrap();
+
+        assert_eq!(dopo.queue.len(), step.queue.len(), "sbagliando non esce nessuno");
+        let posizione = dopo
+            .queue
+            .iter()
+            .position(|i| i == &chiesto)
+            .expect("il segno sbagliato resta in coda");
         assert!(
-            next_question(&db, &scope, now, &mut rng())
-                .await
-                .unwrap()
-                .is_none()
+            (2..=4).contains(&posizione),
+            "ne' subito ne' alla prossima vita: {posizione}"
         );
     }
 
+    #[test]
+    fn con_un_solo_segno_rimasto_lo_si_rivede_subito() {
+        let scope = handakuten();
+        let mut rng = rng();
+        let coda = vec![ItemId::new("kana:katakana:パ")];
+
+        let dopo = advance(&scope, &coda, false, &mut rng).unwrap();
+
+        assert_eq!(dopo.queue, coda, "non c'e' niente da mettergli davanti");
+        assert!(dopo.question.is_some());
+    }
+
+    #[test]
+    fn il_giro_finisce_solo_indovinando_tutto() {
+        let scope = handakuten();
+        let mut rng = rng();
+        let mut coda = start(&scope, &mut rng).unwrap().queue;
+        assert_eq!(coda.len(), 5);
+
+        // Sbagliare non avvicina la fine, per quante volte lo si faccia.
+        for _ in 0..50 {
+            coda = advance(&scope, &coda, false, &mut rng).unwrap().queue;
+        }
+        assert_eq!(coda.len(), 5);
+
+        // Indovinando invece si svuota, un segno per volta.
+        let mut ultimo = None;
+        while !coda.is_empty() {
+            let step = advance(&scope, &coda, true, &mut rng).unwrap();
+            coda = step.queue;
+            ultimo = Some(step.question);
+        }
+
+        assert_eq!(
+            ultimo.expect("almeno un passo"),
+            None,
+            "a coda vuota non c'e' piu' niente da chiedere"
+        );
+    }
+
+    #[test]
+    fn una_coda_vuota_non_ha_domande() {
+        let step = advance(&handakuten(), &[], true, &mut rng()).unwrap();
+
+        assert!(step.queue.is_empty());
+        assert_eq!(step.question, None);
+    }
+
     #[tokio::test]
-    async fn rispondere_bene_toglie_il_segno_da_quelli_dovuti() {
+    async fn rispondere_bene_finisce_nello_storico_e_non_crea_carte() {
         let db = db().await;
-        let scheduler = Scheduler::default();
         let now = Utc::now();
         let scope = base(Mode::Input);
-        prepare(&db, &scope, now).await.unwrap();
+        let mut rng = rng();
 
-        let q = next_question(&db, &scope, now, &mut rng())
-            .await
+        let q = start(&scope, &mut rng)
             .unwrap()
-            .unwrap();
+            .question
+            .expect("il giro comincia con una domanda");
         let Prompt::Latin(romaji) = &q.prompt else {
             panic!("l'input mostra la trascrizione");
         };
         assert_eq!(q.format, AnswerFormat::Input);
+        assert!(!romaji.is_empty());
 
         // Si risale al segno atteso dall'identificatore della domanda.
         let segno = q.item.as_str().rsplit(':').next().unwrap().to_owned();
-        assert!(!romaji.is_empty());
 
-        let esito = submit(&db, &scheduler, &scope, &q.item, &Answer::new(&segno), now)
+        let verdict = submit(&db, &scope, &q.item, &Answer::new(&segno), now)
             .await
             .unwrap();
 
-        assert_eq!(esito.verdict, Verdict::Correct);
-        assert!(esito.due_at > now);
+        assert_eq!(verdict, Verdict::Correct);
 
-        let p = progress(&db, &scope, now).await.unwrap();
-        assert_eq!(p.due, 45, "il segno appena studiato non e' piu' dovuto");
-    }
+        let esercizio = Mode::Input.exercise_id();
+        let storico = db.answers(q.item.as_str(), esercizio.as_str()).await.unwrap();
+        assert_eq!(storico.len(), 1);
+        assert!(storico[0].correct);
 
-    #[tokio::test]
-    async fn rispondere_male_lo_rimanda_indietro_di_poco() {
-        let db = db().await;
-        let scheduler = Scheduler::default();
-        let now = Utc::now();
-        let scope = base(Mode::Input);
-        prepare(&db, &scope, now).await.unwrap();
-
-        let q = next_question(&db, &scope, now, &mut rng())
-            .await
-            .unwrap()
-            .unwrap();
-
-        let esito = submit(&db, &scheduler, &scope, &q.item, &Answer::new("ん"), now)
-            .await
-            .unwrap();
-
-        assert!(!esito.verdict.is_correct());
-        assert!(
-            esito.interval_days < 1.0,
-            "una risposta sbagliata deve tornare in giornata: {} giorni",
-            esito.interval_days
+        // Nessuna carta: sui kana non c'e' ripetizione spaziata da tenere.
+        assert_eq!(
+            db.card(q.item.as_str(), esercizio.as_str()).await.unwrap(),
+            None
         );
     }
 
     #[tokio::test]
-    async fn la_sessione_si_svuota_rispondendo_a_tutto() {
+    async fn rispondere_male_dice_cosa_si_accettava() {
         let db = db().await;
-        let scheduler = Scheduler::default();
         let now = Utc::now();
-        let scope = Scope {
-            syllabary: Syllabary::Katakana,
-            groups: vec![KanaGroup::Handakuten],
-            mode: Mode::Recognition,
+        let scope = base(Mode::Input);
+        let mut rng = rng();
+
+        let item = start(&scope, &mut rng).unwrap().queue.remove(0);
+
+        let verdict = submit(&db, &scope, &item, &Answer::new("ん"), now)
+            .await
+            .unwrap();
+
+        let Verdict::Incorrect { accepted } = verdict else {
+            panic!("ん non e' la risposta a nessuno degli altri segni");
         };
+        assert!(!accepted.is_empty(), "va detto cosa sarebbe andato bene");
+    }
 
-        let p = prepare(&db, &scope, now).await.unwrap();
-        assert_eq!(p.total, 5);
+    #[tokio::test]
+    async fn un_giro_intero_si_puo_rifare_subito() {
+        let db = db().await;
+        let now = Utc::now();
+        let scope = handakuten();
+        let mut rng = rng();
 
-        for _ in 0..5 {
-            let q = next_question(&db, &scope, now, &mut rng())
-                .await
-                .unwrap()
-                .expect("ne resta almeno una");
-            // La risposta giusta e' la trascrizione canonica del segno mostrato.
+        let mut step = start(&scope, &mut rng).unwrap();
+        while let Some(q) = step.question.clone() {
             let Prompt::Japanese(segno) = &q.prompt else {
                 unreachable!()
             };
+            // La risposta giusta e' la trascrizione canonica del segno mostrato.
             let atteso = table(Syllabary::Katakana)
                 .all()
                 .iter()
@@ -473,103 +516,16 @@ mod tests {
                 .romaji[0]
                 .clone();
 
-            let esito = submit(&db, &scheduler, &scope, &q.item, &Answer::new(atteso), now)
+            let verdict = submit(&db, &scope, &q.item, &Answer::new(atteso), now)
                 .await
                 .unwrap();
-            assert_eq!(esito.verdict, Verdict::Correct);
+            assert_eq!(verdict, Verdict::Correct);
+
+            step = advance(&scope, &step.queue, true, &mut rng).unwrap();
         }
 
-        assert!(
-            next_question(&db, &scope, now, &mut rng())
-                .await
-                .unwrap()
-                .is_none()
-        );
-        assert_eq!(progress(&db, &scope, now).await.unwrap().due, 0);
-    }
-
-    #[test]
-    fn senza_candidati_non_si_sceglie_niente() {
-        assert_eq!(pick(&[], &mut rng()), None);
-    }
-
-    #[test]
-    fn tra_le_carte_mai_viste_si_tira_a_sorte() {
-        let candidati: Vec<_> = ["a", "b", "c", "d", "e"]
-            .into_iter()
-            .map(|id| candidate(id, None))
-            .collect();
-
-        let usciti: HashSet<_> = (0..12)
-            .filter_map(|seme| pick(&candidati, &mut StdRng::seed_from_u64(seme)))
-            .collect();
-
-        assert!(
-            usciti.len() > 1,
-            "l'ordine di scrittura non deve diventare l'ordine delle domande: {usciti:?}"
-        );
-    }
-
-    #[test]
-    fn una_carta_molto_arretrata_passa_avanti() {
-        let now = Utc::now();
-        let candidati = vec![
-            candidate("arretrata", Some(now - TimeDelta::days(2))),
-            candidate("appena scaduta", Some(now - TimeDelta::minutes(1))),
-            candidate("scaduta ora", Some(now)),
-        ];
-
-        // Qui la sorte non c'entra: chi aspetta da due giorni non aspetta un giro in
-        // piu' perche' e' uscito un numero.
-        for seme in 0..12 {
-            let scelta = pick(&candidati, &mut StdRng::seed_from_u64(seme)).unwrap();
-            assert_eq!(scelta.as_str(), "arretrata");
-        }
-    }
-
-    #[test]
-    fn le_scadenze_vicine_contano_come_pari() {
-        let now = Utc::now();
-        let candidati = vec![
-            candidate("novanta", Some(now - TimeDelta::minutes(90))),
-            candidate("ottanta", Some(now - TimeDelta::minutes(80))),
-            candidate("dieci", Some(now - TimeDelta::minutes(10))),
-        ];
-
-        let usciti: HashSet<_> = (0..12)
-            .filter_map(|seme| pick(&candidati, &mut StdRng::seed_from_u64(seme)))
-            .map(|i| i.as_str().to_owned())
-            .collect();
-
-        assert!(
-            usciti.contains("novanta") && usciti.contains("ottanta"),
-            "dieci minuti di scarto non sono una precedenza: {usciti:?}"
-        );
-        assert!(
-            !usciti.contains("dieci"),
-            "un'ora e mezzo di ritardo invece conta: {usciti:?}"
-        );
-    }
-
-    #[tokio::test]
-    async fn una_sessione_nuova_non_segue_l_ordine_della_tabella() {
-        let db = db().await;
-        let now = Utc::now();
-        let scope = base(Mode::Recognition);
-        prepare(&db, &scope, now).await.unwrap();
-
-        let candidati = due_items(&db, &scope, now).await.unwrap();
-        assert_eq!(candidati.len(), 46, "vanno guardate tutte, non solo la prima");
-
-        let primi: HashSet<_> = (0..12)
-            .filter_map(|seme| pick(&candidati, &mut StdRng::seed_from_u64(seme)))
-            .map(|i| i.as_str().to_owned())
-            .collect();
-
-        assert!(
-            primi.len() > 1,
-            "la prima domanda sarebbe sempre あ, e la sequenza del gojuon diventerebbe \
-             piu' facile da ricordare dei segni: {primi:?}"
-        );
+        // Il giro appena finito non chiude la porta: le scadenze non decidono cosa
+        // entra in una sessione, quindi il secondo giro e' pieno quanto il primo.
+        assert_eq!(start(&scope, &mut rng).unwrap().queue.len(), 5);
     }
 }

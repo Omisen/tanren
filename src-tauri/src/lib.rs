@@ -4,14 +4,15 @@
 
 mod commands;
 
-use tanren_core::shared::srs::Scheduler;
 use tanren_core::shared::storage::Database;
 use tauri::Manager;
 
 /// Quello che ogni comando ha bisogno di avere sottomano.
+///
+/// Non c'e' nessuno scheduler: sui kana la ripetizione spaziata non si usa, e quando
+/// arriveranno i kanji sara' la loro sessione a costruirsene uno.
 pub struct AppState {
     pub db: Database,
-    pub scheduler: Scheduler,
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -34,19 +35,15 @@ pub fn run() {
 
             let db = tauri::async_runtime::block_on(Database::open(&path))?;
 
-            app.manage(AppState {
-                db,
-                scheduler: Scheduler::default(),
-            });
+            app.manage(AppState { db });
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::kana_catalogue,
             commands::normalize_reading,
-            commands::prepare_session,
-            commands::session_progress,
-            commands::next_question,
+            commands::start_session,
+            commands::next_step,
             commands::submit_answer,
         ])
         .run(tauri::generate_context!())
