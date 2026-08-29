@@ -1,30 +1,36 @@
-/* Base mobile-first: nessun ingrandimento accidentale, area sicura rispettata
-   sui telefoni con notch, altezza piena anche con la barra del browser. */
+@import "tailwindcss";
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+/* Palette e font del progetto, ripresi dal logo a pennello: inchiostro scuro
+   e un solo accento rosso. Diventano utility Tailwind (bg-ink, text-accent...). */
+@theme {
+  --color-ink: #12121c;
+  --color-ink-soft: #1c1c2e;
+  --color-paper: #f2f2f2;
+  --color-muted: #9a9ab0;
+  --color-accent: #d94436;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-jp: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-}
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
 
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  color: #f2f2f2;
-  background-color: #12121c;
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-}
+  body {
+    /* Niente ingrandimento accidentale sui tap e nessun flash grigio al tocco:
+       l'uso primario e' col pollice su schermo piccolo. */
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    @apply bg-ink text-paper font-sans antialiased;
+  }
 
-#root {
-  padding: env(safe-area-inset-top) env(safe-area-inset-right)
-    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  #root {
+    /* Rispetta notch e barre di sistema sui telefoni. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
 }
