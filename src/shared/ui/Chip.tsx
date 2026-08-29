@@ -22,8 +22,11 @@ export function Chip({
       onClick={onClick}
       className={`min-h-11 rounded-full border px-4 text-sm transition-colors active:opacity-70 ${
         pressed
-          ? 'border-accent bg-accent/15 text-paper'
-          : 'border-muted/30 text-muted'
+          ? 'border-accent bg-accent-wash text-paper'
+          : // Deriva da riconciliare: ogni altro bordo del progetto e'
+            // `border-hairline` (20%), questo e' al 30%. Lasciato com'era per non
+            // infilare un cambio d'aspetto dentro una riorganizzazione di nomi.
+            'border-muted/30 text-muted'
       }`}
     >
       {children}

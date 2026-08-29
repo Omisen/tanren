@@ -152,7 +152,10 @@ function Card({
       aria-pressed={pressed}
       onClick={onClick}
       className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl border transition-colors active:opacity-70 ${
-        pressed ? 'border-accent bg-accent/10' : 'border-muted/20 bg-ink-soft'
+        // Deriva da riconciliare: l'altra scelta premuta del progetto (`Chip`) usa
+        // `bg-accent-wash` (15%), questa e' al 10%. Lasciata com'era per la stessa
+        // ragione detta in `Chip`.
+        pressed ? 'border-accent bg-accent/10' : 'border-hairline bg-ink-soft'
       }`}
     >
       {children}

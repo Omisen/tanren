@@ -1,19 +1,84 @@
 @import "tailwindcss";
 
+/* Il font giapponese e' imbarcato, non chiesto alla rete: l'app e' local-first e
+   deve funzionare senza connessione. E non e' lasciato al ripiego di sistema,
+   perche' il carattere e' l'elemento primario (sezione 4, regola 2) e non puo'
+   dipendere da quale font giapponese capita di avere installato: sul telefono e
+   sul desktop si vedrebbero forme diverse, o su un Linux senza font CJK dei
+   rettangoli vuoti.
+
+   E' M PLUS Rounded 1c ritagliato ai soli caratteri che l'app puo' mostrare, da
+   3,3 MB a 37 kB. Il ritaglio lo fa `tools/font/generate.py`, che va rieseguito
+   quando arriveranno i kanji.
+
+   `font-display: block` e non `swap`: con swap si vedrebbe prima il ripiego di
+   sistema e poi il salto alla forma giusta, proprio sul segno che si sta
+   studiando. Meglio un istante di nulla che insegnare la forma sbagliata. */
+@font-face {
+  font-family: "M PLUS Rounded 1c";
+  src: url("/fonts/MPLUSRounded1c-kana.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
 /* Palette e font del progetto, ripresi dal logo a pennello: inchiostro scudo
    e un solo accento rosso. Diventano utility Tailwind (bg-ink, text-accent...). */
 @theme {
-  --color-ink: #12121c;
-  --color-ink-soft: #1c1c2e;
-  --color-paper: #f2f2f2;
-  --color-muted: #9a9ab0;
+  
+  --color-ink: #12121c; /* la pagina */
+  --color-ink-soft: #1c1c2e; /* una superficie sollevata sopra la pagina */
+
+  /* --- La rampa del testo ---
+     Quattro gradini, dal primario allo spento. Prima erano due colori piu'
+     opacita' sparse a mano nei componenti (`text-muted/60`, `/40`), che e' lo
+     stesso valore scritto in posti diversi senza un nome: chi legge non sa se
+     due `/60` distanti significano la stessa cosa. Ora il nome dice il ruolo, e
+     i valori sono identici a prima. */
+  --color-paper: #f2f2f2; /* primario: lo si legge */
+  --color-muted: #9a9ab0; /* secondario: etichette, testo di servizio */
+  --color-faint: rgb(154 154 176 / 0.6); /* terziario: contorno, ancora leggibile */
+  --color-dim: rgb(154 154 176 / 0.4); /* spento di proposito: scartato, segnaposto */
+
+  /* --- Bordi ---
+     Tenuti fuori dalla rampa del testo anche se derivano dallo stesso colore:
+     un bordo e un testo debole hanno ruoli diversi e cambieranno per ragioni
+     diverse. */
+  --color-hairline: rgb(154 154 176 / 0.2); /* il bordo normale */
+  --color-hairline-soft: rgb(154 154 176 / 0.1); /* bordo di cio' che e' spento */
+
+  /* --- I colori che significano qualcosa ---
+     Qui il colore porta informazione e non decora. `accent` dice "sbagliato"
+     nella correzione, quindi non puo' dire anche "giusto": e' il motivo per cui
+     esiste `ok`. Le lavature sono i fondi tenui degli stessi due. */
   --color-accent: #d94436;
-  /* L'unico colore fuori dalla palette del logo: serve a dire "giusto" senza
-     riusare l'accento, che nella correzione vuol dire l'opposto. */
   --color-ok: #4caf7d;
+  --color-accent-wash: rgb(217 68 54 / 0.15);
+  --color-ok-wash: rgb(76 175 125 / 0.15);
+
+  /* Il bordo del campo che ha il fuoco. E' l'accento smorzato: deve dire "stai
+     scrivendo qui" senza gridare "sbagliato", che e' l'accento pieno. */
+  --color-focus: rgb(217 68 54 / 0.6);
+
+  /* Il velo sotto un pannello modale. */
+  --color-scrim: rgb(18 18 28 / 0.8);
+
+  /* --- Riservato: la famiglia semantica ---
+     La regola 1 della sezione 4 chiede un colore fisso per tipo di item e una
+     scala per lo stato SRS. I nomi saranno `--color-type-radical`,
+     `--color-type-kanji`, `--color-type-vocab`, `--color-srs-learning`,
+     `--color-srs-review` e seguenti, tenuti separati dal nucleo qui sopra
+     perche' portano significato e non devono colare nella cornice.
+     Vanno **ricalibrati per il fondo scuro**: un colore di categoria scelto per
+     stare su bianco, come quelli dei riferimenti, su nero non regge.
+     Non sono ancora definiti di proposito: oggi esistono solo i kana, quindi non
+     c'e' nessun tipo di item da distinguere ne' nessuno stato SRS da graduare, e
+     inventarli adesso vorrebbe dire indovinare. */
 
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-jp: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
+  /* I ripieghi restano dietro a quello imbarcato: servono solo se il woff2 non
+     si carica, e in quel caso meglio un font di sistema che nessun giapponese. */
+  --font-jp: "M PLUS Rounded 1c", "Noto Sans JP", "Hiragino Sans", sans-serif;
 }
 
 @layer base {

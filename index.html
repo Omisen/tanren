@@ -7,6 +7,15 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
     />
+    <!-- Il carattere e' l'elemento primario: si carica per primo, cosi' non si
+         apre una sessione su un segno ancora invisibile. -->
+    <link
+      rel="preload"
+      href="/fonts/MPLUSRounded1c-kana.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <title>Tanren</title>
   </head>
   <body>

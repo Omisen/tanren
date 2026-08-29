@@ -39,12 +39,12 @@ export function Confirm({
   }, [onCancel])
 
   return (
-    <div className="bg-ink/80 fixed inset-0 z-50 flex flex-col justify-end p-4">
+    <div className="bg-scrim fixed inset-0 z-50 flex flex-col justify-end p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="border-muted/20 bg-ink-soft flex flex-col gap-2 rounded-2xl border p-5"
+        className="border-hairline bg-ink-soft flex flex-col gap-2 rounded-2xl border p-5"
       >
         <h2 id={titleId} className="text-base font-medium">
           {title}

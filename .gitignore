@@ -5,6 +5,15 @@ CLAUDE.md
 # Va versionata sul suo remote (tanren.wiki.git), non dentro questo repo.
 wiki/*.md
 
+# Riferimenti di design (file DESIGN.md presi da getdesign.md): materiale personale
+# di ispirazione, non fa parte del progetto. La regola su come vanno usati sta nel
+# README della cartella e in CLAUDE.md, sezione "4. Design principles".
+design-references/
+
+# Materia prima del ritaglio del font: `tools/font/generate.py` la scarica e la
+# cancella da se'. Resta solo se lo script muore a meta', e sono megabyte.
+public/fonts/*-intero.ttf
+
 # Node
 node_modules/
 dist/
