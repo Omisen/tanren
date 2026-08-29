@@ -15,3 +15,10 @@ serde_json = { workspace = true }
 rand = { workspace = true }
 thiserror = { workspace = true }
 unicode-normalization = { workspace = true }
+sqlx = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+tempfile = { workspace = true }

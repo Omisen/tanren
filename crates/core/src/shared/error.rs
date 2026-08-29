@@ -21,6 +21,30 @@ pub enum CoreError {
     /// L'elemento esiste ma questo tipo di esercizio non sa che farsene.
     #[error("l'esercizio {exercise} non si applica all'elemento {id}")]
     ItemNotSupported { exercise: String, id: String },
+
+    /// Il database locale non ha risposto come previsto.
+    ///
+    /// Il messaggio di sqlx viene appiattito in una stringa perche' l'errore deve
+    /// attraversare il confine verso il frontend, dove un tipo di libreria non
+    /// arriverebbe.
+    #[error("errore di archiviazione: {message}")]
+    Storage { message: String },
+}
+
+impl From<sqlx::Error> for CoreError {
+    fn from(e: sqlx::Error) -> Self {
+        Self::Storage {
+            message: e.to_string(),
+        }
+    }
+}
+
+impl From<sqlx::migrate::MigrateError> for CoreError {
+    fn from(e: sqlx::migrate::MigrateError) -> Self {
+        Self::Storage {
+            message: format!("migrazione fallita: {e}"),
+        }
+    }
 }
 
 /// Scorciatoia per i risultati del dominio.
