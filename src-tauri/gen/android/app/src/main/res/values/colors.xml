@@ -7,4 +7,9 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Lo stesso `ink` della palette del logo, in `src/index.css`. Serve come fondo
+         della finestra: la WebView e' rientrata rispetto alle barre di sistema, e
+         dietro a quelle si vede questo. Se non combaciasse col fondo della pagina si
+         vedrebbero due strisce di colore diverso ai bordi. -->
+    <color name="ink">#FF12121C</color>
 </resources>

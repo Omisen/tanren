@@ -77,7 +77,12 @@ export function SessionScreen() {
         {state.phase === 'done' && <Summary tally={tally} />}
 
         {(state.phase === 'asking' || state.phase === 'answered') && (
-          <div className="flex h-full flex-col">
+          /* `min-h-full` e non `h-full`: con la tastiera aperta lo spazio verticale
+             si dimezza, e un contenitore alto esattamente quanto `main` non potrebbe
+             crescere. Il contenuto traboccherebbe da un `justify-center`, cioe'
+             verrebbe tagliato sopra e sotto, senza niente da scorrere per
+             recuperarlo. Potendo crescere, `main` scorre davvero. */
+          <div className="flex min-h-full flex-col">
             <Meter tally={tally} />
 
             <div className="flex flex-1 flex-col items-center justify-center gap-6">

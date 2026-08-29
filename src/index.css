@@ -31,9 +31,11 @@
     @apply bg-ink text-paper font-sans antialiased;
   }
 
-  #root {
-    /* Rispetta notch e barre di sistema sui telefoni. */
-    padding: env(safe-area-inset-top) env(safe-area-inset-right)
-      env(safe-area-inset-bottom) env(safe-area-inset-left);
-  }
+  /* Qui non si tocca il rientro dalle barre di sistema, dal ritaglio del display e
+     dalla tastiera: su Android lo fa il lato nativo, in `MainActivity.kt`, che
+     restringe la WebView e poi consuma gli insets.
+     C'era una regola che ci provava con `env(safe-area-inset-*)`, ed era sbagliata:
+     su Android quelle variabili descrivono il ritaglio del display, non la status bar
+     e la navigation bar, quindi il contenuto finiva sotto le barre. Gli insets devono
+     avere un padrone solo, e averne due qui significherebbe rientrare due volte. */
 }
