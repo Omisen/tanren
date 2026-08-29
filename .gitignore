@@ -1,6 +1,10 @@
 # Claude / project docs (non versionati)
 CLAUDE.md
 
+# Wiki di GitHub: e' un repository git a se', clonato qui dentro per comodita'.
+# Va versionata sul suo remote (tanren.wiki.git), non dentro questo repo.
+wiki/*.md
+
 # Node
 node_modules/
 dist/

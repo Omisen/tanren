@@ -41,7 +41,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::kana_catalogue,
-            commands::normalize_reading,
+            commands::normalize_input,
             commands::start_session,
             commands::next_step,
             commands::submit_answer,

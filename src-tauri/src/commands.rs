@@ -39,12 +39,18 @@ pub fn kana_catalogue(syllabary: Syllabary) -> Vec<KanaSet> {
     .collect()
 }
 
-/// Riduce un testo alla forma con cui viene confrontato.
+/// Riduce un testo alla forma con cui viene confrontato, sillabario compreso.
 ///
 /// Serve al frontend per mostrare in tempo reale cosa verra' davvero valutato, mentre
 /// l'IME e' ancora in mezzo alla conversione.
+///
+/// E' la pulizia che **non** ripiega sull'hiragana, la stessa che usa `kana.input`:
+/// li' la domanda chiede un sillabario preciso, quindi rispondere か a una domanda su
+/// カ e' sbagliato e l'anteprima non deve far credere il contrario. Quando arrivera'
+/// un esercizio giudicato sulla lettura servira' anche `normalize_reading`, che e'
+/// una funzione diversa e vorra' un comando suo.
 #[tauri::command]
-pub fn normalize_reading(input: String) -> String {
+pub fn normalize_input(input: String) -> String {
     text::normalize_input(&input)
 }
 

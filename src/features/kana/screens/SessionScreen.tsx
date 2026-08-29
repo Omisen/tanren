@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 
-import type { Mode, Prompt, Verdict } from '@/shared/bridge'
+import type { Mode, Prompt, Syllabary, Verdict } from '@/shared/bridge'
 import { Button } from '@/shared/ui/Button'
 import { Confirm } from '@/shared/ui/Confirm'
 import { Screen } from '@/shared/ui/Screen'
 import { useUi } from '@/shared/store/ui'
 
+import { AnswerField } from '../AnswerField'
 import { useSession, type SessionState, type Tally } from '../useSession'
 
 /**
@@ -26,6 +27,11 @@ const ADVANCE_MS = 700
 const MODE_LABELS: Record<Mode, string> = {
   recognition: 'Riconoscimento',
   input: 'Scrittura',
+}
+
+const SYLLABARY_LABELS: Record<Syllabary, string> = {
+  hiragana: 'hiragana',
+  katakana: 'katakana',
 }
 
 export function SessionScreen() {
@@ -75,12 +81,30 @@ export function SessionScreen() {
             <Meter tally={tally} />
 
             <div className="flex flex-1 flex-col items-center justify-center gap-6">
-              <PromptView prompt={state.question.prompt} />
+              <div className="flex flex-col items-center gap-3">
+                {/* Scrivendo, il prompt e' una trascrizione, e `ka` vale sia per か
+                    sia per カ: senza dire quale sillabario la domanda avrebbe due
+                    risposte, e il core ne accetta una sola. */}
+                {state.question.format.mode === 'input' && (
+                  <p className="text-muted/60 text-xs tracking-[0.2em] uppercase">
+                    in {SYLLABARY_LABELS[scope.syllabary]}
+                  </p>
+                )}
+                <PromptView prompt={state.question.prompt} />
+              </div>
 
               {/* Lo spazio dell'esito e' sempre occupato, anche quando non c'e'
                   niente da dire: il segno non deve saltare quando si risponde. */}
-              <div className="flex min-h-14 flex-col items-center gap-1 text-center">
-                {state.phase === 'answered' && <Feedback verdict={state.verdict} />}
+              <div className="flex min-h-16 flex-col items-center gap-1 text-center">
+                {state.phase === 'answered' && (
+                  <Feedback
+                    verdict={state.verdict}
+                    // La risposta attesa e' nell'alfabeto opposto a quello della
+                    // domanda: si mostra il segno se si chiedeva la trascrizione, e
+                    // viceversa.
+                    expects={state.question.prompt.script === 'japanese' ? 'latin' : 'japanese'}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -141,17 +165,32 @@ function Actions({
   if (state.phase !== 'asking' && state.phase !== 'answered') return null
 
   const { format } = state.question
-  if (format.mode !== 'choice') {
-    // La scrittura con l'IME arriva al passo successivo. Fino ad allora l'esercizio
-    // esiste nel core ma non ha una superficie con cui rispondere.
+  const answered = state.phase === 'answered' ? state : null
+
+  if (format.mode === 'input') {
     return (
-      <p className="text-muted/60 py-3 text-center text-xs">
-        La scrittura con l’IME arriva al prossimo passo.
-      </p>
+      <div className="flex flex-col gap-2">
+        <AnswerField
+          // Il campo riparte pulito a ogni domanda. Serve anche il conteggio delle
+          // risposte, non solo il segno: l'ultimo segno rimasto in coda puo' essere
+          // chiesto due volte di fila, e con la sola chiave del segno il campo si
+          // ritroverebbe dentro il tentativo precedente.
+          key={`${state.question.item}:${tally.answered}`}
+          disabled={answered !== null || busy}
+          given={answered?.answer ?? null}
+          onSubmit={onAnswer}
+        />
+
+        <div className="min-h-12">
+          {answered && (
+            <Button variant="quiet" disabled={busy} onClick={onNext}>
+              Avanti
+            </Button>
+          )}
+        </div>
+      </div>
     )
   }
-
-  const answered = state.phase === 'answered' ? state : null
 
   return (
     <div className="flex flex-col gap-2">
@@ -234,15 +273,29 @@ function Option({
   )
 }
 
-function Feedback({ verdict }: { verdict: Verdict }) {
+function Feedback({
+  verdict,
+  expects,
+}: {
+  verdict: Verdict
+  /** In che alfabeto e' la risposta attesa. */
+  expects: 'japanese' | 'latin'
+}) {
   if (verdict.outcome === 'correct') {
     return <p className="text-ok text-base">Giusto</p>
   }
 
+  const japanese = expects === 'japanese'
+
   return (
     <>
-      <p className="text-muted text-sm">Si legge</p>
-      <p className="text-accent text-xl">{verdict.accepted.join(' · ')}</p>
+      <p className="text-muted text-sm">{japanese ? 'Si scrive' : 'Si legge'}</p>
+      <p
+        className={`text-accent ${japanese ? 'font-jp text-4xl leading-none' : 'text-xl'}`}
+        lang={japanese ? 'ja' : undefined}
+      >
+        {verdict.accepted.join(' · ')}
+      </p>
     </>
   )
 }

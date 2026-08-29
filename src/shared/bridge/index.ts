@@ -18,13 +18,14 @@ export function kanaCatalogue(syllabary: Syllabary): Promise<KanaSet[]> {
 }
 
 /**
- * Riduce un testo alla forma con cui verra' confrontato.
+ * Riduce un testo alla forma con cui verra' confrontato, sillabario compreso.
  *
  * Serve a mostrare in tempo reale cosa sara' davvero valutato, mentre l'IME e' ancora
- * in mezzo alla conversione.
+ * in mezzo alla conversione. Non ripiega sull'hiragana: per `kana.input` rispondere か
+ * a una domanda su カ e' sbagliato, e l'anteprima non deve far credere il contrario.
  */
-export function normalizeReading(input: string): Promise<string> {
-  return invoke('normalize_reading', { input })
+export function normalizeInput(input: string): Promise<string> {
+  return invoke('normalize_input', { input })
 }
 
 /** Comincia una sessione: la coda mescolata e la prima domanda. */
