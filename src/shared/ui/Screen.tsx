@@ -12,6 +12,7 @@ export function Screen({
   title,
   onBack,
   action,
+  textured = false,
   children,
 }: {
   title: string
@@ -19,10 +20,12 @@ export function Screen({
   onBack?: () => void
   /** L'azione principale, ancorata in fondo. */
   action?: ReactNode
+  /** Il reticolo di sfondo. Solo dove non c'e' uno stimolo da proteggere. */
+  textured?: boolean
   children: ReactNode
 }) {
   return (
-    <div className="flex h-full flex-col">
+    <div className={`flex h-full flex-col ${textured ? 'paper-grid' : ''}`}>
       <header className="flex items-center gap-1 px-4 pt-4 pb-2">
         {onBack && (
           <button

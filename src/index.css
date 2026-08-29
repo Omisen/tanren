@@ -62,9 +62,31 @@
      nella correzione, quindi non puo' dire anche "giusto": e' il motivo per cui
      esiste `ok`. Le lavature sono i fondi tenui degli stessi due. */
   --color-accent: #d94436;
+  /* Lo stesso rosso, scurito, per quando fa da **fondo** sotto testo bianco.
+     L'accento pieno li' dava 4,35x contro i 4,50x richiesti a 16px; questo da'
+     4,89x. Un colore che regge come testo su scuro non regge come fondo. */
+  --color-accent-strong: #cc3e2f;
+  /* Il testo sopra `accent-strong`. E' bianco pieno e non `paper`, che li' darebbe
+     4,36x: sotto la soglia. E' l'unica eccezione, ed e' misurata. */
+  --color-on-accent: #ffffff;
   --color-ok: #4caf7d;
   --color-accent-wash: rgb(217 68 54 / 0.15);
   --color-ok-wash: rgb(76 175 125 / 0.15);
+
+  /* L'azione primaria: la crema del banner nel logo, con testo `ink` sopra.
+     Non piu' l'accento rosso, che dice «sbagliato»: un colore, un significato.
+     Smorzata rispetto alla crema piena del logo perche' di sera abbagliava. */
+  --color-action: #ddd5c4;
+
+  /* Lo stato «scelto». E' un token di **interfaccia**, non di categoria, perche' lo
+     usa anche `shared/ui`, che non puo' sapere cosa sia un kana. Oggi vale il
+     verde-azzurro dei kana. */
+  --color-selected: #0e7f72;
+  --color-selected-wash: rgb(14 127 114 / 0.15);
+
+  /* La carta a quadretti su cui il giapponese si esercita. Porta significato, non
+     decora, ma sta solo dove non c'e' uno stimolo da proteggere. */
+  --color-grid: rgb(158 156 153 / 0.08);
 
   /* Il bordo del campo che ha il fuoco. E' l'accento smorzato: deve dire "stai
      scrivendo qui" senza gridare "sbagliato", che e' l'accento pieno. */
@@ -132,4 +154,14 @@
      su Android quelle variabili descrivono il ritaglio del display, non la status bar
      e la navigation bar, quindi il contenuto finiva sotto le barre. Gli insets devono
      avere un padrone solo, e averne due qui significherebbe rientrare due volte. */
+}
+
+@layer components {
+  /* Il reticolo della carta da esercizi. Dietro al carattere non ci va mai: la
+     regola 2 dice che nulla deve competere con lo stimolo. */
+  .paper-grid {
+    background-image:
+      repeating-linear-gradient(to right, var(--color-grid) 0 1px, transparent 1px 34px),
+      repeating-linear-gradient(to bottom, var(--color-grid) 0 1px, transparent 1px 34px);
+  }
 }

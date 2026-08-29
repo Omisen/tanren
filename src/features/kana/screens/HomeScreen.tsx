@@ -63,6 +63,7 @@ export function HomeScreen() {
 
   return (
     <Screen
+      textured
       title="Tanren"
       action={
         <Button disabled={scope.groups.length === 0} onClick={() => goTo('session')}>
@@ -152,7 +153,7 @@ function Card({
       aria-pressed={pressed}
       onClick={onClick}
       className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl border transition-colors active:opacity-70 ${
-        pressed ? 'border-accent bg-accent-wash' : 'border-hairline bg-ink-soft'
+        pressed ? 'border-selected bg-selected-wash' : 'border-hairline bg-ink-soft'
       }`}
     >
       {children}

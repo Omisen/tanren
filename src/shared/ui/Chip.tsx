@@ -22,7 +22,7 @@ export function Chip({
       onClick={onClick}
       className={`min-h-11 rounded-full border px-4 text-sm transition-colors active:opacity-70 ${
         pressed
-          ? 'border-accent bg-accent-wash text-paper'
+          ? 'border-selected bg-selected-wash text-paper'
           : 'border-hairline text-muted'
       }`}
     >

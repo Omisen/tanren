@@ -1,13 +1,20 @@
 import type { ButtonHTMLAttributes } from 'react'
 
-type Variant = 'primary' | 'quiet'
+type Variant = 'primary' | 'quiet' | 'danger'
 
 const base =
-  'flex min-h-12 w-full items-center justify-center rounded-xl px-4 text-base font-medium transition-opacity active:opacity-70 disabled:opacity-40'
+  'flex min-h-12 w-full items-center justify-center rounded-full px-5 text-base font-medium transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-40'
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-accent text-white',
+  // Crema con testo scuro, non piu' rosso con testo bianco: il rosso dice
+  // «sbagliato» a due centimetri di distanza, e con il bianco sopra stava anche
+  // sotto la soglia di contrasto (4,35x contro 4,50x). Cosi' sono 12,7x.
+  primary: 'bg-action text-ink',
   quiet: 'bg-ink-soft text-paper',
+  // L'accento resta qui, ed e' l'unico posto in cui fa da fondo: dice
+  // «attenzione», la stessa cosa che dice sull'opzione sbagliata. Nella versione
+  // scurita, perche' sotto testo bianco quello pieno non passava il contrasto.
+  danger: 'bg-accent-strong text-on-accent',
 }
 
 /**

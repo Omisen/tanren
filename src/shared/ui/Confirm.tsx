@@ -52,7 +52,9 @@ export function Confirm({
         <p className="text-muted text-sm">{children}</p>
 
         <div className="mt-4 flex flex-col gap-2">
-          <Button onClick={onConfirm}>{confirmLabel}</Button>
+          <Button variant="danger" onClick={onConfirm}>
+            {confirmLabel}
+          </Button>
           <Button variant="quiet" autoFocus onClick={onCancel}>
             {cancelLabel}
           </Button>

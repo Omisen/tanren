@@ -345,7 +345,7 @@ function Meter({ tally }: { tally: Tally }) {
         className="bg-ink-soft h-1 flex-1 overflow-hidden rounded-full"
       >
         <div
-          className="bg-accent h-full transition-[width] duration-300"
+          className="bg-type-kana h-full transition-[width] duration-300"
           style={{ width: `${ratio * 100}%` }}
         />
       </div>
