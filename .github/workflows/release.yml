@@ -89,7 +89,12 @@ jobs:
 
       - run: npm ci
 
+      # Su una release i segreti servono e la loro assenza e' un errore: un APK non
+      # firmato non si installa. Su una corsa manuale no: quella serve a provare il
+      # workflow, e pretendere la chiave di produzione per una prova a vuoto
+      # impedirebbe proprio la cosa per cui `workflow_dispatch` esiste.
       - name: Portachiavi di firma
+        id: keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -97,8 +102,13 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${KEYSTORE_BASE64:-}" ]; then
-            echo "::error::manca il segreto ANDROID_KEYSTORE_BASE64: senza firma l'APK non e' installabile"
-            exit 1
+            if [ "${{ github.event_name }}" = "release" ]; then
+              echo "::error::manca il segreto ANDROID_KEYSTORE_BASE64: senza firma l'APK non e' installabile"
+              exit 1
+            fi
+            echo "::warning::nessun portachiavi: compilo NON FIRMATO, prova del workflow soltanto"
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/tanren.jks"
           cat > src-tauri/gen/android/keystore.properties <<PROPS
@@ -107,6 +117,7 @@ jobs:
           keyAlias=$KEY_ALIAS
           keyPassword=$KEYSTORE_PASSWORD
           PROPS
+          echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Compila l'APK
         run: npm run tauri android build -- --target aarch64 armv7 --apk
@@ -117,7 +128,13 @@ jobs:
           set -euo pipefail
           src=$(find src-tauri/gen/android/app/build/outputs/apk -name '*-release*.apk' | head -1)
           [ -n "$src" ] || { echo "::error::nessun APK di release prodotto"; exit 1; }
-          out="Tanren-${{ steps.v.outputs.version }}.apk"
+          # Il nome dice se e' firmato, cosi' un artefatto scaricato da una prova
+          # manuale non si confonde con quello di una release.
+          if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then
+            out="Tanren-${{ steps.v.outputs.version }}.apk"
+          else
+            out="Tanren-${{ steps.v.outputs.version }}-unsigned.apk"
+          fi
           cp "$src" "$out"
           echo "path=$out" >> "$GITHUB_OUTPUT"
           ls -lh "$out"
@@ -128,7 +145,7 @@ jobs:
           path: ${{ steps.apk.outputs.path }}
 
       - name: Allega alla release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' && steps.keystore.outputs.signed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.apk.outputs.path }}" --clobber
