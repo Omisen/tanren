@@ -17,9 +17,6 @@ use tanren_core::features::kanji::levels::Level;
 use tanren_core::features::kanji::progress::{Blocked, Gate};
 use tanren_core::features::kanji::study::{Mode as StudyMode, Scope as StudyScope};
 use tanren_core::shared::session::Task;
-use tanren_core::features::kanji::data::Grade;
-use tanren_core::features::kanji::exercise::Family;
-use tanren_core::features::kanji::session::{Mode as KanjiMode, Scope as KanjiScope};
 use tanren_core::shared::error::CoreError;
 use tanren_core::shared::exercise::{
     AnswerFormat, ExerciseTypeId, ItemId, Note, Prompt, Question, Verdict,
@@ -197,35 +194,6 @@ fn l_ambito_attraversa_il_confine_nei_due_versi() {
     // L'ambito arriva dal frontend, quindi deve anche potersi rileggere.
     let riletto: Scope = serde_json::from_value(serde_json::to_value(&scope).unwrap()).unwrap();
     assert_eq!(riletto, scope);
-}
-
-/// L'ambito dei kanji, che il frontend costruisce e il core rilegge.
-#[test]
-fn l_ambito_dei_kanji_attraversa_il_confine_nei_due_versi() {
-    let scope = KanjiScope {
-        grade: Grade::First,
-        families: vec![Family::On, Family::Okurigana],
-        mode: KanjiMode::Recognition,
-    };
-    assert_eq!(
-        serde_json::to_value(&scope).unwrap(),
-        json!({
-            "grade": "first",
-            "families": ["on", "okurigana"],
-            "mode": "recognition"
-        })
-    );
-
-    let riletto: KanjiScope =
-        serde_json::from_value(serde_json::to_value(&scope).unwrap()).unwrap();
-    assert_eq!(riletto, scope);
-
-    // Il grado `secondary` e' il grado 8 di KANJIDIC2, e attraversa col suo nome e non
-    // con un numero: di la' del confine si legge, non si conta.
-    assert_eq!(
-        serde_json::to_value(Grade::Secondary).unwrap(),
-        json!("secondary")
-    );
 }
 
 /// Come la porta del Learning attraversa il confine.

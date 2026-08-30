@@ -31,40 +31,6 @@ export interface KanaSet {
   size: number
 }
 
-/** L'anno di scuola in cui un kanji si insegna. `secondary` sono medie e superiori. */
-export type Grade =
-  | 'first'
-  | 'second'
-  | 'third'
-  | 'fourth'
-  | 'fifth'
-  | 'sixth'
-  | 'secondary'
-
-/**
- * Quale lettura di un kanji si sta allenando.
- *
- * `on` e `kun` mostrano il kanji da solo e dicono quale lettura vogliono;
- * `okurigana` mostra la forma scritta col suo okurigana (生きる), che dice gia' da se'
- * cosa chiede e infatti arriva con `asks` a `null`.
- */
-export type Family = 'on' | 'kun' | 'okurigana'
-
-/** In che modo ci si allena sui kanji. La scrittura con l'IME arriva dopo. */
-export type KanjiMode = 'recognition'
-
-/** Cosa si sta allenando. `families` vuoto significa tutte. */
-export interface KanjiScope {
-  grade: Grade
-  families: Family[]
-  mode: KanjiMode
-}
-
-export interface KanjiSet {
-  family: Family
-  size: number
-}
-
 /* --- Il percorso sui kanji: livelli, faccette, tre modalita' --------------- */
 
 /** Un livello del percorso, da 1 a 69. */
@@ -140,6 +106,56 @@ export interface StudySession {
   /** I kanji da presentare prima di interrogare. Vuoto fuori dal Learning. */
   introducing: string[]
   step: Step
+}
+
+/** In che stato e' un kanji. */
+export type Standing =
+  /** Mai introdotto. */
+  | 'new'
+  /** Introdotto, con almeno una faccetta ancora acerba. */
+  | 'learning'
+  /** Tutte le faccette attive hanno superato la soglia. */
+  | 'mature'
+
+export interface KanjiCell {
+  character: string
+  standing: Standing
+}
+
+/** Una forma scritta col suo okurigana: 生きる, che si legge いきる. */
+export interface Okurigana {
+  form: string
+  readings: string[]
+  /** Se e' una parola che si incontra davvero. */
+  common: boolean
+}
+
+export interface Example {
+  word: string
+  reading: string
+  meaning: string
+}
+
+/** Un kanji, con tutto quello che serve a impararlo. */
+export interface Kanji {
+  character: string
+  strokes: number
+  level: Level
+  frequency: number | null
+  /** Quanto ricorre da solo invece che dentro un composto, da 0 a 1. */
+  aloneRatio: number | null
+  /** I significati: **il primo e' il primario**. */
+  meanings: string[]
+  on: string[]
+  onRare?: string[]
+  /** La lettura on che pesa di piu' nei composti veri. */
+  primaryOn: string | null
+  kun: string[]
+  kunRare?: string[]
+  okurigana: Okurigana[]
+  /** Le letture nei nomi propri: si mostrano, non si chiedono. */
+  nanori: string[]
+  examples: Example[]
 }
 
 /**

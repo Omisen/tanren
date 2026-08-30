@@ -20,7 +20,8 @@ export function useKanaSession(scope: KanaScope): Session {
     () => ({
       start: startKanaSession,
       next: nextKanaStep,
-      submit: submitKanaAnswer,
+      submit: (scope, question, answer, responseTimeMs) =>
+        submitKanaAnswer(scope, question.item, answer, responseTimeMs),
     }),
     [],
   )

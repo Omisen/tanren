@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import type { Prompt, Question, Verdict } from '@/shared/bridge'
+import type { Note, Prompt, Question, Verdict } from '@/shared/bridge'
 import { AnswerField } from '@/shared/ui/AnswerField'
 import { Button } from '@/shared/ui/Button'
 import { Confirm } from '@/shared/ui/Confirm'
@@ -54,6 +54,13 @@ export interface StudyProps {
   hint?: (question: Question) => string | null
   /** Come si presenta la risposta giusta dopo un errore. */
   reveal: (question: Question) => Reveal
+  /**
+   * Come si dice un rilievo su una risposta **giusta**.
+   *
+   * Il core manda un'etichetta (`on_in_hiragana`), non una frase: la frase la scrive
+   * la materia, che e' l'unica a sapere di cosa si sta parlando.
+   */
+  remark?: (note: Note) => string
   /** Serve solo alle modalita' in cui si scrive. */
   input?: {
     placeholder: string
@@ -69,6 +76,7 @@ export function SessionScreen({
   onHome,
   hint,
   reveal,
+  remark,
   input,
 }: StudyProps) {
   const { state, tally, busy, dirty, answer, next, restart } = session
@@ -139,7 +147,11 @@ export function SessionScreen({
                   niente da dire: lo stimolo non deve saltare quando si risponde. */}
               <div className="flex min-h-16 flex-col items-center gap-1 text-center">
                 {state.phase === 'answered' && (
-                  <Feedback verdict={state.verdict} reveal={reveal(state.question)} />
+                  <Feedback
+                    verdict={state.verdict}
+                    reveal={reveal(state.question)}
+                    remark={remark}
+                  />
                 )}
               </div>
             </div>
@@ -337,9 +349,26 @@ function Option({
   )
 }
 
-function Feedback({ verdict, reveal }: { verdict: Verdict; reveal: Reveal }) {
+function Feedback({
+  verdict,
+  reveal,
+  remark,
+}: {
+  verdict: Verdict
+  reveal: Reveal
+  remark?: (note: Note) => string
+}) {
   if (verdict.outcome === 'correct') {
-    return <p className="text-ok text-base">Right</p>
+    // Giusta, ma scritta contro la convenzione: si dice, e non si toglie niente. Chi
+    // ha ricordato la lettura ha ricordato, e il rilievo insegna l'ortografia senza
+    // trasformarla in un errore.
+    const note = verdict.note && remark?.(verdict.note)
+    return (
+      <>
+        <p className="text-ok text-base">Right</p>
+        {note && <p className="text-muted text-sm">{note}</p>}
+      </>
+    )
   }
 
   const japanese = reveal.script === 'japanese'

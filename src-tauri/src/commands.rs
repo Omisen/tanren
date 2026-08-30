@@ -7,11 +7,8 @@
 use chrono::Utc;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, table};
 use tanren_core::features::kana::session as kana;
-use tanren_core::features::kanji::data::Grade;
-use tanren_core::features::kanji::exercise::{FAMILIES, Family, items as kanji_items};
-use tanren_core::features::kanji::levels::Level;
+use tanren_core::features::kanji::levels::{Kanji, Level, table as levels_table};
 use tanren_core::features::kanji::progress::{LevelProgress, Pacing};
-use tanren_core::features::kanji::session as kanji;
 use tanren_core::features::kanji::study;
 use tanren_core::shared::error::CoreError;
 use tanren_core::shared::session::{Step, Task};
@@ -25,13 +22,6 @@ use crate::AppState;
 #[derive(Debug, serde::Serialize)]
 pub struct KanaSet {
     group: KanaGroup,
-    size: usize,
-}
-
-/// Cosa si puo' allenare di un anno di scuola: una famiglia e quanti item contiene.
-#[derive(Debug, serde::Serialize)]
-pub struct KanjiSet {
-    family: Family,
     size: usize,
 }
 
@@ -113,59 +103,6 @@ pub async fn submit_kana_answer(
     .await
 }
 
-/// Cosa si puo' allenare di un anno: le famiglie di letture con quanti item contengono.
-///
-/// Stessa forma del catalogo dei kana. I sette gradi invece non passano di qui: sono
-/// sette e non cambiano, quindi l'interfaccia li conosce come conosce i due sillabari.
-#[tauri::command]
-pub fn kanji_catalogue(grade: Grade) -> Vec<KanjiSet> {
-    FAMILIES
-        .into_iter()
-        .map(|family| KanjiSet {
-            family,
-            size: kanji_items(grade, &[family]).len(),
-        })
-        .collect()
-}
-
-/// Comincia una sessione sui kanji.
-#[tauri::command]
-pub fn start_kanji_session(scope: kanji::Scope) -> Result<Step, CoreError> {
-    let mut rng = rand::rng();
-    kanji::start(&scope, &mut rng)
-}
-
-/// Come continua il giro sui kanji dopo una risposta.
-#[tauri::command]
-pub fn next_kanji_step(
-    scope: kanji::Scope,
-    queue: Vec<Task>,
-    correct: bool,
-) -> Result<Step, CoreError> {
-    let mut rng = rand::rng();
-    kanji::advance(&scope, &queue, correct, &mut rng)
-}
-
-/// Corregge una risposta sui kanji e la registra.
-#[tauri::command]
-pub async fn submit_kanji_answer(
-    state: State<'_, AppState>,
-    scope: kanji::Scope,
-    item: String,
-    answer: String,
-    response_time_ms: Option<i64>,
-) -> Result<Verdict, CoreError> {
-    kanji::submit(
-        &state.db,
-        &scope,
-        &ItemId::new(item),
-        &Answer::new(answer),
-        response_time_ms,
-        Utc::now(),
-    )
-    .await
-}
-
 // ---------------------------------------------------------------------------
 // Il percorso sui kanji: le tre modalita'.
 //
@@ -210,6 +147,50 @@ pub async fn kanji_overview(
 #[tauri::command]
 pub async fn kanji_current_level(state: State<'_, AppState>) -> Result<Level, CoreError> {
     tanren_core::features::kanji::progress::current_level(&state.db, &Pacing::default()).await
+}
+
+/// Una cella della griglia di un livello.
+#[derive(Debug, serde::Serialize)]
+pub struct KanjiCell {
+    character: String,
+    standing: tanren_core::features::kanji::progress::Standing,
+}
+
+/// I kanji di un livello con lo stato di ciascuno, nell'ordine della tabella.
+///
+/// L'ordine e' per frequenza e non cambia: una griglia che si riordina a ogni risposta
+/// non si potrebbe guardare.
+#[tauri::command]
+pub async fn kanji_grid(
+    state: State<'_, AppState>,
+    level: Level,
+) -> Result<Vec<KanjiCell>, CoreError> {
+    let stati =
+        tanren_core::features::kanji::progress::standings(&state.db, level, &Pacing::default())
+            .await?;
+
+    Ok(stati
+        .into_iter()
+        .map(|(character, standing)| KanjiCell {
+            character,
+            standing,
+        })
+        .collect())
+}
+
+/// I kanji chiesti, per intero.
+///
+/// Serve a presentarli prima di interrogarli, e sara' la stessa cosa che alimenta la
+/// scheda di dettaglio: quello che si mostra per conoscere un kanji e quello che si
+/// mostra per riguardarlo sono la stessa scheda.
+#[tauri::command]
+pub fn kanji_details(level: Level, characters: Vec<String>) -> Vec<Kanji> {
+    let t = levels_table(level);
+    characters
+        .iter()
+        .filter_map(|c| t.get(c))
+        .cloned()
+        .collect()
 }
 
 /// Un giro appena cominciato.

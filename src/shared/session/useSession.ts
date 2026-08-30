@@ -35,9 +35,16 @@ import type { Queue, Question, Step, Verdict } from '@/shared/bridge'
 export interface SessionApi<S> {
   start: (scope: S) => Promise<Step>
   next: (scope: S, queue: Queue, correct: boolean) => Promise<Step>
+  /**
+   * Manda la risposta.
+   *
+   * Riceve la **domanda** e non il solo identificatore, perche' quello che si sta
+   * rispondendo e' la domanda: sui kanji la stessa forma scritta ha piu' faccette, e
+   * senza sapere quale si sta chiedendo la risposta finirebbe sulla carta sbagliata.
+   */
   submit: (
     scope: S,
-    item: string,
+    question: Question,
     answer: string,
     responseTimeMs: number | null,
   ) => Promise<Verdict>
@@ -198,7 +205,7 @@ export function useSession<S>(scope: S, api: SessionApi<S>): Session {
       shownAt.current = null
       const elapsed = started === null ? null : Math.round(performance.now() - started)
 
-      api.submit(scope, question.item, value, elapsed)
+      api.submit(scope, question, value, elapsed)
         .then((verdict) => {
           if (run.current !== token) return
           setState({ phase: 'answered', question, answer: value, verdict })

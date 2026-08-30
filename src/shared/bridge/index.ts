@@ -12,7 +12,8 @@
 import { invoke } from '@tauri-apps/api/core'
 
 import type {
-  Grade,
+  Kanji,
+  KanjiCell,
   Overview,
   StudyMode,
   StudyScope,
@@ -21,8 +22,6 @@ import type {
   Task,
   KanaScope,
   KanaSet,
-  KanjiScope,
-  KanjiSet,
   Queue,
   Step,
   Syllabary,
@@ -82,34 +81,6 @@ export function submitKanaAnswer(
   return invoke('submit_kana_answer', { scope, item, answer, responseTimeMs })
 }
 
-/** Le famiglie di letture di un anno di scuola, con quanti item contengono. */
-export function kanjiCatalogue(grade: Grade): Promise<KanjiSet[]> {
-  return invoke('kanji_catalogue', { grade })
-}
-
-/** Comincia una sessione sui kanji. */
-export function startKanjiSession(scope: KanjiScope): Promise<Step> {
-  return invoke('start_kanji_session', { scope })
-}
-
-/** Come continua il giro sui kanji dopo una risposta. */
-export function nextKanjiStep(
-  scope: KanjiScope,
-  queue: Queue,
-  correct: boolean,
-): Promise<Step> {
-  return invoke('next_kanji_step', { scope, queue, correct })
-}
-
-/** Corregge una risposta sui kanji e la registra nello storico. */
-export function submitKanjiAnswer(
-  scope: KanjiScope,
-  item: string,
-  answer: string,
-  responseTimeMs: number | null,
-): Promise<Verdict> {
-  return invoke('submit_kanji_answer', { scope, item, answer, responseTimeMs })
-}
 
 /* --- Il percorso sui kanji ------------------------------------------------- */
 
@@ -122,6 +93,21 @@ export function submitKanjiAnswer(
  */
 export function normalizeReading(input: string): Promise<string> {
   return invoke('normalize_reading', { input })
+}
+
+/** I kanji di un livello con lo stato di ciascuno, nell'ordine per frequenza. */
+export function kanjiGrid(level: Level): Promise<KanjiCell[]> {
+  return invoke('kanji_grid', { level })
+}
+
+/**
+ * I kanji chiesti, per intero.
+ *
+ * Quello che si mostra per conoscere un kanji e quello che si mostra per riguardarlo
+ * sono la stessa scheda.
+ */
+export function kanjiDetails(level: Level, characters: string[]): Promise<Kanji[]> {
+  return invoke('kanji_details', { level, characters })
 }
 
 /** Quanto si e' consolidato un livello, e quali modalita' sono aperte. */

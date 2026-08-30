@@ -1,7 +1,7 @@
 import { KanaHomeScreen } from '@/features/kana/screens/HomeScreen'
 import { KanaSessionScreen } from '@/features/kana/screens/SessionScreen'
 import { KanjiHomeScreen } from '@/features/kanji/screens/HomeScreen'
-import { KanjiSessionScreen } from '@/features/kanji/screens/SessionScreen'
+import { KanjiStudyScreen } from '@/features/kanji/screens/SessionScreen'
 import { useUi } from '@/shared/store/ui'
 
 import { SubjectPicker } from './SubjectPicker'
@@ -25,7 +25,7 @@ export default function App() {
   const subject = useUi((s) => s.subject)
 
   if (screen === 'session') {
-    return subject === 'kana' ? <KanaSessionScreen /> : <KanjiSessionScreen />
+    return subject === 'kana' ? <KanaSessionScreen /> : <KanjiStudyScreen />
   }
 
   const subjects = <SubjectPicker />

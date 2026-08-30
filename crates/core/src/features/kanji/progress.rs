@@ -18,7 +18,7 @@ use chrono::{DateTime, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::features::kanji::facets::{Facet, Item, items};
-use crate::features::kanji::levels::Level;
+use crate::features::kanji::levels::{Level, table};
 use crate::shared::error::Result;
 use crate::shared::srs::retrievability;
 use crate::shared::storage::{Card, CardFilter, Database};
@@ -155,37 +155,62 @@ fn is_mature(card: Option<&Card>, pacing: &Pacing) -> bool {
         .is_some_and(|s| s >= pacing.mature_days)
 }
 
-/// A che punto e' un livello, kanji per kanji.
+/// In che stato e' ogni kanji del livello, **nell'ordine della tabella**.
 ///
 /// Un kanji e' maturo quando **tutte** le sue faccette attive lo sono: sapere il
 /// significato di 生 e non sapere come si legge non e' saperlo.
+pub async fn standings(
+    db: &Database,
+    level: Level,
+    pacing: &Pacing,
+) -> Result<Vec<(String, Standing)>> {
+    let (elenco, cards) = cards_of(db, level).await?;
+
+    let mut per_kanji: std::collections::HashMap<String, Vec<&Item>> = Default::default();
+    for item in &elenco {
+        per_kanji.entry(kanji_of(item)).or_default().push(item);
+    }
+
+    // L'ordine e' quello della tabella, cioe' per frequenza, e non quello di una mappa:
+    // la griglia si guarda, e un ordine che cambia da un giro all'altro sarebbe
+    // illeggibile.
+    Ok(table(level)
+        .all()
+        .iter()
+        .map(|k| {
+            let facce = per_kanji.get(&k.character);
+            let stato = match facce {
+                None => Standing::New,
+                Some(facce) => {
+                    let carte: Vec<Option<&Card>> =
+                        facce.iter().map(|i| card_for(&cards, i)).collect();
+                    if carte.iter().all(Option::is_none) {
+                        Standing::New
+                    } else if carte.iter().all(|c| is_mature(*c, pacing)) {
+                        Standing::Mature
+                    } else {
+                        Standing::Learning
+                    }
+                }
+            };
+            (k.character.clone(), stato)
+        })
+        .collect())
+}
+
+/// A che punto e' un livello.
 pub async fn level_progress(
     db: &Database,
     level: Level,
     pacing: &Pacing,
 ) -> Result<LevelProgress> {
-    let (elenco, cards) = cards_of(db, level).await?;
+    let stati = standings(db, level, pacing).await?;
 
-    let mut per_kanji: std::collections::BTreeMap<String, Vec<&Item>> = Default::default();
-    for item in &elenco {
-        per_kanji.entry(kanji_of(item)).or_default().push(item);
-    }
-
-    let mut new = 0;
-    let mut learning = 0;
-    let mut mature = 0;
-    for facce in per_kanji.values() {
-        let carte: Vec<Option<&Card>> = facce.iter().map(|i| card_for(&cards, i)).collect();
-        if carte.iter().all(Option::is_none) {
-            new += 1;
-        } else if carte.iter().all(|c| is_mature(*c, pacing)) {
-            mature += 1;
-        } else {
-            learning += 1;
-        }
-    }
-
-    let total = per_kanji.len();
+    let conta = |cercato: Standing| stati.iter().filter(|(_, s)| *s == cercato).count();
+    let new = conta(Standing::New);
+    let learning = conta(Standing::Learning);
+    let mature = conta(Standing::Mature);
+    let total = stati.len();
     let ratio = if total > 0 {
         mature as f32 / total as f32
     } else {
@@ -435,6 +460,25 @@ mod tests {
         let p = level_progress(&db, primo(), &pacing).await.unwrap();
         assert!(p.complete, "quota {}", p.ratio);
         assert!(p.mature < p.total, "e non serve averli tutti");
+    }
+
+    #[tokio::test]
+    async fn la_griglia_tiene_l_ordine_della_tabella() {
+        let db = db().await;
+        let pacing = Pacing::default();
+        let now = Utc::now();
+        let tabella = table(primo()).all();
+
+        impara(&db, primo(), &tabella[1].character.clone(), 40.0, now).await;
+
+        let stati = standings(&db, primo(), &pacing).await.unwrap();
+        assert_eq!(stati.len(), tabella.len());
+        // Una griglia che si riordina a ogni risposta non si potrebbe guardare.
+        for (i, (kanji, _)) in stati.iter().enumerate() {
+            assert_eq!(kanji, &tabella[i].character);
+        }
+        assert_eq!(stati[0].1, Standing::New);
+        assert_eq!(stati[1].1, Standing::Mature);
     }
 
     #[tokio::test]
