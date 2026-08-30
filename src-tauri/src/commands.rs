@@ -143,6 +143,16 @@ pub async fn kanji_overview(
     })
 }
 
+/// Quanti livelli conta il percorso.
+///
+/// L'interfaccia ne ha bisogno per non offrire livelli che non esistono. Arriva dal
+/// core e non e' scritto di la': il numero cambia quando si rigenera il contenuto, e
+/// due copie dello stesso numero divergerebbero senza che nessuno se ne accorga.
+#[tauri::command]
+pub fn kanji_level_count() -> u8 {
+    tanren_core::features::kanji::levels::LEVELS
+}
+
 /// Fin dove si e' arrivati: il primo livello non ancora consolidato.
 #[tauri::command]
 pub async fn kanji_current_level(state: State<'_, AppState>) -> Result<Level, CoreError> {

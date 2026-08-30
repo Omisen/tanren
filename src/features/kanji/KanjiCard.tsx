@@ -9,9 +9,15 @@ import type { Kanji } from '@/shared/bridge'
  *
  * # Le due etichette PRIMARY sono su assi diversi
  *
- * Una dice quale significato e' quello principale, l'altra quale lettura on pesa di
- * piu' nei composti veri. Non sono la stessa scelta e non si implicano: 生 significa
- * «life» e si legge セイ, ma sono due fatti indipendenti.
+ * Una dice quale significato e' quello principale, le altre quale lettura viene prima.
+ * Non sono la stessa scelta e non si implicano: 生 significa «life» e si legge セイ, ma
+ * sono due fatti indipendenti.
+ *
+ * E le due primarie di lettura non si derivano allo stesso modo: la on pesa i
+ * composti, la kun guarda come si legge il kanji **da solo**, perche' dentro un
+ * composto una kun prende la forma legata, che e' un'altra lettura. La primaria kun
+ * compare quindi di rado, su quattro kanji soltanto: dove il dato non decide non si
+ * marca niente.
  *
  * # Perche' le on sono in katakana e le kun in hiragana
  *
@@ -45,7 +51,13 @@ export function KanjiCard({ kanji }: { kanji: Kanji }) {
           primary={kanji.primaryOn}
           empty="none"
         />
-        <Readings label="Kun'yomi" readings={kanji.kun} rare={kanji.kunRare} empty="none" />
+        <Readings
+          label="Kun'yomi"
+          readings={kanji.kun}
+          rare={kanji.kunRare}
+          primary={kanji.primaryKun}
+          empty="none"
+        />
       </div>
 
       {kanji.okurigana.length > 0 && (

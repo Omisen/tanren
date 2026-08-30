@@ -215,15 +215,30 @@ async fn seen_tasks(db: &Database) -> Result<Vec<Task>> {
     Ok(cards.into_iter().filter_map(as_task).collect())
 }
 
-/// Una carta diventa un compito solo se e' di questa materia.
+/// Una carta diventa un compito solo se e' di questa materia **e se esiste ancora**.
 ///
 /// L'archivio non e' diviso per materia, e non deve esserlo: e' qui che si tiene fuori
 /// quello che non ci riguarda.
+///
+/// # Perche' non basta riconoscere la materia
+///
+/// Perche' l'identificatore porta dentro il livello, e i livelli si rifanno quando si
+/// rigenera il contenuto: una carta studiata quando 年 stava al primo livello resta
+/// scritta come `kanji:1:年` anche dopo che 年 e' passato al nono. Quella carta non
+/// e' di un'altra materia e il livello che dichiara esiste, quindi i due controlli
+/// facili la lascerebbero passare; poi pero' non si risolve, e l'errore risale fino a
+/// far fallire l'avvio del giro. **Una traccia rimasta indietro deve sparire in
+/// silenzio, non rompere il Drill.**
 fn as_task(card: Card) -> Option<Task> {
     let exercise = ExerciseTypeId::owned(card.exercise_type);
-    exercise_for(&exercise)?;
+    let esercizio = exercise_for(&exercise)?;
     let item = ItemId::new(card.item_id);
     level_of(&item)?;
+
+    // L'unico modo onesto di sapere se l'item esiste ancora e' chiederlo a chi lo sa
+    // risolvere, cioe' all'esercizio stesso.
+    esercizio.grade(&item, &Answer::new("")).ok()?;
+
     Some(Task::new(item, exercise))
 }
 
@@ -442,6 +457,40 @@ mod tests {
 
         let plan = plan(&db, &scope(Mode::Drill), &pacing, now).await.unwrap();
         assert_eq!(plan.tasks.len(), pacing.drill_size, "un giro lungo quanto dichiarato");
+    }
+
+    #[tokio::test]
+    async fn una_carta_rimasta_indietro_non_rompe_il_giro() {
+        let db = db().await;
+        let pacing = Pacing::default();
+        let now = Utc::now();
+
+        // Qualcosa di buono, per avere un giro da fare.
+        let uno = table(primo()).all()[0].character.clone();
+        impara(&db, primo(), &uno, 40.0, now).await;
+
+        // E una carta che parla di un kanji che in quel livello non c'e' (piu'): e'
+        // quello che resta quando i livelli si rifanno e un kanji si sposta.
+        db.record_answer(NewAnswer {
+            item_id: "kanji:1:年",
+            exercise_type: Facet::Meaning.exercise_id().as_str(),
+            correct: true,
+            answer: "year",
+            answered_at: now,
+            response_time_ms: None,
+            scheduling: None,
+        })
+        .await
+        .unwrap();
+
+        // Il Drill deve ignorarla e partire lo stesso, non fallire.
+        let plan = plan(&db, &scope(Mode::Drill), &pacing, now).await.unwrap();
+        assert!(!plan.tasks.is_empty(), "il giro c'e' comunque");
+        assert!(
+            !plan.tasks.iter().any(|t| t.item.as_str() == "kanji:1:年"),
+            "la traccia rimasta indietro sparisce in silenzio"
+        );
+        assert!(start(&plan, &mut rng()).is_ok(), "e il giro si apre");
     }
 
     #[tokio::test]

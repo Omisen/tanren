@@ -28,6 +28,19 @@ and are used under its licence.
 - Licence statement: <http://www.edrdg.org/edrdg/licence.html>
 - Licence: **Creative Commons Attribution-ShareAlike 4.0**
 
+## The level ordering is ours, and deliberately so
+
+The order in which kanji are introduced is **not taken from any existing progression
+list**. It is computed by `generate.py` with a topological sort over the component data
+kanjium publishes in `elements.kanji_parts`, so that a kanji never comes before the
+pieces it is built from, with ties broken by stroke count and then frequency. Both inputs
+are CC BY-SA, like the rest of the data.
+
+This matters beyond tidiness: published progression orders belong to the services that
+designed them and are not free data. Component-first progression is an idea, and ideas are
+not owned; a particular ordering of 2,136 characters is a work. Ours is generated, and the
+generator is in the repository for anyone to re-run.
+
 ## What this means for Tanren
 
 Both statements extend to "any data files which are derived from them". The tables in

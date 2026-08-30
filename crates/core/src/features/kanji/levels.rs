@@ -14,14 +14,18 @@
 //! # Perche' i livelli e non gli anni di scuola
 //!
 //! Perche' l'anno di scuola giapponese non e' un ordine di difficolta' per chi non e'
-//! madrelingua, e un anno da 328 kanji non si finisce mai. L'asse e' quello di
-//! **WaniKani**, che kanjium porta: livelli da una ventina di kanji, ordinati per
-//! componenti.
+//! madrelingua, e un anno da 328 kanji non si finisce mai.
 //!
-//! WaniKani pero' copre **1.662 joyo su 2.136**. I 474 che restano fuori sono quasi
-//! tutti kanji rari delle medie e delle superiori, e si accodano in livelli da
-//! venticinque ordinati per frequenza: sono i joyo che si incontrano di meno, quindi
-//! stare in fondo e' il loro posto. In tutto **69 livelli**.
+//! L'ordine e' **calcolato**, non importato: un ordinamento topologico sui componenti
+//! che kanjium dichiara in `kanji_parts`, cosi' che un kanji non venga mai prima dei
+//! pezzi di cui e' fatto, con i pareggi rotti per numero di tratti e poi per
+//! frequenza. Ne escono **86 livelli** da venticinque, tutti della stessa forma:
+//! niente discontinuita' a meta' percorso.
+//!
+//! Che sia calcolato e non letto da una lista e' una differenza che conta anche
+//! fuori dal codice: le liste di progressione dei servizi commerciali non sono dati
+//! liberi, mentre i componenti e i tratti arrivano dalle stesse fonti CC BY-SA di
+//! tutto il resto.
 //!
 //! # Perche' i file stanno nel binario
 //!
@@ -45,12 +49,12 @@ use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
 
 /// Quanti livelli conta il percorso.
-pub const LEVELS: u8 = 69;
+pub const LEVELS: u8 = 86;
 
 /// Un livello del percorso, da 1 a [`LEVELS`].
 ///
-/// I livelli da 1 a 50 sono quelli di WaniKani; dal 51 in poi sono la coda dei joyo
-/// che WaniKani non copre, ordinati per frequenza.
+/// I livelli sono tutti della stessa forma, venticinque kanji l'uno, e l'ordine viene
+/// da un topologico sui componenti: vedi la testa del modulo.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 // In uscita e' un numero e basta; in entrata passa da `TryFrom`, che rifiuta quelli
 // fuori scala. Senza, un livello 999 arrivato dal confine sfonderebbe l'indice delle
@@ -161,6 +165,17 @@ pub struct Kanji {
     pub primary_on: Option<String>,
     /// Le letture kun del kanji nudo, senza okurigana.
     pub kun: Vec<String>,
+    /// La lettura kun con cui il kanji si legge piu' spesso **da solo**.
+    ///
+    /// Non e' derivata come [`Self::primary_on`], e non poteva esserlo: quella pesa i
+    /// composti, ma dentro un composto una kun prende la forma legata, che e' un'altra
+    /// dalla lettura da isolato. Verificato che sbaglia: direbbe いな per 稲, che da solo
+    /// e' いね. Qui si guarda la voce di dizionario che e' il kanji da solo.
+    ///
+    /// `None` quasi sempre, e per due ragioni diverse: perche' di kun nuda ce n'e' una
+    /// sola e non c'e' niente da scegliere (553 kanji su 595), o perche' il dato non
+    /// discrimina. **Ne restano quattro marcati**: 雌, 雄, 女, 羽.
+    pub primary_kun: Option<String>,
     #[serde(default)]
     pub kun_rare: Vec<String>,
     pub okurigana: Vec<Okurigana>,
@@ -290,6 +305,23 @@ static RAW: [&str; LEVELS as usize] = [
     include_str!("../../../data/kanji/levels/level-67.json"),
     include_str!("../../../data/kanji/levels/level-68.json"),
     include_str!("../../../data/kanji/levels/level-69.json"),
+    include_str!("../../../data/kanji/levels/level-70.json"),
+    include_str!("../../../data/kanji/levels/level-71.json"),
+    include_str!("../../../data/kanji/levels/level-72.json"),
+    include_str!("../../../data/kanji/levels/level-73.json"),
+    include_str!("../../../data/kanji/levels/level-74.json"),
+    include_str!("../../../data/kanji/levels/level-75.json"),
+    include_str!("../../../data/kanji/levels/level-76.json"),
+    include_str!("../../../data/kanji/levels/level-77.json"),
+    include_str!("../../../data/kanji/levels/level-78.json"),
+    include_str!("../../../data/kanji/levels/level-79.json"),
+    include_str!("../../../data/kanji/levels/level-80.json"),
+    include_str!("../../../data/kanji/levels/level-81.json"),
+    include_str!("../../../data/kanji/levels/level-82.json"),
+    include_str!("../../../data/kanji/levels/level-83.json"),
+    include_str!("../../../data/kanji/levels/level-84.json"),
+    include_str!("../../../data/kanji/levels/level-85.json"),
+    include_str!("../../../data/kanji/levels/level-86.json"),
 ];
 
 /// Le tabelle gia' analizzate. Ognuna si costruisce alla prima richiesta e poi resta.
@@ -395,8 +427,8 @@ mod tests {
 
     #[test]
     fn le_letture_rare_stanno_fuori_dalle_altre() {
-        let t = table(Level::new(5).unwrap());
-        let ku = t.get("行").expect("行 sta al livello 5");
+        let t = table(Level::new(9).unwrap());
+        let ku = t.get("行").expect("行 sta al livello 9");
         assert_eq!(ku.on, ["コウ", "ギョウ"]);
         assert_eq!(ku.on_rare, ["アン"], "アン si incontra di rado");
         assert_eq!(ku.primary_on.as_deref(), Some("コウ"));
@@ -404,7 +436,7 @@ mod tests {
 
     #[test]
     fn una_forma_con_due_letture_e_una_forma_sola() {
-        let t = table(Level::new(5).unwrap());
+        let t = table(Level::new(9).unwrap());
         let ku = t.get("行").unwrap();
         let iku = ku.okurigana.iter().find(|o| o.form == "行く").unwrap();
         assert_eq!(iku.readings, ["いく", "ゆく"]);
@@ -414,14 +446,14 @@ mod tests {
     fn la_lettura_on_primaria_pesa_i_composti_invece_di_contarli() {
         // 生 ha piu' composti con ショウ ma quelli che si leggono davvero (生活,
         // 学生, 先生) sono con セイ. Contare darebbe la risposta sbagliata.
-        let vita = table(Level::new(3).unwrap()).get("生").unwrap();
+        let vita = table(Level::new(5).unwrap()).get("生").unwrap();
         assert_eq!(vita.primary_on.as_deref(), Some("セイ"));
         assert_eq!(vita.on, ["セイ", "ショウ"]);
     }
 
     #[test]
     fn chi_vive_nei_composti_si_distingue_da_chi_sta_da_solo() {
-        let vita = table(Level::new(3).unwrap()).get("生").unwrap();
+        let vita = table(Level::new(5).unwrap()).get("生").unwrap();
         let io = table(Level::new(14).unwrap()).get("私").expect("私 sta al livello 14");
         assert!(vita.alone_ratio.unwrap() < 0.05, "生 vive nei composti");
         assert!(io.alone_ratio.unwrap() > 0.4, "私 sta quasi sempre da solo");
@@ -429,7 +461,7 @@ mod tests {
 
     #[test]
     fn le_forme_comuni_sono_marcate() {
-        let vita = table(Level::new(3).unwrap()).get("生").unwrap();
+        let vita = table(Level::new(5).unwrap()).get("生").unwrap();
         let comune = |f: &str| vita.okurigana.iter().find(|o| o.form == f).unwrap().common;
         assert!(comune("生きる"));
         assert!(comune("生える"), "il corpus non la contiene ma kanjium la dice comune");
@@ -450,12 +482,44 @@ mod tests {
     #[test]
     fn un_livello_fuori_scala_non_attraversa_il_confine() {
         assert!(serde_json::from_str::<Level>("3").is_ok());
-        for fuori in ["0", "70", "255"] {
+        for fuori in ["0", "87", "255"] {
             assert!(
                 serde_json::from_str::<Level>(fuori).is_err(),
                 "{fuori} non e' un livello e non deve entrare"
             );
         }
+    }
+
+    #[test]
+    fn i_livelli_hanno_tutti_la_stessa_misura_tranne_l_ultimo() {
+        for level in Level::all() {
+            let quanti = table(level).all().len();
+            if level.get() < LEVELS {
+                assert_eq!(quanti, 25, "livello {level}");
+            } else {
+                assert!((1..=25).contains(&quanti), "l'ultimo livello e' un resto");
+            }
+        }
+    }
+
+    #[test]
+    fn la_difficolta_sale_lungo_il_percorso() {
+        // L'ordine viene da un topologico sui componenti coi pareggi rotti per numero
+        // di tratti: la conseguenza visibile e' che i segni si complicano andando
+        // avanti. Se un domani il criterio cambiasse di nascosto, questo se ne
+        // accorgerebbe.
+        let medi = |level: Level| {
+            let voci = table(level).all();
+            voci.iter().map(|k| u32::from(k.strokes)).sum::<u32>() as f32 / voci.len() as f32
+        };
+
+        let primo = medi(Level::new(1).unwrap());
+        let mezzo = medi(Level::new(43).unwrap());
+        let ultimo = medi(Level::new(LEVELS).unwrap());
+
+        assert!(primo < mezzo, "{primo} tratti contro {mezzo}");
+        assert!(mezzo < ultimo, "{mezzo} tratti contro {ultimo}");
+        assert!(primo < 4.0, "il primo livello e' fatto di segni semplici: {primo}");
     }
 
     #[test]

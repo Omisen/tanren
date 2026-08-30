@@ -33,7 +33,7 @@ export interface KanaSet {
 
 /* --- Il percorso sui kanji: livelli, faccette, tre modalita' --------------- */
 
-/** Un livello del percorso, da 1 a 69. */
+/** Un livello del percorso. Quanti siano lo dice `kanjiLevelCount`. */
 export type Level = number
 
 /**
@@ -163,6 +163,8 @@ export interface Kanji {
   /** La lettura on che pesa di piu' nei composti veri. */
   primaryOn: string | null
   kun: string[]
+  /** La kun con cui il kanji si legge piu' spesso da solo. Quasi sempre `null`. */
+  primaryKun: string | null
   kunRare?: string[]
   okurigana: Okurigana[]
   /** Le letture nei nomi propri: si mostrano, non si chiedono. */

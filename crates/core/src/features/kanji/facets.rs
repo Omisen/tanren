@@ -482,9 +482,9 @@ mod tests {
         StdRng::seed_from_u64(7)
     }
 
-    /// 生 sta al livello 3, e per tutta la sua ricchezza di letture e' il caso peggiore.
+    /// 生 sta al livello 5, e per tutta la sua ricchezza di letture e' il caso peggiore.
     fn vita() -> Level {
-        Level::new(3).unwrap()
+        Level::new(5).unwrap()
     }
 
     fn id(level: Level, form: &str) -> ItemId {
@@ -531,7 +531,7 @@ mod tests {
 
     #[test]
     fn ogni_item_si_risolve_da_solo() {
-        for level in [Level::new(1).unwrap(), vita(), Level::new(69).unwrap()] {
+        for level in [Level::new(1).unwrap(), vita(), Level::new(86).unwrap()] {
             for item in items(level) {
                 let esercizio = item.facet.exercise_id();
                 let risolto = resolve(&item.id, &esercizio).expect("l'item si risolve");
@@ -671,7 +671,7 @@ mod tests {
     #[test]
     fn una_forma_con_due_letture_le_accetta_entrambe() {
         // 行く si legge sia いく sia ゆく: due risposte buone alla stessa domanda.
-        let livello = Level::new(5).unwrap();
+        let livello = Level::new(9).unwrap();
         let item = id(livello, "行く");
         for lettura in ["いく", "ゆく"] {
             assert!(

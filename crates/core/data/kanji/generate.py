@@ -29,6 +29,7 @@ si estende esplicitamente ai dati derivati.
 """
 import argparse
 import collections
+import heapq
 import json
 import re
 import sqlite3
@@ -54,12 +55,16 @@ SOURCE = {
     "licence": "CC BY-SA 4.0",
     "url": "https://github.com/mifunetoshiro/kanjium",
     "includes": "EDICT, KANJIDIC, KRADFILE (EDRDG, CC BY-SA 4.0)",
+    # L'ordine dei livelli non e' un campo di kanjium: e' calcolato qui, con un
+    # ordinamento topologico sui componenti che kanjium dichiara in `kanji_parts`.
+    "ordering": "topological over kanji_parts, ties by strokes then frequency",
 }
 
 FORMAT_VERSION = 1
 
-# Quanti kanji per livello nella coda oltre WaniKani, vedi `livelli()`.
-CODA = 25
+# Quanti kanji per livello. Venticinque e' una misura, non una legge: abbastanza da
+# essere un traguardo, poco da vedere la fine. Cambiarla rifa' tutti i livelli.
+LIVELLO = 25
 
 # Quanto pesa un composto quando si cerca la lettura on dominante. Le classi sono
 # quelle di kanjium; l'asterisco marca l'ambiguo e non cambia la classe.
@@ -79,9 +84,8 @@ def intero(v) -> int | None:
     """Un numero, oppure niente.
 
     kanjium usa la **stringa vuota** dove ci si aspetterebbe NULL, e lo fa su piu' di
-    una colonna: `wanikani` e `frequency` almeno. Chi la legge come se fosse un numero
-    conta 2.136 kanji con un livello dove sono 1.662, ed e' un errore che non si vede
-    finche' qualcosa non prova a leggerlo davvero.
+    una colonna. Chi la legge come se fosse un numero conta valori che non ci sono, ed
+    e' un errore che non si vede finche' qualcosa non prova a leggerlo davvero.
     """
     return v if isinstance(v, int) else None
 
@@ -148,29 +152,119 @@ def spezza_kun(regolari: list[str], rare: list[str]) -> tuple[list, list, list]:
     return nude, nude_rare, forme
 
 
-def livelli(voci: list[dict]) -> None:
-    """Assegna a ogni kanji il livello a cui appartiene, scrivendolo dentro la voce.
+def primaria_kun(nude: list[str], isolate: dict[str, int]) -> str | None:
+    """La lettura kun con cui il kanji si legge piu' spesso **da solo**.
 
-    L'asse e' quello di **WaniKani**, che kanjium porta: cinquanta livelli da una
-    ventina di kanji, ordinati per componenti, cioe' una progressione pensata per chi
-    impara. Gli anni di scuola giapponesi restano nel dato ma non sono l'asse: non
-    sono un ordine di difficolta' per chi non e' madrelingua, e un anno da 328 kanji
-    non si finisce mai.
+    # Perche' non lo stesso metodo delle letture on
 
-    **WaniKani pero' non copre tutti i joyo: sono 1.662 su 2.136.** I 474 che restano
-    fuori sono quasi tutti kanji rari delle medie e delle superiori (il piu' comune e'
-    藩, al posto 807 per frequenza); delle elementari ne mancano dieci. Lasciarli fuori
-    vorrebbe dire non poter mai studiare un quinto dei joyo, quindi si accodano in
-    fondo in livelli da venticinque, ordinati per frequenza. Che stiano per ultimi non
-    e' un ripiego: sono i joyo che si incontrano di meno.
+    Perche' misurerebbe la cosa sbagliata, ed e' stato verificato che sbaglia. La
+    primaria on si deriva pesando i composti; ma una kun nuda e' per definizione come
+    si legge il kanji **isolato**, e dentro un composto le kun prendono la forma
+    legata, che e' un'altra: quel metodo direbbe いな per 稲 (che da solo e' いね), は per
+    羽 (はね), あま per 雨 (あめ), こ per 黄 (き). Quattro su quattro sbagliati.
+
+    Qui si guarda invece la voce di `edict` che e' **il kanji da solo**, con la classe
+    di frequenza di ciascuna lettura: e' l'unico dato che misuri la lettura da isolato.
+
+    Restituisce `None` quando il dato non discrimina, e succede spesso, perche' quelle
+    voci sono quasi tutte marcate ambigue nella fonte. Su 2.136 joyo appena **70 hanno
+    piu' di una kun nuda** (per gli altri la primaria sarebbe l'unica che c'e', cioe'
+    non servirebbe), e di quei 70 se ne decidono 19. Marcarne una a caso sugli altri 51
+    sarebbe peggio che non marcarla: `None` vuol dire non misurato, non pareggio.
     """
-    coperti = [v for v in voci if v.pop("_wk") is not None]
-    resto = [v for v in voci if "level" not in v]
+    if len(nude) < 2:
+        return None
+    pesi = {n: isolate.get(n, 0) for n in nude}
+    migliore = max(pesi.values())
+    if migliore == 0:
+        return None
+    vincitori = [n for n in nude if pesi[n] == migliore]
+    return vincitori[0] if len(vincitori) == 1 else None
 
-    resto.sort(key=lambda v: (v["frequency"] is None, v["frequency"] or 0, v["character"]))
-    ultimo = max((v["level"] for v in coperti), default=0)
-    for i, voce in enumerate(resto):
-        voce["level"] = ultimo + 1 + i // CODA
+
+def livelli(voci: list[dict], parti: dict[str, set[str]]) -> None:
+    """Assegna a ogni kanji il livello, scrivendolo dentro la voce.
+
+    # Da dove viene l'ordine
+
+    Da un **ordinamento topologico sul grafo dei componenti**: un kanji non puo'
+    venire prima dei pezzi di cui e' fatto. I pezzi li dichiara kanjium nella colonna
+    `kanji_parts` della tabella `elements`, e si tengono solo quelli che sono a loro
+    volta joyo, perche' gli altri non si studiano.
+
+    L'ordine **non e' letto da nessuna lista preesistente**: e' calcolato qui, da dati
+    di composizione e dal numero di tratti. E' una differenza che conta, perche' le
+    liste di progressione dei servizi commerciali non sono dati liberi.
+
+    # Come si rompono i pareggi
+
+    Con una coda di priorita' e non a strati: a ogni passo esce **il piu' semplice fra
+    quelli disponibili**, cioe' fra quelli che hanno gia' tutti i componenti
+    introdotti. La chiave e' tratti crescenti, poi frequenza, poi il carattere per
+    determinismo assoluto.
+
+    A strati sarebbe peggio: un kanji da venti tratti finirebbe nel primo livello solo
+    perche' i suoi pezzi non sono joyo. Cosi' invece la difficolta' sale davvero, e i
+    componenti restano comunque garantiti prima dei composti.
+
+    # Il costo di mettere i tratti prima della frequenza
+
+    Che qualche kanji raro e semplice arriva presto: 乙 e' di un tratto e sta nel primo
+    livello pur essendo al posto 1657 per frequenza, mentre 日, che e' il quarto piu'
+    comune, aspetta il secondo. E' il prezzo di una progressione che sale per forma
+    invece che per utilita' immediata, ed e' una scelta, non una svista.
+    """
+    per_carattere = {v["character"]: v for v in voci}
+
+    # Archi componente -> kanji, e quanti componenti mancano ancora a ciascuno.
+    figli: dict[str, set[str]] = collections.defaultdict(set)
+    mancanti = {k: len(p) for k, p in parti.items()}
+    for k, comp in parti.items():
+        for d in comp:
+            figli[d].add(k)
+
+    def chiave(k: str) -> tuple:
+        v = per_carattere[k]
+        # Senza rango di frequenza si va in fondo al proprio gruppo di tratti, non in
+        # testa: un numero mancante non e' uno zero.
+        return (v["strokes"], v["frequency"] if v["frequency"] is not None else 10**6, k)
+
+    pronti = [(chiave(k), k) for k, n in mancanti.items() if n == 0]
+    heapq.heapify(pronti)
+
+    ordine: list[str] = []
+    while pronti:
+        _, k = heapq.heappop(pronti)
+        ordine.append(k)
+        for f in sorted(figli[k]):
+            mancanti[f] -= 1
+            if mancanti[f] == 0:
+                heapq.heappush(pronti, (chiave(f), f))
+
+    # Se ne restasse fuori qualcuno il grafo avrebbe un ciclo, cioe' un kanji che
+    # contiene se' stesso passando per altri. Verificato che non succede, ma tacere
+    # sarebbe peggio che accorgersene tardi.
+    assert len(ordine) == len(voci), (
+        f"ordinamento incompleto: {len(ordine)} su {len(voci)}, il grafo ha un ciclo"
+    )
+
+    for i, k in enumerate(ordine):
+        per_carattere[k]["level"] = i // LIVELLO + 1
+
+
+def componenti(c: sqlite3.Cursor, joyo: set[str]) -> dict[str, set[str]]:
+    """Per ogni joyo, i suoi componenti che sono a loro volta joyo.
+
+    `kanji_parts` e' gia' la chiusura transitiva (時 elenca 日, 寺, 寸, 土, 士, dove 寸 e
+    土 stanno dentro 寺): per un topologico non cambia niente, gli archi in piu' sono
+    ridondanti.
+    """
+    out: dict[str, set[str]] = {k: set() for k in joyo}
+    for k, parts in c.execute("SELECT kanji,kanji_parts FROM elements"):
+        if k not in joyo:
+            continue
+        out[k] = {x for x in (parts or "").split(",") if x and x != k and x in joyo}
+    return out
 
 
 def main() -> int:
@@ -212,9 +306,17 @@ def main() -> int:
 
     # --- quali forme con okurigana sono parole che si incontrano ---
     comuni = set()
-    for k, oku, fr in c.execute("SELECT kanji,okurigana,frequency FROM edict"):
-        if (fr or "").rstrip("*") in ("Very common", "Common"):
+    # E, per le stesse voci, quanto pesa ogni lettura del kanji **da solo**: serve alla
+    # kun primaria, vedi `primaria_kun`.
+    isolate: dict[str, dict[str, int]] = collections.defaultdict(dict)
+    for k, lettura, oku, fr in c.execute(
+        "SELECT kanji,reading,okurigana,frequency FROM edict"
+    ):
+        classe = (fr or "").rstrip("*")
+        if classe in ("Very common", "Common"):
             comuni.add(oku)
+        if oku == k:
+            isolate[k][lettura] = PESO.get(classe, 0)
 
     # --- la lettura on dominante nei composti, pesata sulla frequenza ---
     #
@@ -250,8 +352,8 @@ def main() -> int:
     per_livello: dict[int, list] = collections.defaultdict(list)
     tutte: list[dict] = []
 
-    for (kanji, strokes, wk, freq_rank, reg_on, reg_kun, nanori, meaning,
-         compact) in c.execute(f"""SELECT kanji,strokes,wanikani,frequency,reg_on,reg_kun,
+    for (kanji, strokes, freq_rank, reg_on, reg_kun, nanori, meaning,
+         compact) in c.execute(f"""SELECT kanji,strokes,frequency,reg_on,reg_kun,
                                           nanori,meaning,compact_meaning
                                    FROM kanjidict WHERE {joyo}"""):
         on, on_rare = letture(reg_on)
@@ -287,6 +389,7 @@ def main() -> int:
             "on": on,
             "primaryOn": primaria,
             "kun": kun,
+            "primaryKun": primaria_kun(kun, isolate.get(kanji, {})),
             "okurigana": [
                 {
                     "form": kanji + coda,
@@ -308,13 +411,10 @@ def main() -> int:
             voce["onRare"] = on_rare
         if kun_rare:
             voce["kunRare"] = kun_rare
-        # Il livello si assegna dopo, quando si sa chi resta fuori da WaniKani.
-        if intero(wk) is not None:
-            voce["level"] = wk
-        voce["_wk"] = intero(wk)
+        # Il livello si assegna dopo, quando si conosce tutto il grafo.
         tutte.append(voce)
 
-    livelli(tutte)
+    livelli(tutte, componenti(c, {v["character"] for v in tutte}))
     for voce in tutte:
         per_livello[voce["level"]].append(voce)
 

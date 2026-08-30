@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import {
   kanjiCurrentLevel,
   kanjiGrid,
+  kanjiLevelCount,
   kanjiOverview,
   type Gate,
   type KanjiCell,
@@ -46,6 +47,7 @@ const MODES: { value: StudyMode; label: string; caption: string }[] = [
 export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
   const { kanji: scope, setLevel, study, goTo } = useUi()
   const [reached, setReached] = useState<Level | null>(null)
+  const [count, setCount] = useState<number | null>(null)
   const [overview, setOverview] = useState<{ level: Level; data: Overview | null } | null>(null)
   const [grid, setGrid] = useState<{ level: Level; cells: KanjiCell[] } | null>(null)
   const [opened, setOpened] = useState<KanjiCell | null>(null)
@@ -61,6 +63,11 @@ export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
         setLevel(level)
       })
       .catch(() => current && setReached(1))
+    // Quanti livelli esistano lo dice il core: scriverlo qui vorrebbe dire tenere due
+    // copie dello stesso numero e vederle divergere alla prima rigenerazione.
+    kanjiLevelCount()
+      .then((n) => current && setCount(n))
+      .catch(() => {})
     return () => {
       current = false
     }
@@ -119,6 +126,7 @@ export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
             <LevelPile
               level={scope.level}
               reached={reached}
+              count={count}
               progress={fresh?.progress}
               onPick={setLevel}
             />
@@ -159,16 +167,19 @@ export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
 function LevelPile({
   level,
   reached,
+  count,
   progress,
   onPick,
 }: {
   level: Level
   reached: Level | null
+  /** Quanti livelli esistono. `null` finche' il core non lo ha detto. */
+  count: number | null
   progress?: Overview['progress']
   onPick: (level: Level) => void
 }) {
   const around = [level - 2, level - 1, level, level + 1, level + 2].filter(
-    (l) => l >= 1 && l <= 69,
+    (l) => l >= 1 && (count === null || l <= count),
   )
 
   return (
