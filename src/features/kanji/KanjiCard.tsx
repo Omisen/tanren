@@ -177,7 +177,9 @@ function Readings({
           {readings.map((r) => (
             <p key={r} className="font-jp text-lg" lang="ja">
               {r}
-              {r === primary && <Primary />}
+              {/* Il marcatore ha senso solo dove c'e' qualcosa da distinguere: su una
+                  lettura sola direbbe «la prima di una», che non e' informazione. */}
+              {readings.length > 1 && r === primary && <Primary />}
             </p>
           ))}
           {/* Le letture rare restano visibili ma smorzate: esistono, e chi legge deve

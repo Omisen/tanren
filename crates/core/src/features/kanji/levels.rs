@@ -44,7 +44,8 @@
 //! incontrano davvero ([`Okurigana::common`]). Qui non si taglia niente: il contenuto
 //! dice cosa **e'** un kanji, l'esercizio sceglie cosa chiederne.
 
-use std::sync::OnceLock;
+use std::collections::HashMap;
+use std::sync::{LazyLock, OnceLock};
 
 use serde::{Deserialize, Serialize};
 
@@ -172,9 +173,10 @@ pub struct Kanji {
     /// dalla lettura da isolato. Verificato che sbaglia: direbbe いな per 稲, che da solo
     /// e' いね. Qui si guarda la voce di dizionario che e' il kanji da solo.
     ///
-    /// `None` quasi sempre, e per due ragioni diverse: perche' di kun nuda ce n'e' una
-    /// sola e non c'e' niente da scegliere (553 kanji su 595), o perche' il dato non
-    /// discrimina. **Ne restano quattro marcati**: 雌, 雄, 女, 羽.
+    /// Con **una sola** kun nuda e' quella per definizione, e sono 553 kanji su 595.
+    /// Fra i 42 che ne hanno piu' di una il dato ne decide quattro (雌 めす, 雄 おす,
+    /// 女 おんな, 羽 はね) e sugli altri 38 resta `None`, perche' marcarne una a caso
+    /// sarebbe peggio che non marcarla: `None` vuol dire non misurato, non pareggio.
     pub primary_kun: Option<String>,
     #[serde(default)]
     pub kun_rare: Vec<String>,
@@ -231,6 +233,52 @@ impl KanjiTable {
     pub fn get(&self, character: &str) -> Option<&Kanji> {
         self.entries.iter().find(|k| k.character == character)
     }
+}
+
+/// L'indice carattere -> livello.
+///
+/// # Perche' esiste
+///
+/// Perche' **l'identificatore di un item non porta dentro il livello**. Un kanji e'
+/// quel kanji indipendentemente da dove lo mettiamo nel percorso: il livello e' una
+/// nostra decisione editoriale, e le decisioni cambiano. Se stesse nell'id, ogni
+/// riordino orfanerebbe lo storico di chi studia, e in silenzio. **Misurato**: il
+/// riordino che ha tolto la dipendenza dalla colonna proprietaria ha spostato di
+/// livello il **97% dei kanji**; se ci fosse stato uno storico sparso, sarebbe sparito
+/// quasi tutto.
+///
+/// Senza indice pero' risalire da `kanji:生` al suo kanji vorrebbe dire aprire tutte e
+/// ottantasei le tabelle a ogni domanda. L'indice e' la terza via: sette kilobyte
+/// letti una volta sola, e il **caricamento pigro per livello resta intatto**, perche'
+/// dice quale tabella aprire senza aprirla.
+static INDEX: LazyLock<HashMap<char, Level>> = LazyLock::new(|| {
+    #[derive(Deserialize)]
+    struct File {
+        levels: HashMap<String, String>,
+    }
+
+    let file: File = serde_json::from_str(include_str!("../../../data/kanji/index.json"))
+        .unwrap_or_else(|e| panic!("indice dei livelli non leggibile: {e}"));
+
+    file.levels
+        .into_iter()
+        .flat_map(|(livello, caratteri)| {
+            let level = livello
+                .parse()
+                .ok()
+                .and_then(Level::new)
+                .unwrap_or_else(|| panic!("livello {livello} fuori scala nell'indice"));
+            caratteri.chars().map(move |c| (c, level)).collect::<Vec<_>>()
+        })
+        .collect()
+});
+
+/// A quale livello si studia un kanji. `None` se non e' fra i joyo.
+///
+/// Vale per il **kanji**, non per una forma con okurigana: 生きる si studia dove si
+/// studia 生, quindi chi ha una forma passa il suo primo carattere.
+pub fn level_of_character(kanji: char) -> Option<Level> {
+    INDEX.get(&kanji).copied()
 }
 
 /// I file, in ordine di livello. Sono costanti, quindi non costano niente finche'
@@ -500,6 +548,29 @@ mod tests {
                 assert!((1..=25).contains(&quanti), "l'ultimo livello e' un resto");
             }
         }
+    }
+
+    #[test]
+    fn la_kun_primaria_e_una_delle_sue_e_c_e_quando_serve() {
+        let mut con_primaria = 0;
+        for level in Level::all() {
+            for k in table(level).all() {
+                match &k.primary_kun {
+                    Some(p) => {
+                        assert!(k.kun.contains(p), "{}: {p} non e' fra le sue kun", k.character);
+                        con_primaria += 1;
+                    }
+                    // Senza kun nude non c'e' faccetta kun, quindi niente da marcare;
+                    // con una sola dev'esserci sempre, perche' e' quella.
+                    None => assert!(
+                        k.kun.len() != 1,
+                        "{}: con una sola kun la primaria e' quella",
+                        k.character
+                    ),
+                }
+            }
+        }
+        assert_eq!(con_primaria, 557, "553 ovvie piu' quattro decise dal dato");
     }
 
     #[test]

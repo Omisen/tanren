@@ -486,6 +486,15 @@ mod tests {
         Database::in_memory().await.unwrap()
     }
 
+    /// Un istante fisso, lontano dai confini della giornata.
+    ///
+    /// Serve dove si somma tempo a `now`: con l'orologio vero un test che aggiunge ore
+    /// puo' scavalcare la mezzanotte e cambiare risposta a seconda di quando lo si
+    /// lancia, che e' un test che mente.
+    fn mattina() -> DateTime<Utc> {
+        "2026-03-15T08:00:00Z".parse().expect("istante valido")
+    }
+
     /// Scrive una carta con la stabilita' e l'eta' che servono alla prova.
     ///
     /// Passa dall'archivio invece di inventare righe: cosi' la prova esercita la
@@ -543,7 +552,7 @@ mod tests {
         let uno = &table(primo()).all()[0].character.clone();
 
         // Una faccetta sola, e per giunta gia' matura: il kanji resta in mezzo al guado.
-        let solo_significato = item_id(primo(), uno);
+        let solo_significato = item_id(uno);
         carta(&db, &solo_significato, Facet::Meaning, 40.0, now).await;
 
         let p = level_progress(&db, primo(), &pacing).await.unwrap();
@@ -746,7 +755,10 @@ mod tests {
     async fn la_quota_di_oggi_si_esaurisce() {
         let db = db().await;
         let pacing = Pacing::default();
-        let now = Utc::now();
+        // Un istante fisso e di mattina, non `Utc::now()`: la quota si azzera a
+        // mezzanotte UTC, quindi partendo di sera `now + floor` cadrebbe nel giorno
+        // dopo e il test fallirebbe per l'ora in cui viene eseguito.
+        let now = mattina();
 
         for k in table(primo()).all().iter().take(pacing.daily_new) {
             impara(&db, primo(), &k.character, 40.0, now).await;

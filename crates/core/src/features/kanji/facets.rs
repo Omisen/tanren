@@ -42,7 +42,7 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
-use crate::features::kanji::levels::{Kanji, Level, table};
+use crate::features::kanji::levels::{Kanji, Level, level_of_character, table};
 use crate::shared::error::{CoreError, Result};
 use crate::shared::exercise::{
     Answer, AnswerFormat, ExerciseType, ExerciseTypeId, ItemId, Note, Prompt, Question,
@@ -107,20 +107,26 @@ pub struct Item {
     pub form: String,
 }
 
-/// Costruisce l'identificatore di una forma, nella forma `kanji:3:生`.
+/// Costruisce l'identificatore di una forma, nella forma `kanji:生`.
 ///
-/// # Perche' dentro c'e' il livello
+/// # Perche' il livello **non** sta qui dentro
 ///
-/// Perche' dice **in quale tabella cercare**, e senza si dovrebbero scorrere tutti e
-/// sessantanove i file a ogni domanda, buttando via il caricamento pigro. Il costo e'
-/// che il livello entra nell'identita' dell'item: se un domani un kanji cambiasse
-/// livello, il suo storico resterebbe attaccato al vecchio identificatore.
+/// Perche' non fa parte dell'identita' di un kanji: e' una nostra decisione editoriale
+/// su dove metterlo nel percorso, e le decisioni cambiano. Un identificatore invece si
+/// scrive nell'archivio e ci resta per sempre.
 ///
-/// **La faccetta invece non sta qui**: sta nel tipo di esercizio, che e' l'altra meta'
-/// della chiave dell'archivio. Cosi' le tre faccette di 生 condividono lo stesso item e
-/// si vede che parlano dello stesso kanji.
-pub fn item_id(level: Level, form: &str) -> ItemId {
-    ItemId::new(format!("{NAMESPACE}:{level}:{form}"))
+/// Ci stava, ed e' stato tolto dopo averne misurato il costo: il riordino che ha
+/// sganciato il percorso da una lista proprietaria ha spostato di livello il **97% dei
+/// kanji**. Con uno storico vero sarebbe sparito quasi tutto, e in silenzio, perche'
+/// una carta che non si risolve viene ignorata senza dire niente.
+///
+/// Quale tabella aprire lo dice ora [`level_of`], che lo chiede all'indice.
+///
+/// **La faccetta non sta qui**: sta nel tipo di esercizio, che e' l'altra meta' della
+/// chiave dell'archivio. Cosi' le tre faccette di 生 condividono lo stesso item e si
+/// vede che parlano dello stesso kanji.
+pub fn item_id(form: &str) -> ItemId {
+    ItemId::new(format!("{NAMESPACE}:{form}"))
 }
 
 /// Tutti gli item di un livello, kanji per kanji.
@@ -131,7 +137,7 @@ pub fn items(level: Level) -> Vec<Item> {
     let mut out = Vec::new();
 
     for kanji in table(level).all() {
-        let id = item_id(level, &kanji.character);
+        let id = item_id(&kanji.character);
         for facet in KANJI_FACETS {
             if has_facet(kanji, facet) {
                 out.push(Item {
@@ -143,7 +149,7 @@ pub fn items(level: Level) -> Vec<Item> {
         }
         for oku in kanji.okurigana.iter().filter(|o| o.common) {
             out.push(Item {
-                id: item_id(level, &oku.form),
+                id: item_id(&oku.form),
                 facet: Facet::Okurigana,
                 form: oku.form.clone(),
             });
@@ -195,22 +201,16 @@ fn resolve(id: &ItemId, exercise: &ExerciseTypeId) -> Result<Resolved> {
     };
     let unknown = || CoreError::UnknownItem { id: id.to_string() };
 
-    let rest = id
+    let form = id
         .as_str()
         .strip_prefix(NAMESPACE)
         .and_then(|r| r.strip_prefix(':'))
         .ok_or_else(not_supported)?;
-    let (level, form) = rest.split_once(':').ok_or_else(not_supported)?;
-
-    let level = level
-        .parse()
-        .ok()
-        .and_then(Level::new)
-        .ok_or_else(not_supported)?;
 
     // Il kanji e' il primo carattere: da solo per le faccette del kanji nudo, seguito
-    // dall'okurigana per le altre.
+    // dall'okurigana per le altre. Il livello lo dice l'indice, non l'identificatore.
     let first = form.chars().next().ok_or_else(unknown)?;
+    let level = level_of_character(first).ok_or_else(unknown)?;
     let kanji = table(level)
         .all()
         .iter()
@@ -448,17 +448,31 @@ fn fold(meaning: &str) -> String {
     meaning.trim().to_lowercase()
 }
 
-/// Il livello a cui appartiene un item, letto dal suo identificatore.
+/// Il livello a cui si studia un item.
 ///
-/// `None` se l'identificatore non e' di questa materia: e' il modo di riconoscere
-/// quello che non ci riguarda senza doverlo risolvere per intero.
+/// Non e' scritto nell'identificatore: si chiede all'indice, partendo dal kanji che
+/// apre la forma. `None` se l'identificatore non e' di questa materia, o se quel kanji
+/// non e' fra i joyo, ed e' il modo di riconoscere quello che non ci riguarda senza
+/// doverlo risolvere per intero.
 pub fn level_of(id: &ItemId) -> Option<Level> {
     id.as_str()
         .strip_prefix(NAMESPACE)
         .and_then(|r| r.strip_prefix(':'))
-        .and_then(|r| r.split_once(':'))
-        .and_then(|(level, _)| level.parse().ok())
-        .and_then(Level::new)
+        .and_then(|form| form.chars().next())
+        .and_then(level_of_character)
+}
+
+/// Se un item esiste ancora davvero nel contenuto.
+///
+/// Serve a chi rilegge lo storico: una carta scritta mesi fa nomina una forma che il
+/// dato di oggi potrebbe non avere piu', per esempio se una lettura con okurigana
+/// sparisse da una rigenerazione. Quella carta va **ignorata in silenzio**, non deve
+/// far fallire l'avvio di un giro.
+pub fn resolves(id: &ItemId, facet: Facet) -> bool {
+    match resolve(id, &facet.exercise_id()) {
+        Ok(item) => !item.accepted(facet).is_empty(),
+        Err(_) => false,
+    }
 }
 
 /// L'esercizio che sa fare una domanda, se e' di questa materia.
@@ -487,8 +501,8 @@ mod tests {
         Level::new(5).unwrap()
     }
 
-    fn id(level: Level, form: &str) -> ItemId {
-        item_id(level, form)
+    fn id(form: &str) -> ItemId {
+        item_id(form)
     }
 
     #[test]
@@ -547,7 +561,7 @@ mod tests {
     #[test]
     fn il_significato_si_chiede_a_scelta_multipla() {
         let pool: Vec<ItemId> = items(vita()).into_iter().map(|i| i.id).collect();
-        let item = id(vita(), "生");
+        let item = id("生");
         let q = MeaningFacet
             .question(
                 QuestionRequest {
@@ -582,7 +596,7 @@ mod tests {
 
     #[test]
     fn del_significato_si_accetta_anche_quello_secondario() {
-        let item = id(vita(), "生");
+        let item = id("生");
         for risposta in ["life", "Life", " be born "] {
             assert!(
                 MeaningFacet.grade(&item, &Answer::new(risposta)).unwrap().is_correct(),
@@ -594,7 +608,7 @@ mod tests {
 
     #[test]
     fn la_lettura_on_si_accetta_in_tutte_e_due_le_grafie() {
-        let item = id(vita(), "生");
+        let item = id("生");
         assert_eq!(
             OnFacet.grade(&item, &Answer::new("セイ")).unwrap(),
             Verdict::correct(),
@@ -618,7 +632,7 @@ mod tests {
 
     #[test]
     fn la_lettura_kun_vuole_l_hiragana_e_lo_dice_al_contrario() {
-        let item = id(vita(), "生");
+        let item = id("生");
         assert_eq!(
             KunFacet.grade(&item, &Answer::new("なま")).unwrap(),
             Verdict::correct()
@@ -635,7 +649,7 @@ mod tests {
 
     #[test]
     fn una_lettura_sbagliata_dice_cosa_si_accettava() {
-        let item = id(vita(), "生");
+        let item = id("生");
         let verdict = OnFacet.grade(&item, &Answer::new("あい")).unwrap();
         assert_eq!(
             verdict,
@@ -648,7 +662,7 @@ mod tests {
     #[test]
     fn l_okurigana_e_la_domanda_e_non_ha_bisogno_di_etichette() {
         let pool = vec![];
-        let item = id(vita(), "生きる");
+        let item = id("生きる");
         let q = OkuriganaFacet
             .question(
                 QuestionRequest {
@@ -671,8 +685,7 @@ mod tests {
     #[test]
     fn una_forma_con_due_letture_le_accetta_entrambe() {
         // 行く si legge sia いく sia ゆく: due risposte buone alla stessa domanda.
-        let livello = Level::new(9).unwrap();
-        let item = id(livello, "行く");
+        let item = id("行く");
         for lettura in ["いく", "ゆく"] {
             assert!(
                 OkuriganaFacet.grade(&item, &Answer::new(lettura)).unwrap().is_correct(),
@@ -688,16 +701,15 @@ mod tests {
             Err(CoreError::ItemNotSupported { .. })
         ));
         assert!(matches!(
-            OnFacet.grade(&ItemId::new("kanji:99:生"), &Answer::new("セイ")),
-            Err(CoreError::ItemNotSupported { .. }),
-        ));
-        assert!(matches!(
-            OnFacet.grade(&id(vita(), "X"), &Answer::new("セイ")),
+            OnFacet.grade(&id("X"), &Answer::new("セイ")),
             Err(CoreError::UnknownItem { .. })
         ));
-        // Un kanji vero, ma nel livello sbagliato.
+
+        // Un identificatore della vecchia forma, col livello dentro: dopo il
+        // disaccoppiamento non e' piu' leggibile, ed e' esattamente cio' che la
+        // migrazione `0004` esiste per non lasciare in giro.
         assert!(matches!(
-            OnFacet.grade(&id(Level::new(1).unwrap(), "生"), &Answer::new("セイ")),
+            OnFacet.grade(&ItemId::new("kanji:1:生"), &Answer::new("セイ")),
             Err(CoreError::UnknownItem { .. })
         ));
     }

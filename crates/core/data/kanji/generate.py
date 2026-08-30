@@ -166,14 +166,23 @@ def primaria_kun(nude: list[str], isolate: dict[str, int]) -> str | None:
     Qui si guarda invece la voce di `edict` che e' **il kanji da solo**, con la classe
     di frequenza di ciascuna lettura: e' l'unico dato che misuri la lettura da isolato.
 
-    Restituisce `None` quando il dato non discrimina, e succede spesso, perche' quelle
-    voci sono quasi tutte marcate ambigue nella fonte. Su 2.136 joyo appena **70 hanno
-    piu' di una kun nuda** (per gli altri la primaria sarebbe l'unica che c'e', cioe'
-    non servirebbe), e di quei 70 se ne decidono 19. Marcarne una a caso sugli altri 51
-    sarebbe peggio che non marcarla: `None` vuol dire non misurato, non pareggio.
+    # I due casi degeneri
+
+    Con **una sola** kun nuda quella e' la primaria per definizione, e non c'e' niente
+    da calcolare: dirlo costa zero e rende il campo utile su 553 kanji invece che su
+    quattro. Con **zero** kun nude la faccetta kun non esiste e non c'e' niente da
+    marcare.
+
+    Fuori dai degeneri restituisce `None` quando il dato non discrimina, e succede
+    spesso, perche' quelle voci sono quasi tutte marcate ambigue nella fonte: dei 42
+    joyo con piu' di una kun nuda regolare se ne decidono quattro. Marcarne una a caso
+    sugli altri 38 sarebbe peggio che non marcarla, perche' `None` vuol dire non
+    misurato e non pareggio.
     """
-    if len(nude) < 2:
+    if not nude:
         return None
+    if len(nude) == 1:
+        return nude[0]
     pesi = {n: isolate.get(n, 0) for n in nude}
     migliore = max(pesi.values())
     if migliore == 0:
@@ -441,8 +450,37 @@ def main() -> int:
         path.write_text("{" + testa + ',\n  "entries": [\n' + righe + "\n]\n}\n", encoding="utf-8")
         totale_byte += path.stat().st_size
 
+    # --- l'indice carattere -> livello ---
+    #
+    # Serve perche' **l'identificatore di un item non porta dentro il livello**: un
+    # kanji e' quel kanji indipendentemente da dove lo mettiamo nel percorso, e il
+    # livello e' una nostra decisione che cambia a ogni rigenerazione. Se stesse
+    # nell'id, riordinare i livelli orfanerebbe lo storico di chi studia: misurato,
+    # il riordino di oggi ha spostato il 97% dei kanji.
+    #
+    # Senza indice pero' risalire da `kanji:生` al suo kanji vorrebbe dire aprire tutte
+    # e ottantasei le tabelle. L'indice e' la terza via: si legge una volta, pesa
+    # poco, e il caricamento pigro per livello resta intatto.
+    #
+    # I caratteri di un livello si scrivono attaccati invece che come mappa voce per
+    # voce: 7 kB invece di 36, per la stessa informazione.
+    indice = {
+        "version": FORMAT_VERSION,
+        "levels": {
+            str(livello): "".join(v["character"] for v in voci)
+            for livello, voci in sorted(per_livello.items())
+        },
+    }
+    (QUI / "index.json").write_text(
+        json.dumps(indice, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
+    )
+
     kanji_totali = sum(len(v) for v in per_livello.values())
-    print(f"  {len(per_livello)} livelli, {kanji_totali} kanji, {totale_byte / 1024:.0f} kB")
+    indice_kb = (QUI / "index.json").stat().st_size / 1024
+    print(
+        f"  {len(per_livello)} livelli, {kanji_totali} kanji, {totale_byte / 1024:.0f} kB"
+        f" piu' {indice_kb:.0f} kB di indice"
+    )
     for path in scaricati:
         path.unlink()
     return 0

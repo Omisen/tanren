@@ -37,7 +37,9 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
-use crate::features::kanji::facets::{Facet, exercise_for, item_id, items, level_of};
+use crate::features::kanji::facets::{
+    Facet, exercise_for, facet_of, item_id, items, level_of, resolves,
+};
 use crate::features::kanji::levels::{Level, table};
 use crate::features::kanji::progress::{Gate, LevelProgress, Pacing, learning_gate, level_progress};
 use crate::shared::error::{CoreError, Result};
@@ -181,7 +183,7 @@ async fn new_kanji(db: &Database, level: Level, quanti: usize) -> Result<Vec<Str
     let ids: Vec<String> = table(level)
         .all()
         .iter()
-        .map(|k| item_id(level, &k.character).as_str().to_owned())
+        .map(|k| item_id(&k.character).as_str().to_owned())
         .collect();
 
     let esistenti = db
@@ -195,7 +197,7 @@ async fn new_kanji(db: &Database, level: Level, quanti: usize) -> Result<Vec<Str
         .all()
         .iter()
         .filter(|k| {
-            let id = item_id(level, &k.character);
+            let id = item_id(&k.character);
             !esistenti.iter().any(|c| c.item_id == id.as_str())
         })
         .take(quanti)
@@ -222,22 +224,24 @@ async fn seen_tasks(db: &Database) -> Result<Vec<Task>> {
 ///
 /// # Perche' non basta riconoscere la materia
 ///
-/// Perche' l'identificatore porta dentro il livello, e i livelli si rifanno quando si
-/// rigenera il contenuto: una carta studiata quando 年 stava al primo livello resta
-/// scritta come `kanji:1:年` anche dopo che 年 e' passato al nono. Quella carta non
-/// e' di un'altra materia e il livello che dichiara esiste, quindi i due controlli
-/// facili la lascerebbero passare; poi pero' non si risolve, e l'errore risale fino a
-/// far fallire l'avvio del giro. **Una traccia rimasta indietro deve sparire in
-/// silenzio, non rompere il Drill.**
+/// Perche' una carta scritta mesi fa nomina una forma che il contenuto di oggi
+/// potrebbe non avere piu': basta che una rigenerazione tolga una lettura con
+/// okurigana, e `kanji:生かす` resta un identificatore ben formato che pero' non si
+/// risolve. L'errore risalirebbe fino a far fallire l'avvio del giro. **Una traccia
+/// rimasta indietro deve sparire in silenzio, non rompere il Drill.**
+///
+/// Questa difesa era nata per un'altra ragione, cioe' i kanji che cambiavano livello
+/// mentre il livello stava dentro l'identificatore. Quella ragione non c'e' piu',
+/// perche' l'identificatore non porta piu' il livello; questa invece resta, e vive di
+/// vita propria.
 fn as_task(card: Card) -> Option<Task> {
     let exercise = ExerciseTypeId::owned(card.exercise_type);
-    let esercizio = exercise_for(&exercise)?;
+    exercise_for(&exercise)?;
     let item = ItemId::new(card.item_id);
     level_of(&item)?;
 
-    // L'unico modo onesto di sapere se l'item esiste ancora e' chiederlo a chi lo sa
-    // risolvere, cioe' all'esercizio stesso.
-    esercizio.grade(&item, &Answer::new("")).ok()?;
+    // Che l'item esista ancora lo chiede il contenuto, non un giudizio inventato.
+    facet_of(&exercise).filter(|f| resolves(&item, *f))?;
 
     Some(Task::new(item, exercise))
 }
@@ -338,6 +342,13 @@ mod tests {
         Database::in_memory().await.unwrap()
     }
 
+    /// Un istante fisso, lontano dai confini della giornata: la quota giornaliera si
+    /// azzera a mezzanotte UTC, e un test che somma ore all'orologio vero cambierebbe
+    /// risposta a seconda di quando lo si lancia.
+    fn mattina() -> DateTime<Utc> {
+        "2026-03-15T08:00:00Z".parse().expect("istante valido")
+    }
+
     /// Porta tutte le faccette di un kanji alla stabilita' chiesta.
     async fn impara(db: &Database, level: Level, kanji: &str, stability: f32, quando: DateTime<Utc>) {
         for item in items(level)
@@ -397,7 +408,7 @@ mod tests {
     async fn imparare_a_porta_chiusa_da_un_giro_vuoto_e_non_un_errore() {
         let db = db().await;
         let pacing = Pacing::default();
-        let now = Utc::now();
+        let now = mattina();
 
         for k in table(primo()).all().iter().take(pacing.daily_new) {
             impara(&db, primo(), &k.character, 40.0, now).await;
@@ -438,7 +449,7 @@ mod tests {
             "salire di livello non deve far dimenticare quello di prima"
         );
 
-        let non_dovuto = item_id(primo(), &table(primo()).all()[1].character);
+        let non_dovuto = item_id(&table(primo()).all()[1].character);
         assert!(
             !plan.tasks.iter().any(|t| t.item == non_dovuto),
             "cio' che non e' scaduto resta fuori"
@@ -511,7 +522,7 @@ mod tests {
         let uno = table(primo()).all()[0].character.clone();
         impara(&db, primo(), &uno, 40.0, now).await;
 
-        let task = Task::new(item_id(primo(), &uno), Facet::Meaning.exercise_id());
+        let task = Task::new(item_id(&uno), Facet::Meaning.exercise_id());
         let prima = db
             .card(task.item.as_str(), task.exercise.as_str())
             .await
@@ -546,7 +557,7 @@ mod tests {
         let uno = table(primo()).all()[0].character.clone();
         impara(&db, primo(), &uno, 1.0, now - TimeDelta::days(30)).await;
 
-        let task = Task::new(item_id(primo(), &uno), Facet::Meaning.exercise_id());
+        let task = Task::new(item_id(&uno), Facet::Meaning.exercise_id());
         let prima = db
             .card(task.item.as_str(), task.exercise.as_str())
             .await
