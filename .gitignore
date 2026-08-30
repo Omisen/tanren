@@ -30,6 +30,13 @@ target/
 # .gitignore che Tauri stesso mette dentro gen/android.
 src-tauri/gen/schemas/
 
+# Portachiavi di firma Android: sono chiavi private. Perderle significa non poter
+# piu' aggiornare l'app per chi l'ha installata; committarle significa regalarle.
+*.jks
+*.keystore
+*.b64
+keystore.properties
+
 # Android
 .gradle/
 *.apk
