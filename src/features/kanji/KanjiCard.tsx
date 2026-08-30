@@ -34,6 +34,7 @@ export function KanjiCard({ kanji }: { kanji: Kanji }) {
         {kanji.meanings.length > 1 && (
           <p className="text-muted text-center text-sm">{kanji.meanings.slice(1).join(', ')}</p>
         )}
+        <Alone ratio={kanji.aloneRatio} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -78,7 +79,9 @@ export function KanjiCard({ kanji }: { kanji: Kanji }) {
         <Section label="Examples">
           <div className="flex flex-col gap-2">
             {kanji.examples.map((e) => (
-              <div key={e.word} className="flex flex-col">
+              /* La chiave e' parola piu' lettura: 半年 compare due volte perche' si
+                 legge sia はんとし sia はんねん, e sono due voci vere. */
+              <div key={`${e.word}:${e.reading}`} className="flex flex-col">
                 <p className="flex items-baseline gap-2">
                   <span className="font-jp text-lg" lang="ja">
                     {e.word}
@@ -94,6 +97,31 @@ export function KanjiCard({ kanji }: { kanji: Kanji }) {
         </Section>
       )}
     </div>
+  )
+}
+
+/**
+ * Quanto quel kanji si incontra da solo invece che dentro un composto.
+ *
+ * E' la cosa che dice **quale lato conta**: 私 sta da solo la meta' delle volte, quindi
+ * la lettura che si incontra e' la kun; 生 quasi mai, quindi conta la on. Si mostra il
+ * numero misurato e non una fascia («spesso», «raramente»), perche' la fascia sarebbe
+ * una soglia inventata da noi mentre il numero e' un dato.
+ *
+ * Manca per i 205 joyo che il corpus non contiene, e allora non si dice niente: NULL
+ * vuol dire «non misurato», e scriverci zero direbbe «non ricorre mai da solo», che e'
+ * un'altra cosa.
+ */
+function Alone({ ratio }: { ratio: number | null }) {
+  if (ratio === null) return null
+
+  const percento = Math.round(ratio * 100)
+  return (
+    <p className="text-muted text-center text-xs">
+      {percento < 1
+        ? 'Almost never stands alone: you will meet it inside compounds.'
+        : `Stands alone in about ${percento}% of its uses.`}
+    </p>
   )
 }
 

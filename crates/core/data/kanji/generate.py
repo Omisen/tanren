@@ -231,11 +231,20 @@ def main() -> int:
                 peso_lettura[k][parti[1]] += w
 
     # --- gli esempi, i piu' comuni per primi ---
+    #
+    # Una stessa parola puo' comparire due volte, e per due ragioni diverse: 半年 si
+    # legge sia はんとし sia はんねん, e quelle sono due voci vere; 岡山 おかやま invece
+    # e' proprio ripetuto nella fonte. Le prime si tengono, le seconde no, e la
+    # differenza e' se cambia anche la lettura.
     esempi: dict[str, list] = collections.defaultdict(list)
+    visti: dict[str, set] = collections.defaultdict(set)
     ordine = {"Very common": 0, "Common": 1, "Uncommon": 2, "Rare": 3}
     for k, parola, lettura, sign, fr in c.execute(
         "SELECT kanji,jukugo,reading,meaning,frequency FROM jukugo"
     ):
+        if (parola, lettura) in visti[k]:
+            continue
+        visti[k].add((parola, lettura))
         esempi[k].append((ordine.get((fr or "").rstrip("*"), 4), parola, lettura, sign))
 
     per_livello: dict[int, list] = collections.defaultdict(list)

@@ -17,6 +17,8 @@ import { Note } from '@/shared/ui/Card'
 import { Screen } from '@/shared/ui/Screen'
 import { useUi } from '@/shared/store/ui'
 
+import { KanjiSheet } from '../KanjiSheet'
+
 /**
  * Il percorso sui kanji: dove sei, cosa c'e' in questo livello, cosa puoi fare.
  *
@@ -46,6 +48,7 @@ export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
   const [reached, setReached] = useState<Level | null>(null)
   const [overview, setOverview] = useState<{ level: Level; data: Overview | null } | null>(null)
   const [grid, setGrid] = useState<{ level: Level; cells: KanjiCell[] } | null>(null)
+  const [opened, setOpened] = useState<KanjiCell | null>(null)
 
   // Fin dove si e' arrivati lo sa il core: e' il primo livello non ancora consolidato.
   // Si chiede una volta sola, e la schermata ci si porta sopra.
@@ -91,41 +94,54 @@ export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
   const start = useCallback((mode: StudyMode) => study(mode), [study])
 
   return (
-    <Screen
-      textured
-      title="Tanren"
-      action={
-        <div className="flex flex-col gap-2">
-          {MODES.map((m) => (
-            <ModeButton
-              key={m.value}
-              mode={m}
-              locked={locked}
-              overview={fresh}
-              onStart={start}
+    <>
+      <Screen
+        textured
+        title="Tanren"
+        action={
+          <div className="flex flex-col gap-2">
+            {MODES.map((m) => (
+              <ModeButton
+                key={m.value}
+                mode={m}
+                locked={locked}
+                overview={fresh}
+                onStart={start}
+              />
+            ))}
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-7">
+          {subjects}
+
+          <Field label="Level">
+            <LevelPile
+              level={scope.level}
+              reached={reached}
+              progress={fresh?.progress}
+              onPick={setLevel}
             />
-          ))}
+          </Field>
+
+          <Field label={locked ? 'Locked, but you can look' : 'Kanji'}>
+            {cells === null && <Note>Loading…</Note>}
+            {cells !== null && <Grid cells={cells} onOpen={setOpened} />}
+          </Field>
         </div>
-      }
-    >
-      <div className="flex flex-col gap-7">
-        {subjects}
+      </Screen>
 
-        <Field label="Level">
-          <LevelPile
-            level={scope.level}
-            reached={reached}
-            progress={fresh?.progress}
-            onPick={setLevel}
-          />
-        </Field>
-
-        <Field label={locked ? 'Locked, but you can look' : 'Kanji'}>
-          {cells === null && <Note>Loading…</Note>}
-          {cells !== null && <Grid cells={cells} />}
-        </Field>
-      </div>
-    </Screen>
+      {/* La scheda si apre anche sui livelli chiusi: guardare cosa arrivera' non e'
+          barare, ed e' l'unico modo di farsi un'idea del percorso. */}
+      {opened && (
+        <KanjiSheet
+          level={scope.level}
+          character={opened.character}
+          standing={opened.standing}
+          onClose={() => setOpened(null)}
+        />
+      )}
+    </>
   )
 }
 
@@ -244,20 +260,28 @@ const STANDING: Record<Standing, string> = {
   mature: 'border-type-kanji bg-type-kanji text-paper',
 }
 
-function Grid({ cells }: { cells: KanjiCell[] }) {
+function Grid({
+  cells,
+  onOpen,
+}: {
+  cells: KanjiCell[]
+  onOpen: (cell: KanjiCell) => void
+}) {
   if (cells.length === 0) return <Note>Nothing here.</Note>
 
   return (
     <div className="grid grid-cols-6 gap-1.5">
       {cells.map((c) => (
-        <div
+        <button
           key={c.character}
-          title={c.standing}
-          className={`font-jp flex aspect-square items-center justify-center rounded-lg border text-xl ${STANDING[c.standing]}`}
+          type="button"
+          onClick={() => onOpen(c)}
+          aria-label={`${c.character}, ${c.standing}`}
+          className={`font-jp flex aspect-square items-center justify-center rounded-lg border text-xl transition-colors active:opacity-70 ${STANDING[c.standing]}`}
           lang="ja"
         >
           {c.character}
-        </div>
+        </button>
       ))}
     </div>
   )
