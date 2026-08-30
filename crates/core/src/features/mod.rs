@@ -4,3 +4,4 @@
 //! vive in [`crate::shared`].
 
 pub mod kana;
+pub mod kanji;

@@ -224,6 +224,16 @@ The font stays under the <b>SIL Open Font License 1.1</b>, whose text ships alon
 in <code>public/fonts/OFL.txt</code>.
 </sub>
 
+<br>
+
+<sub>
+The kanji tables are derived from <b><a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project">KANJIDIC2</a></b>,
+the property of the <b>Electronic Dictionary Research and Development Group</b>,<br>
+used under <b><a href="http://www.edrdg.org/edrdg/licence.html">CC BY-SA 4.0</a></b>. The
+licence extends to derived data, so those tables carry it too while the code stays MIT.<br>
+Details in <code>crates/core/data/kanji/ATTRIBUTION.md</code>.
+</sub>
+
 <br><br>
 
 <sub>🚧 Early stage project, under active development.</sub>
