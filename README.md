@@ -101,6 +101,36 @@ Built for a small screen and thumb reach. Desktop works too.
 
 <div align="center">
 
+## 導入 Install
+
+<a href="https://github.com/Omisen/tanren/releases/latest">
+  <img src="https://img.shields.io/github/v/release/Omisen/tanren?style=flat-square&label=download%20the%20APK&color=0e7f72&labelColor=201e1c" alt="Download the latest APK">
+</a>
+
+</div>
+
+Grab the APK from the [latest release](https://github.com/Omisen/tanren/releases/latest)
+and open it on the phone. The build carries `arm64-v8a` and `armeabi-v7a`.
+
+**Play Protect refuses the install the first time.** It says it has never seen an app from
+this developer, which is true: it happens to any app signed with a key Google does not
+know. Tap **More details**, then **Install anyway**. The warning will not go away while
+Tanren is distributed outside the stores.
+
+`minSdk` is 24, so Android 7 and up in principle, but it has only been run on **Android
+15**. Below Android 11 the on-screen keyboard may cover the question you are answering,
+because older versions do not report keyboard insets reliably.
+
+**There is no desktop download, and that is deliberate.** Android is the only surface you
+cannot use without an executable, so the release carries an APK and nothing else. On a
+desktop you clone and run, which takes two commands and is described below. Building and
+hosting three binaries for three operating systems would be three build chains to maintain
+for the secondary case.
+
+<br>
+
+<div align="center">
+
 ## 開発 Development
 
 </div>
@@ -129,11 +159,6 @@ npm run tauri dev
 The first run compiles the whole Rust dependency tree and takes a few minutes. Later
 runs are immediate. The window opens in portrait shape, because the design targets the
 phone first.
-
-**There is no desktop download, and that is deliberate.** Android is the only surface you
-cannot use without an executable, so the release carries an APK and nothing else. On a
-desktop you clone and run the command above. Building and hosting three binaries for three
-operating systems would be three build chains to maintain for the secondary case.
 
 ### Useful commands
 
