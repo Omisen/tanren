@@ -1,5 +1,6 @@
 import { KanaHomeScreen } from '@/features/kana/screens/HomeScreen'
 import { KanaSessionScreen } from '@/features/kana/screens/SessionScreen'
+import { KanjiDashboardScreen } from '@/features/kanji/screens/DashboardScreen'
 import { KanjiHomeScreen } from '@/features/kanji/screens/HomeScreen'
 import { KanjiStudyScreen } from '@/features/kanji/screens/SessionScreen'
 import { useUi } from '@/shared/store/ui'
@@ -27,6 +28,10 @@ export default function App() {
   if (screen === 'session') {
     return subject === 'kana' ? <KanaSessionScreen /> : <KanjiStudyScreen />
   }
+
+  // La dashboard e' solo dei kanji: e' la misura del loro percorso, e i kana un
+  // percorso non ce l'hanno.
+  if (screen === 'dashboard') return <KanjiDashboardScreen />
 
   const subjects = <SubjectPicker />
   return subject === 'kana' ? (

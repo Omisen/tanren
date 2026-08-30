@@ -8,7 +8,7 @@ use chrono::Utc;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, table};
 use tanren_core::features::kana::session as kana;
 use tanren_core::features::kanji::levels::{Kanji, Level, table as levels_table};
-use tanren_core::features::kanji::progress::{LevelProgress, Pacing};
+use tanren_core::features::kanji::progress::{LevelProgress, LevelSummary, Pacing};
 use tanren_core::features::kanji::study;
 use tanren_core::shared::error::CoreError;
 use tanren_core::shared::session::{Step, Task};
@@ -176,6 +176,19 @@ pub async fn kanji_grid(
             standing,
         })
         .collect())
+}
+
+/// Come sta andando tutto il percorso, livello per livello.
+///
+/// Misura **quanto sei consolidato**, che lo dice FSRS e lo alimentano solo il Learning
+/// e il Ripasso. Il Drill non compare qui e non deve: e' pratica in piu', e le sue
+/// statistiche vivono e muoiono dentro la sessione.
+#[tauri::command]
+pub async fn kanji_dashboard(
+    state: State<'_, AppState>,
+) -> Result<Vec<LevelSummary>, CoreError> {
+    tanren_core::features::kanji::progress::all_levels(&state.db, &Pacing::default(), Utc::now())
+        .await
 }
 
 /// I kanji chiesti, per intero.

@@ -48,6 +48,7 @@ pub fn run() {
             commands::normalize_reading,
             commands::kanji_overview,
             commands::kanji_grid,
+            commands::kanji_dashboard,
             commands::kanji_details,
             commands::kanji_current_level,
             commands::start_kanji_study,

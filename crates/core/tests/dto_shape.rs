@@ -14,7 +14,7 @@ use serde_json::json;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary};
 use tanren_core::features::kana::session::{Mode, Scope, Step};
 use tanren_core::features::kanji::levels::Level;
-use tanren_core::features::kanji::progress::{Blocked, Gate};
+use tanren_core::features::kanji::progress::{Blocked, Gate, LevelProgress, LevelSummary};
 use tanren_core::features::kanji::study::{Mode as StudyMode, Scope as StudyScope};
 use tanren_core::shared::session::Task;
 use tanren_core::shared::error::CoreError;
@@ -225,6 +225,50 @@ fn la_porta_dice_perche_e_chiusa() {
         serde_json::to_value(Gate::Closed(Blocked::NothingNew)).unwrap(),
         json!({ "state": "closed", "reason": "nothing_new" })
     );
+}
+
+/// Una riga della dashboard.
+///
+/// L'avanzamento e' **appiattito** dentro la riga invece di stare in un oggetto
+/// annidato: chi la legge vuole i numeri di quel livello, non una scatola dentro una
+/// scatola. `flatten` e' facile da sbagliare, quindi la forma si fissa qui.
+#[test]
+fn una_riga_della_dashboard() {
+    let riga = LevelSummary {
+        progress: LevelProgress {
+            level: Level::new(2).unwrap(),
+            total: 37,
+            new: 30,
+            learning: 5,
+            mature: 2,
+            ratio: 0.054_054_055,
+            complete: false,
+        },
+        recall: Some(0.8),
+        unlocked: true,
+    };
+
+    let json = serde_json::to_value(riga).unwrap();
+    assert_eq!(json["level"], json!(2), "l'avanzamento e' appiattito");
+    assert_eq!(json["total"], json!(37));
+    assert_eq!(json["mature"], json!(2));
+    assert_eq!(json["complete"], json!(false));
+    assert_eq!(json["unlocked"], json!(true));
+
+    // Le proporzioni sono `f32` e attraversano il confine allargate a `f64`, quindi
+    // 0,8 arriva come 0,800000011920929. Non si arrotonda qui: chi le mostra le
+    // arrotonda per mostrarle, e arrotondare alla fonte butterebbe via precisione per
+    // un problema di presentazione.
+    assert!((json["recall"].as_f64().unwrap() - 0.8).abs() < 1e-6);
+    assert!((json["ratio"].as_f64().unwrap() - 0.054_054).abs() < 1e-5);
+
+    // Senza faccette attive non c'e' niente da misurare, e si dice `null` invece di
+    // uno zero, che vorrebbe dire «non reggi niente».
+    let vuoto = LevelSummary {
+        recall: None,
+        ..riga
+    };
+    assert_eq!(serde_json::to_value(vuoto).unwrap()["recall"], json!(null));
 }
 
 /// L'ambito di uno studio sui kanji, che il frontend costruisce e il core rilegge.

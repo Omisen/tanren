@@ -155,6 +155,138 @@ fn is_mature(card: Option<&Card>, pacing: &Pacing) -> bool {
         .is_some_and(|s| s >= pacing.mature_days)
 }
 
+/// A che punto e' un livello, con quanto regge e se e' aperto.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LevelSummary {
+    #[serde(flatten)]
+    pub progress: LevelProgress,
+    /// Quanto reggono adesso le faccette che si stanno portando avanti, da 0 a 1.
+    ///
+    /// `None` quando non ce n'e' nessuna: non c'e' niente da misurare, che e' diverso
+    /// da un carico basso.
+    pub recall: Option<f32>,
+    /// Se il livello si puo' studiare, cioe' se i precedenti sono consolidati.
+    pub unlocked: bool,
+}
+
+/// Come sta andando **tutto il percorso**, livello per livello.
+///
+/// # Perche' una interrogazione sola
+///
+/// Perche' chiedere all'archivio sessantanove volte la stessa cosa in pezzi sarebbe
+/// sessantanove viaggi per un dato che sta tutto in uno. Le carte si prendono in blocco
+/// e si indicizzano una volta; l'unico costo che resta e' analizzare le tabelle dei
+/// livelli, misurato in 33 ms la prima volta e in un millesimo le successive, che per
+/// una schermata che si apre apposta va benissimo.
+///
+/// # Cosa misura, e cosa no
+///
+/// Misura **quanto sei consolidato**, che e' cio' che dice FSRS, e lo alimentano solo
+/// il Learning e il Ripasso. Il Drill non compare qui e non deve: e' pratica in piu',
+/// e le sue statistiche vivono e muoiono dentro la sessione. Mescolare le due cose
+/// vorrebbe dire far sembrare progresso quello che e' solo esercizio.
+pub async fn all_levels(
+    db: &Database,
+    pacing: &Pacing,
+    now: DateTime<Utc>,
+) -> Result<Vec<LevelSummary>> {
+    let cards = db.cards(CardFilter::default()).await?;
+    let indice: std::collections::HashMap<(&str, &str), &Card> = cards
+        .iter()
+        .map(|c| ((c.item_id.as_str(), c.exercise_type.as_str()), c))
+        .collect();
+
+    let mut aperto = true;
+    let mut out = Vec::with_capacity(usize::from(crate::features::kanji::levels::LEVELS));
+
+    for level in Level::all() {
+        let elenco = items(level);
+        let cerca = |item: &Item| {
+            let exercise = item.facet.exercise_id();
+            indice
+                .get(&(item.id.as_str(), exercise.as_str()))
+                .copied()
+        };
+
+        let progress = count(&elenco, &cerca, pacing, level);
+        let recall = average_recall(&elenco, &cerca, pacing, now);
+
+        out.push(LevelSummary {
+            progress,
+            recall,
+            unlocked: aperto,
+        });
+
+        // Il primo livello non consolidato e' quello a cui si e' arrivati: da li' in
+        // poi e' tutto chiuso.
+        if !progress.complete {
+            aperto = false;
+        }
+    }
+
+    Ok(out)
+}
+
+/// Conta i kanji per stato, con le carte gia' in mano.
+fn count<'a>(
+    elenco: &[Item],
+    cerca: &dyn Fn(&Item) -> Option<&'a Card>,
+    pacing: &Pacing,
+    level: Level,
+) -> LevelProgress {
+    let mut per_kanji: std::collections::HashMap<String, Vec<&Item>> = Default::default();
+    for item in elenco {
+        per_kanji.entry(kanji_of(item)).or_default().push(item);
+    }
+
+    let (mut new, mut learning, mut mature) = (0, 0, 0);
+    for facce in per_kanji.values() {
+        let carte: Vec<Option<&Card>> = facce.iter().map(|i| cerca(i)).collect();
+        if carte.iter().all(Option::is_none) {
+            new += 1;
+        } else if carte.iter().all(|c| is_mature(*c, pacing)) {
+            mature += 1;
+        } else {
+            learning += 1;
+        }
+    }
+
+    let total = per_kanji.len();
+    let ratio = if total > 0 {
+        mature as f32 / total as f32
+    } else {
+        0.0
+    };
+
+    LevelProgress {
+        level,
+        total,
+        new,
+        learning,
+        mature,
+        ratio,
+        complete: total > 0 && ratio >= pacing.unlock_ratio,
+    }
+}
+
+/// Quanto reggono in media le faccette introdotte e non ancora mature.
+fn average_recall<'a>(
+    elenco: &[Item],
+    cerca: &dyn Fn(&Item) -> Option<&'a Card>,
+    pacing: &Pacing,
+    now: DateTime<Utc>,
+) -> Option<f32> {
+    let attive: Vec<f32> = elenco
+        .iter()
+        .filter_map(cerca)
+        .filter(|c| !is_mature(Some(c), pacing))
+        .filter_map(|c| Some(retrievability(c.memory()?, c.last_reviewed_at?, now)))
+        .collect();
+
+    (!attive.is_empty()).then(|| attive.iter().sum::<f32>() / attive.len() as f32)
+}
+
 /// In che stato e' ogni kanji del livello, **nell'ordine della tabella**.
 ///
 /// Un kanji e' maturo quando **tutte** le sue faccette attive lo sono: sapere il
@@ -495,6 +627,52 @@ mod tests {
             current_level(&db, &pacing).await.unwrap(),
             Level::new(2).unwrap()
         );
+    }
+
+    #[tokio::test]
+    async fn il_percorso_intero_si_legge_in_un_colpo() {
+        let db = db().await;
+        let pacing = Pacing::default();
+        let now = Utc::now();
+
+        let tutti = all_levels(&db, &pacing, now).await.unwrap();
+        assert_eq!(tutti.len(), usize::from(crate::features::kanji::levels::LEVELS));
+        assert_eq!(
+            tutti.iter().map(|l| l.progress.total).sum::<usize>(),
+            2136,
+            "il percorso copre tutti i joyo"
+        );
+
+        // A mani vuote e' aperto solo il primo: il percorso e' sequenziale.
+        assert!(tutti[0].unlocked);
+        assert!(!tutti[1].unlocked);
+        assert!(tutti.iter().all(|l| l.recall.is_none()), "niente da misurare");
+
+        // Finito il primo, si apre il secondo e non il terzo.
+        for k in table(primo()).all() {
+            impara(&db, primo(), &k.character, 40.0, now).await;
+        }
+        let tutti = all_levels(&db, &pacing, now).await.unwrap();
+        assert!(tutti[0].progress.complete);
+        assert!(tutti[1].unlocked);
+        assert!(!tutti[2].unlocked);
+    }
+
+    #[tokio::test]
+    async fn la_dashboard_dice_le_stesse_cose_del_singolo_livello() {
+        let db = db().await;
+        let pacing = Pacing::default();
+        let now = Utc::now();
+        let uno = table(primo()).all()[0].character.clone();
+        impara(&db, primo(), &uno, 1.0, now - TimeDelta::days(10)).await;
+
+        // Due strade per lo stesso numero: una che interroga un livello per volta e
+        // una che li prende tutti insieme. Se divergessero, la schermata e la
+        // dashboard racconterebbero due storie.
+        let singolo = level_progress(&db, primo(), &pacing).await.unwrap();
+        let tutti = all_levels(&db, &pacing, now).await.unwrap();
+        assert_eq!(tutti[0].progress, singolo);
+        assert_eq!(tutti[0].recall, load(&db, primo(), &pacing, now).await.unwrap());
     }
 
     #[tokio::test]

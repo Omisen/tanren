@@ -14,6 +14,7 @@ import { invoke } from '@tauri-apps/api/core'
 import type {
   Kanji,
   KanjiCell,
+  LevelSummary,
   Overview,
   StudyMode,
   StudyScope,
@@ -108,6 +109,16 @@ export function kanjiGrid(level: Level): Promise<KanjiCell[]> {
  */
 export function kanjiDetails(level: Level, characters: string[]): Promise<Kanji[]> {
   return invoke('kanji_details', { level, characters })
+}
+
+/**
+ * Come sta andando tutto il percorso, livello per livello.
+ *
+ * Misura **quanto sei consolidato**, che lo dice FSRS e lo alimentano solo il Learning
+ * e il Ripasso. Il Drill non compare qui e non deve.
+ */
+export function kanjiDashboard(): Promise<LevelSummary[]> {
+  return invoke('kanji_dashboard')
 }
 
 /** Quanto si e' consolidato un livello, e quali modalita' sono aperte. */

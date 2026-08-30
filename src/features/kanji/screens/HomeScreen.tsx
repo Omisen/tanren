@@ -44,7 +44,7 @@ const MODES: { value: StudyMode; label: string; caption: string }[] = [
 ]
 
 export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
-  const { kanji: scope, setLevel, study } = useUi()
+  const { kanji: scope, setLevel, study, goTo } = useUi()
   const [reached, setReached] = useState<Level | null>(null)
   const [overview, setOverview] = useState<{ level: Level; data: Overview | null } | null>(null)
   const [grid, setGrid] = useState<{ level: Level; cells: KanjiCell[] } | null>(null)
@@ -128,6 +128,10 @@ export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
             {cells === null && <Note>Loading…</Note>}
             {cells !== null && <Grid cells={cells} onOpen={setOpened} />}
           </Field>
+
+          <Button variant="quiet" onClick={() => goTo('dashboard')}>
+            Progress across all levels
+          </Button>
         </div>
       </Screen>
 

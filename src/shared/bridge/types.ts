@@ -87,6 +87,18 @@ export interface LevelProgress {
   complete: boolean
 }
 
+/**
+ * Una riga della dashboard: un livello, con quanto regge e se e' aperto.
+ *
+ * I campi dell'avanzamento arrivano appiattiti dentro la riga, non annidati.
+ */
+export interface LevelSummary extends LevelProgress {
+  /** Quanto reggono adesso le faccette che si stanno portando avanti, da 0 a 1. */
+  recall: number | null
+  /** Se il livello si puo' studiare, cioe' se i precedenti sono consolidati. */
+  unlocked: boolean
+}
+
 /** Cosa si puo' fare adesso. */
 export interface Available {
   learning: Gate
