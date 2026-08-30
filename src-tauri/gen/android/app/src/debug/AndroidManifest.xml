@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Il permesso di rete serve **solo** in sviluppo: li' la WebView carica il frontend
+  dal dev server su localhost, mentre in release lo serve `WebViewAssetLoader`
+  intercettando le richieste in locale, senza toccare la rete.
+
+  Sta qui e non nel manifest principale perche' un'app local-first che chiede la
+  rete e' una contraddizione visibile a chiunque guardi i permessi, e la fusione
+  dei manifest lo aggiunge alle sole build di debug. E' lo stesso schema che il
+  gradle usa gia' per `usesCleartextTraffic`.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>
