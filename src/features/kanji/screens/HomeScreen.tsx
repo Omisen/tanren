@@ -44,7 +44,14 @@ const MODES: { value: StudyMode; label: string; caption: string }[] = [
   { value: 'drill', label: 'Drill', caption: 'Free practice' },
 ]
 
-export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
+export function KanjiHomeScreen({
+  subjects,
+  about,
+}: {
+  subjects: ReactNode
+  /** La via per le fonti, messa dalla radice: e' cosa dell'app, non della materia. */
+  about: ReactNode
+}) {
   const { kanji: scope, setLevel, study, goTo } = useUi()
   const [reached, setReached] = useState<Level | null>(null)
   const [count, setCount] = useState<number | null>(null)
@@ -105,6 +112,7 @@ export function KanjiHomeScreen({ subjects }: { subjects: ReactNode }) {
       <Screen
         textured
         title="Tanren"
+        trailing={about}
         action={
           <div className="flex flex-col gap-2">
             {MODES.map((m) => (

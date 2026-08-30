@@ -1,5 +1,15 @@
 # Kanji data: sources and licence
 
+> **This file is for whoever reads the repository. The obligation is discharged inside
+> the app**, on the "Sources and licences" screen reachable from either home screen,
+> because CC BY-SA and the EDRDG licence both require attribution in the medium the work
+> travels in, and for an app that medium is the installed APK, not a file on GitHub.
+>
+> That screen is built from `shared/credits.rs` plus `features/kanji/levels.rs::credits`,
+> and the edition it shows is read from the data itself rather than typed by hand, so it
+> cannot drift from what actually ships. Keep this file and that list saying the same
+> thing.
+
 The tables in `levels/` are **derived from [kanjium](https://github.com/mifunetoshiro/kanjium)**
 by Uros O., which is itself built on files belonging to the Electronic Dictionary
 Research and Development Group (EDRDG) and James William Breen.
@@ -54,9 +64,14 @@ The EDRDG licence is specific about apps:
 > sufficient just to mention it on a start-up/launch page of the app.
 
 **So an APK that ships these tables needs a Sources screen inside the app, naming both
-sources.** It is a condition of use, not a nicety, and it blocks any release that carries
-kanji data. The `source()` field on each table exists partly to feed that screen with the
-exact edition in use.
+sources.** It is a condition of use, not a nicety. **That screen now exists**, and with it
+the last thing blocking a release that carries kanji data. The `source()` field on each
+table feeds it the exact edition in use.
+
+The licence texts travel with the app too, not only their names: the CC BY-SA 4.0 legal
+code and the SIL OFL 1.1 are files under `public/`, which ends up inside the package, and
+the screen opens them. For the EDRDG statement the screen offers the permanent link
+instead, which their licence explicitly allows where including the file is impractical.
 
 ## Regenerating
 

@@ -227,6 +227,14 @@ in <code>public/fonts/OFL.txt</code>.
 <br>
 
 <sub>
+The app carries a <b>Sources and licences</b> screen, reachable from either home screen,
+because these licences ask for attribution<br>inside the medium the work travels in, and
+for an app that is the installed APK rather than this page.
+</sub>
+
+<br>
+
+<sub>
 The kanji tables are derived from <b><a href="https://github.com/mifunetoshiro/kanjium">kanjium</a></b>
 by Uros O., which builds on <b>EDICT</b>, <b>KANJIDIC</b> and <b>KRADFILE</b>,<br>
 the property of the <b>Electronic Dictionary Research and Development Group</b>. Both are

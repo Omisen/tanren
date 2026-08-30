@@ -12,6 +12,7 @@
 import { invoke } from '@tauri-apps/api/core'
 
 import type {
+  Credit,
   Kanji,
   KanjiCell,
   LevelSummary,
@@ -40,6 +41,21 @@ export * from './types'
  */
 export function normalizeInput(input: string): Promise<string> {
   return invoke('normalize_input', { input })
+}
+
+/**
+ * Chi ha fatto cosa, e sotto quale licenza Tanren ridistribuisce.
+ *
+ * L'edizione dei dati arriva dal dato stesso, non da una stringa scritta a mano: cosi'
+ * non puo' divergere da quello che l'app spedisce davvero.
+ */
+export function credits(): Promise<Credit[]> {
+  return invoke('credits')
+}
+
+/** La versione dell'app, come la dichiara il pacchetto. */
+export function appVersion(): Promise<string> {
+  return invoke('app_version')
 }
 
 /** Le famiglie di un sillabario, con quanti segni contengono. */

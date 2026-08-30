@@ -37,7 +37,14 @@ const GROUP_LABELS: Record<KanaGroup, string> = {
  * della radice, che e' l'unica a conoscerle tutte. Questa schermata sa solo di kana, e
  * con la regola di non incrocio fra feature non potrebbe nemmeno nominare i kanji.
  */
-export function KanaHomeScreen({ subjects }: { subjects: ReactNode }) {
+export function KanaHomeScreen({
+  subjects,
+  about,
+}: {
+  subjects: ReactNode
+  /** La via per le fonti, messa dalla radice: e' cosa dell'app, non della materia. */
+  about: ReactNode
+}) {
   const { kana: scope, setSyllabary, setKanaMode, toggleGroup, goTo } = useUi()
   // Il catalogo si porta dietro il sillabario a cui appartiene. Cosi' cambiando
   // scelta il risultato vecchio smette di valere da solo, senza doverlo azzerare a
@@ -74,6 +81,7 @@ export function KanaHomeScreen({ subjects }: { subjects: ReactNode }) {
     <Screen
       textured
       title="Tanren"
+      trailing={about}
       action={
         <Button disabled={scope.groups.length === 0} onClick={() => goTo('session')}>
           {total > 0 ? `Start with ${total} characters` : 'Start'}

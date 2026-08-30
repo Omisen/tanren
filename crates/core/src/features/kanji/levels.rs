@@ -49,6 +49,8 @@ use std::sync::{LazyLock, OnceLock};
 
 use serde::{Deserialize, Serialize};
 
+use crate::shared::credits::Credit;
+
 /// Quanti livelli conta il percorso.
 pub const LEVELS: u8 = 86;
 
@@ -380,6 +382,57 @@ static PARSED: [OnceLock<KanjiTable>; LEVELS as usize] =
 pub fn table(level: Level) -> &'static KanjiTable {
     let i = usize::from(level.get() - 1);
     PARSED[i].get_or_init(|| parse(RAW[i], level))
+}
+
+/// Chi ha fatto i dati dei kanji, con l'edizione che l'app sta spedendo davvero.
+///
+/// Le due fonti **si sommano**: kanjium e' la fonte diretta, ma quasi tutto quello che
+/// contiene viene dall'EDRDG, e nessuna delle due sostituisce l'altra. L'edizione la
+/// legge dal dato invece di averla scritta a mano, cosi' non puo' divergere: e' l'altra
+/// ragione per cui il campo `source` esiste.
+pub fn credits() -> Vec<Credit> {
+    let source = table(Level::new(1).expect("il primo livello esiste")).source();
+
+    vec![
+        Credit {
+            name: "kanjium, by Uros O.".to_owned(),
+            covers: "Kanji meanings, readings, composition, frequencies and example \
+                     words. The order of the levels is not taken from it: it is computed \
+                     from its composition data by topological sort, so a kanji never \
+                     comes before the pieces it is built from."
+                .to_owned(),
+            // La frase che kanjium chiede, parola per parola. Non si riassume.
+            notice: Some(
+                "The pitch accent notation, verb particle data, phonetics, homonyms and \
+                 other additions or modifications to EDICT, KANJIDIC or KRADFILE were \
+                 provided by Uros O. through his free database."
+                    .to_owned(),
+            ),
+            licence: source.licence.clone(),
+            licence_url: "https://creativecommons.org/licenses/by-sa/4.0/".to_owned(),
+            licence_file: Some("/licences/CC-BY-SA-4.0.txt".to_owned()),
+            source_url: Some(source.url.clone()),
+            edition: Some(format!("commit {}, {}", &source.commit[..12], source.committed)),
+        },
+        Credit {
+            name: "EDRDG: EDICT, KANJIDIC, KRADFILE".to_owned(),
+            covers: "Most of what kanjium contains comes from these three, which are the \
+                     property of the Electronic Dictionary Research and Development \
+                     Group and of James William Breen, and are used in conformance with \
+                     the Group's licence."
+                .to_owned(),
+            notice: None,
+            licence: "Creative Commons Attribution-ShareAlike 4.0".to_owned(),
+            licence_url: "https://www.edrdg.org/edrdg/licence.html".to_owned(),
+            // Solo il link, non il testo: il loro statement e' una pagina che sta da
+            // loro, e la licenza stessa dice che dove il pacchetto non permette di
+            // includere i file basta rimandarci. La CC BY-SA che applica e' pero'
+            // imbarcata, ed e' la licenza vera.
+            licence_file: None,
+            source_url: Some("https://www.edrdg.org/wiki/index.php/KANJIDIC_Project".to_owned()),
+            edition: None,
+        },
+    ]
 }
 
 /// I file sono inclusi nel binario, quindi un errore qui non e' un dato sbagliato

@@ -5,6 +5,7 @@ import { KanjiHomeScreen } from '@/features/kanji/screens/HomeScreen'
 import { KanjiStudyScreen } from '@/features/kanji/screens/SessionScreen'
 import { useUi } from '@/shared/store/ui'
 
+import { AboutScreen } from './AboutScreen'
 import { SubjectPicker } from './SubjectPicker'
 
 /**
@@ -33,10 +34,38 @@ export default function App() {
   // percorso non ce l'hanno.
   if (screen === 'dashboard') return <KanjiDashboardScreen />
 
+  // Le fonti sono una cosa dell'app, non di una materia: la licenza dei dati obbliga
+  // ad attribuire dentro il mezzo in cui l'app viaggia, e qui e' l'unico posto che le
+  // conosce tutte.
+  if (screen === 'about') return <AboutScreen />
+
   const subjects = <SubjectPicker />
+  const about = <AboutButton />
   return subject === 'kana' ? (
-    <KanaHomeScreen subjects={subjects} />
+    <KanaHomeScreen subjects={subjects} about={about} />
   ) : (
-    <KanjiHomeScreen subjects={subjects} />
+    <KanjiHomeScreen subjects={subjects} about={about} />
+  )
+}
+
+/**
+ * La via per le fonti.
+ *
+ * In cima e non nella fascia in fondo: quella e' della cosa che si fa decine di volte,
+ * e questa si tocca di rado. Ma dev'esserci **in tutte e due le schermate iniziali**,
+ * perche' l'obbligo di attribuzione non dipende da quale materia si sta guardando.
+ */
+function AboutButton() {
+  const goTo = useUi((s) => s.goTo)
+
+  return (
+    <button
+      type="button"
+      onClick={() => goTo('about')}
+      aria-label="Sources and licences"
+      className="text-muted flex size-11 items-center justify-center text-lg active:opacity-60"
+    >
+      ⓘ
+    </button>
   )
 }

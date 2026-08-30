@@ -40,6 +40,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::credits,
+            commands::app_version,
             commands::normalize_input,
             commands::kana_catalogue,
             commands::start_kana_session,

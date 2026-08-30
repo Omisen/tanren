@@ -29,7 +29,7 @@ import type {
  * azzerarla, e nessuno dei due deve avere campi che non lo riguardano.
  */
 
-export type ScreenName = 'home' | 'session' | 'dashboard'
+export type ScreenName = 'home' | 'session' | 'dashboard' | 'about'
 
 /** Quale materia si sta guardando. */
 export type Subject = 'kana' | 'kanji'

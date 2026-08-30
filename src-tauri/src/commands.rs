@@ -10,6 +10,7 @@ use tanren_core::features::kana::session as kana;
 use tanren_core::features::kanji::levels::{Kanji, Level, table as levels_table};
 use tanren_core::features::kanji::progress::{LevelProgress, LevelSummary, Pacing};
 use tanren_core::features::kanji::study;
+use tanren_core::shared::credits::Credit;
 use tanren_core::shared::error::CoreError;
 use tanren_core::shared::session::{Step, Task};
 use tanren_core::shared::exercise::{Answer, ItemId, Verdict};
@@ -141,6 +142,28 @@ pub async fn kanji_overview(
         progress: study::progress(&state.db, &scope, &pacing).await?,
         available: study::available(&state.db, &scope, &pacing, now).await?,
     })
+}
+
+/// Chi ha fatto cosa, e sotto quale licenza Tanren ridistribuisce.
+///
+/// Le fonti dei dati le dichiara la materia che li usa, perche' e' l'unica a sapere da
+/// quale edizione vengono; il font e la licenza del progetto stanno nel livello
+/// condiviso. Qui si mettono in fila e basta.
+///
+/// **Non e' una schermata di cortesia**: la CC BY-SA e la licenza dell'EDRDG obbligano
+/// ad attribuire dentro il mezzo in cui l'opera viaggia, e per un'app quel mezzo e'
+/// l'APK. Senza questo, ogni release coi dati dei kanji sarebbe in violazione.
+#[tauri::command]
+pub fn credits() -> Vec<Credit> {
+    let mut tutti = tanren_core::features::kanji::levels::credits();
+    tutti.extend(tanren_core::shared::credits::app());
+    tutti
+}
+
+/// La versione dell'app, come la dichiara il pacchetto.
+#[tauri::command]
+pub fn app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_owned()
 }
 
 /// Quanti livelli conta il percorso.

@@ -260,6 +260,28 @@ export interface Note {
   expected: string
 }
 
+/**
+ * Una fonte, con quello che serve a darle credito.
+ *
+ * Non e' una schermata di cortesia: la CC BY-SA e la licenza dell'EDRDG obbligano ad
+ * attribuire **dentro il mezzo in cui l'opera viaggia**, e per un'app quel mezzo e'
+ * l'APK, non il README della repo.
+ */
+export interface Credit {
+  name: string
+  /** Che cosa di quello che si vede nell'app viene da qui. */
+  covers: string
+  /** La frase esatta che quella fonte chiede di riportare. Non si parafrasa. */
+  notice: string | null
+  licence: string
+  licenceUrl: string
+  /** Il testo della licenza imbarcato, se c'e'. Altrimenti resta il link. */
+  licenceFile: string | null
+  sourceUrl: string | null
+  /** Quale edizione esatta di quella fonte l'app sta spedendo. */
+  edition: string | null
+}
+
 /** Un errore arrivato dal core. Il campo `kind` dice di che si tratta. */
 export type CoreError =
   | { kind: 'unknown_item'; id: string }

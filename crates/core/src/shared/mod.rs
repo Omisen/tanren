@@ -4,6 +4,7 @@
 //! kana o di kanji, appartiene alla sua feature, non a questo modulo.
 
 pub mod content;
+pub mod credits;
 pub mod error;
 pub mod exercise;
 pub mod session;
