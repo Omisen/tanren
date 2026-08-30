@@ -165,7 +165,7 @@ impl ExerciseType for KanaRecognition {
         // Vengono accettate tutte le trascrizioni note del segno, non solo quella
         // canonica: chi scrive `si` per し ha capito il segno.
         Ok(if kana.romaji.contains(&dato) {
-            Verdict::Correct
+            Verdict::correct()
         } else {
             Verdict::Incorrect {
                 accepted: kana.romaji.clone(),
@@ -211,7 +211,7 @@ impl ExerciseType for KanaInput {
         // mezza larghezza o segni di sonorizzazione staccati.
         Ok(
             if normalize_input(answer.as_str()) == normalize_input(&kana.character) {
-                Verdict::Correct
+                Verdict::correct()
             } else {
                 Verdict::Incorrect {
                     accepted: vec![kana.character.clone()],

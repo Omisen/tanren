@@ -341,7 +341,7 @@ impl ExerciseType for KanjiRecognition {
         // tastiera e non la conoscenza. `normalize_reading` ripiega tutto sull'hiragana.
         Ok(
             if item.readings.iter().any(|r| normalize_reading(r) == dato) {
-                Verdict::Correct
+                Verdict::correct()
             } else {
                 Verdict::Incorrect {
                     accepted: item.readings,

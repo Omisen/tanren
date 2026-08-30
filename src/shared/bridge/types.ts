@@ -121,9 +121,25 @@ export interface Step {
  * spaziata, l'item torna al prossimo giro e basta.
  */
 export type Verdict =
-  | { outcome: 'correct' }
+  | { outcome: 'correct'; note?: Note }
   /** Le risposte che sarebbero state accettate, da mostrare invece di un secco no. */
   | { outcome: 'incorrect'; accepted: string[] }
+
+/**
+ * Un rilievo su una risposta **giusta**.
+ *
+ * Serve a insegnare una convenzione senza punire chi non la segue: chi digita いち
+ * invece di イチ ha ricordato la lettura, e trattarlo come un errore direbbe a FSRS che
+ * il ricordo e' debole quando il problema era solo ortografico. Non cambia il giudizio.
+ *
+ * `kind` e' **un'etichetta da mappare, non testo da mostrare**, come `asks`: il core
+ * dice `on_in_hiragana`, la schermata scrive la frase.
+ */
+export interface Note {
+  kind: string
+  /** Come si sarebbe scritta seguendo la convenzione. */
+  expected: string
+}
 
 /** Un errore arrivato dal core. Il campo `kind` dice di che si tratta. */
 export type CoreError =

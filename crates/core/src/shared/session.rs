@@ -33,7 +33,8 @@ use serde::Serialize;
 
 use crate::shared::error::Result;
 use crate::shared::exercise::{Answer, ExerciseType, ItemId, Question, QuestionRequest, Verdict};
-use crate::shared::storage::{Database, NewAnswer};
+use crate::shared::srs::{Grade, Scheduler};
+use crate::shared::storage::{Card, Database, NewAnswer, Scheduling};
 
 /// Quante opzioni mostrare nella scelta multipla, risposta giusta compresa.
 pub const CHOICES: usize = 4;
@@ -136,17 +137,17 @@ fn requeue(queue: &[ItemId], correct: bool, rng: &mut dyn Rng) -> Vec<ItemId> {
 
 /// Corregge una risposta e la registra nello storico.
 ///
-/// # Perche' qui non si pianifica niente
+/// # Chi pianifica e chi no
 ///
-/// Nessuna delle materie di oggi usa la ripetizione spaziata: i kana perche' su un
-/// alfabeto lavora contro chi impara (vedi [`crate::shared::srs`]), i kanji perche' non
-/// e' ancora collegata. La risposta entra comunque nello storico, che e' in sola
-/// aggiunta: sapere quante volte un item e' stato sbagliato serve a prescindere dalle
-/// scadenze, e costa una riga. La carta invece non viene toccata, perche' esiste per
-/// tenere lo stato della ripetizione spaziata e qui non ce n'e' nessuno.
+/// `scheduler` a `None` vuol dire **non toccare la carta**: la risposta entra solo
+/// nello storico, che e' in sola aggiunta, e `rating` resta vuoto perche' nessuno ha
+/// dato un giudizio. E' il caso dei kana, dove la ripetizione spaziata lavora contro
+/// chi impara (vedi [`crate::shared::srs`]), ed e' anche il caso del Drill, che e'
+/// esercizio in piu' e non deve spostare le scadenze di niente.
 ///
-/// Quando FSRS verra' collegato, sara' questa funzione a ricevere una pianificazione
-/// invece di passare `None`.
+/// Con uno scheduler invece la carta si aggiorna: si legge lo stato di memoria che
+/// aveva, si calcola quello nuovo e si scrive tutto **nella stessa transazione** della
+/// risposta.
 ///
 /// # Il tempo di risposta
 ///
@@ -160,19 +161,38 @@ pub async fn submit(
     item: &ItemId,
     answer: &Answer,
     response_time_ms: Option<i64>,
+    scheduler: Option<&Scheduler>,
     now: DateTime<Utc>,
 ) -> Result<Verdict> {
     let exercise_id = exercise.id();
     let verdict = exercise.grade(item, answer)?;
+    let correct = verdict.is_correct();
+
+    // Un rilievo sulla grafia non cambia il voto: chi ha ricordato la lettura ha
+    // ricordato, e dire il contrario a FSRS falserebbe l'unico dato da cui impara.
+    let scheduling = match scheduler {
+        None => None,
+        Some(scheduler) => {
+            let card = db.card(item.as_str(), exercise_id.as_str()).await?;
+            let grade = Grade::from_correct(correct);
+            let next = scheduler.schedule(
+                card.as_ref().and_then(Card::memory),
+                card.as_ref().and_then(|c| c.last_reviewed_at),
+                grade,
+                now,
+            )?;
+            Some(Scheduling { grade, next })
+        }
+    };
 
     db.record_answer(NewAnswer {
         item_id: item.as_str(),
         exercise_type: exercise_id.as_str(),
-        correct: verdict.is_correct(),
+        correct,
         answer: answer.as_str(),
         answered_at: now,
         response_time_ms,
-        scheduling: None,
+        scheduling,
     })
     .await?;
 
@@ -210,7 +230,7 @@ mod tests {
         }
 
         fn grade(&self, _item: &ItemId, _answer: &Answer) -> Result<Verdict> {
-            Ok(Verdict::Correct)
+            Ok(Verdict::correct())
         }
     }
 
@@ -309,12 +329,13 @@ mod tests {
             &item,
             &Answer::new("qualcosa"),
             Some(1_200),
+            None,
             Utc::now(),
         )
         .await
         .unwrap();
 
-        assert_eq!(verdict, Verdict::Correct);
+        assert_eq!(verdict, Verdict::correct());
 
         let storico = db.answers(item.as_str(), "finto").await.unwrap();
         assert_eq!(storico.len(), 1);
@@ -322,5 +343,57 @@ mod tests {
 
         // Nessuna carta: senza pianificazione non c'e' stato da tenere.
         assert_eq!(db.card(item.as_str(), "finto").await.unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn con_uno_scheduler_la_carta_nasce_e_si_aggiorna() {
+        let db = Database::in_memory().await.unwrap();
+        let scheduler = Scheduler::default();
+        let item = ItemId::new("finto:0");
+        let now = Utc::now();
+
+        let prima = submit(
+            &db,
+            &Finto,
+            &item,
+            &Answer::new("qualcosa"),
+            None,
+            Some(&scheduler),
+            now,
+        )
+        .await
+        .unwrap();
+        assert!(prima.is_correct());
+
+        let carta = db
+            .card(item.as_str(), "finto")
+            .await
+            .unwrap()
+            .expect("con lo scheduler la carta nasce");
+        assert_eq!(carta.reps, 1);
+        let memoria = carta.memory().expect("ha uno stato di memoria");
+        assert!(memoria.stability > 0.0);
+        assert!(carta.due_at.unwrap() > now, "e' stata programmata nel futuro");
+
+        // Alla seconda risposta si riparte da li' e la stabilita' cresce.
+        let dopo_un_giorno = carta.due_at.unwrap();
+        submit(
+            &db,
+            &Finto,
+            &item,
+            &Answer::new("qualcosa"),
+            None,
+            Some(&scheduler),
+            dopo_un_giorno,
+        )
+        .await
+        .unwrap();
+
+        let carta = db.card(item.as_str(), "finto").await.unwrap().unwrap();
+        assert_eq!(carta.reps, 2);
+        assert!(
+            carta.memory().unwrap().stability > memoria.stability,
+            "ricordare allunga l'intervallo"
+        );
     }
 }

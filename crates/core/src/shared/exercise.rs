@@ -132,11 +132,33 @@ impl Answer {
     }
 }
 
+/// Un rilievo su una risposta giusta.
+///
+/// Serve a insegnare una convenzione senza punire chi non la segue: chi digita いち
+/// invece di イチ ha risposto bene, e trattarlo come un errore direbbe a FSRS che il
+/// ricordo e' debole quando il problema era solo ortografico.
+///
+/// `kind` e' **un'etichetta da mappare, non testo da mostrare**, come [`Question::asks`]:
+/// il core dice `on_in_hiragana`, l'interfaccia scrive la frase.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Note {
+    pub kind: String,
+    /// Come si sarebbe scritta seguendo la convenzione.
+    pub expected: String,
+}
+
 /// L'esito di una risposta.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "outcome", rename_all = "snake_case")]
 pub enum Verdict {
-    Correct,
+    Correct {
+        /// Giusta, ma con qualcosa da far notare. `None` quando non c'e' niente da dire.
+        ///
+        /// **Non cambia il giudizio**: per FSRS la risposta e' giusta e basta.
+        #[serde(skip_serializing_if = "Option::is_none", default)]
+        note: Option<Note>,
+    },
     /// Sbagliata, con le risposte che sarebbero state accettate: la UI le mostra
     /// invece di limitarsi a dire di no.
     Incorrect {
@@ -145,8 +167,13 @@ pub enum Verdict {
 }
 
 impl Verdict {
+    /// Una risposta giusta e senza rilievi.
+    pub fn correct() -> Self {
+        Self::Correct { note: None }
+    }
+
     pub fn is_correct(&self) -> bool {
-        matches!(self, Self::Correct)
+        matches!(self, Self::Correct { .. })
     }
 }
 

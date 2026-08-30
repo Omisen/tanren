@@ -111,6 +111,9 @@ pub async fn submit(
         item,
         answer,
         response_time_ms,
+        // Sui kana non si pianifica niente, ed e' una scelta cognitiva: vedi la
+        // nota su FSRS in cima al modulo.
+        None,
         now,
     )
     .await
@@ -282,7 +285,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(verdict, Verdict::Correct);
+        assert_eq!(verdict, Verdict::correct());
 
         let esercizio = Mode::Input.exercise_id();
         let storico = db.answers(q.item.as_str(), esercizio.as_str()).await.unwrap();
@@ -343,7 +346,7 @@ mod tests {
             let verdict = submit(&db, &scope, &q.item, &Answer::new(atteso), Some(900), now)
                 .await
                 .unwrap();
-            assert_eq!(verdict, Verdict::Correct);
+            assert_eq!(verdict, Verdict::correct());
 
             step = advance(&scope, &step.queue, true, &mut rng).unwrap();
         }

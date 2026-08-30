@@ -18,7 +18,7 @@ use tanren_core::features::kanji::exercise::Family;
 use tanren_core::features::kanji::session::{Mode as KanjiMode, Scope as KanjiScope};
 use tanren_core::shared::error::CoreError;
 use tanren_core::shared::exercise::{
-    AnswerFormat, ExerciseTypeId, ItemId, Prompt, Question, Verdict,
+    AnswerFormat, ExerciseTypeId, ItemId, Note, Prompt, Question, Verdict,
 };
 
 #[test]
@@ -98,8 +98,25 @@ fn una_domanda_che_precisa_cosa_chiede() {
 #[test]
 fn un_esito_giusto_e_uno_sbagliato() {
     assert_eq!(
-        serde_json::to_value(Verdict::Correct).unwrap(),
-        json!({ "outcome": "correct" })
+        serde_json::to_value(Verdict::correct()).unwrap(),
+        json!({ "outcome": "correct" }),
+        "senza rilievi il campo non attraversa nemmeno il confine"
+    );
+
+    // Giusta, ma scritta contro la convenzione: il rilievo viaggia come etichetta da
+    // mappare, non come frase gia' scritta.
+    assert_eq!(
+        serde_json::to_value(Verdict::Correct {
+            note: Some(Note {
+                kind: "on_in_hiragana".into(),
+                expected: "イチ".into(),
+            }),
+        })
+        .unwrap(),
+        json!({
+            "outcome": "correct",
+            "note": { "kind": "on_in_hiragana", "expected": "イチ" }
+        })
     );
 
     assert_eq!(

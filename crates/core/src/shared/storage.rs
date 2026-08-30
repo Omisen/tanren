@@ -278,6 +278,73 @@ impl Database {
         Ok(nuove)
     }
 
+    /// Tutte le carte che rientrano nel filtro, studiate o no.
+    ///
+    /// Serve a misurare a che punto e' un insieme di item: quante sono gia' nate,
+    /// quante hanno raggiunto una certa stabilita', quanto reggono adesso. E' una
+    /// domanda diversa da [`Self::due_cards`], che chiede solo cosa tocca fare.
+    pub async fn cards(&self, filter: CardFilter<'_>) -> Result<Vec<Card>> {
+        let mut query = QueryBuilder::new(
+            "SELECT item_id, exercise_type, due_at, last_reviewed_at, reps, lapses,
+                    stability, difficulty, updated_at, rev
+             FROM cards
+             WHERE deleted_at IS NULL",
+        );
+
+        if let Some(exercise) = filter.exercise_type {
+            query.push(" AND exercise_type = ").push_bind(exercise);
+        }
+
+        if let Some(items) = filter.items {
+            if items.is_empty() {
+                return Ok(Vec::new());
+            }
+            query.push(" AND item_id IN (");
+            let mut elenco = query.separated(", ");
+            for item in items {
+                elenco.push_bind(item.as_str());
+            }
+            query.push(")");
+        }
+
+        Ok(query.build_query_as::<Card>().fetch_all(&self.pool).await?)
+    }
+
+    /// Quante carte di un tipo sono nate dopo un certo istante.
+    ///
+    /// Una carta nasce quando l'elemento viene introdotto, quindi contarle e' il modo
+    /// di sapere quanto si e' introdotto oggi. Il tipo di esercizio serve a contare
+    /// **una volta sola per elemento** quando un elemento ne genera piu' d'una.
+    pub async fn cards_created_since(
+        &self,
+        exercise_type: &str,
+        since: DateTime<Utc>,
+    ) -> Result<i64> {
+        let (count,): (i64,) = sqlx::query_as(
+            "SELECT count(*) FROM cards
+             WHERE deleted_at IS NULL AND exercise_type = ? AND created_at >= ?",
+        )
+        .bind(exercise_type)
+        .bind(since)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(count)
+    }
+
+    /// Quando e' nata l'ultima carta di un tipo. `None` se non ce n'e' nessuna.
+    pub async fn last_card_created(&self, exercise_type: &str) -> Result<Option<DateTime<Utc>>> {
+        let (last,): (Option<DateTime<Utc>>,) = sqlx::query_as(
+            "SELECT max(created_at) FROM cards
+             WHERE deleted_at IS NULL AND exercise_type = ?",
+        )
+        .bind(exercise_type)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(last)
+    }
+
     /// Le carte da studiare adesso, le piu' arretrate per prime.
     ///
     /// Le carte mai studiate hanno `due_at` a NULL e SQLite le ordina prima di tutte

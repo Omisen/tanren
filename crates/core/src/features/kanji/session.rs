@@ -104,6 +104,9 @@ pub async fn submit(
         item,
         answer,
         response_time_ms,
+        // La versione precedente dell'esercizio non collega FSRS. Lo fa il
+        // redesign, con le faccette.
+        None,
         now,
     )
     .await
@@ -178,7 +181,7 @@ mod tests {
         .await
         .unwrap();
 
-        assert_eq!(verdict, Verdict::Correct, "せい e' una lettura on di 生");
+        assert_eq!(verdict, Verdict::correct(), "せい e' una lettura on di 生");
 
         let esercizio = Mode::Recognition.exercise_id();
         let storico = db.answers(item.as_str(), esercizio.as_str()).await.unwrap();

@@ -20,7 +20,7 @@
 //! scadenza.
 
 use chrono::{DateTime, TimeDelta, Utc};
-use fsrs::{DEFAULT_PARAMETERS, FSRS};
+use fsrs::{DEFAULT_PARAMETERS, FSRS, FSRS6_DEFAULT_DECAY, current_retrievability};
 use serde::{Deserialize, Serialize};
 
 use crate::shared::error::{CoreError, Result};
@@ -77,6 +77,25 @@ pub struct MemoryState {
     pub stability: f32,
     /// Quanto l'elemento e' faticoso per questa persona.
     pub difficulty: f32,
+}
+
+/// Quanto e' probabile ricordare adesso una carta gia' studiata, da 0 a 1.
+///
+/// E' il valore che scende lungo la curva dell'oblio via via che passa il tempo: al
+/// momento del ripasso previsto vale `DEFAULT_RETENTION`, prima e' piu' alto, dopo piu'
+/// basso. Serve a misurare **quanto si sta reggendo il carico attuale**, che e' la
+/// condizione per introdurre roba nuova.
+///
+/// I giorni si contano con la virgola e non interi: fra le carte appena introdotte gli
+/// intervalli sono di ore, e arrotondare a zero direbbe che il ricordo e' ancora
+/// intatto quando non lo e'.
+pub fn retrievability(
+    memory: MemoryState,
+    last_reviewed_at: DateTime<Utc>,
+    now: DateTime<Utc>,
+) -> f32 {
+    let days = ((now - last_reviewed_at).num_seconds() as f32 / 86_400.0).max(0.0);
+    current_retrievability(memory.into(), days, FSRS6_DEFAULT_DECAY)
 }
 
 /// Il risultato di una pianificazione.
