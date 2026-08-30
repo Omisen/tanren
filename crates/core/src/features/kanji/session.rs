@@ -24,7 +24,7 @@ use crate::features::kanji::data::Grade;
 use crate::features::kanji::exercise::{self, Family, KanjiRecognition, item_id};
 use crate::shared::error::Result;
 use crate::shared::exercise::{Answer, ExerciseType, ExerciseTypeId, ItemId, Verdict};
-use crate::shared::session;
+use crate::shared::session::{self, Retry, Task};
 use crate::shared::storage::Database;
 
 pub use crate::shared::session::Step;
@@ -44,7 +44,7 @@ pub enum Mode {
 }
 
 impl Mode {
-    fn exercise(self) -> &'static dyn ExerciseType {
+    pub fn exercise(self) -> &'static dyn ExerciseType {
         match self {
             Self::Recognition => &RECOGNITION,
         }
@@ -75,14 +75,28 @@ impl Scope {
     }
 }
 
+/// I compiti dell'ambito: gli stessi item, tutti con l'esercizio della modalita'.
+fn tasks(scope: &Scope) -> Vec<Task> {
+    let exercise = scope.mode.exercise_id();
+    scope
+        .items()
+        .into_iter()
+        .map(|item| Task::new(item, exercise.clone()))
+        .collect()
+}
+
+fn lookup(id: &ExerciseTypeId) -> Option<&'static dyn ExerciseType> {
+    (Mode::Recognition.exercise_id() == *id).then(|| Mode::Recognition.exercise())
+}
+
 /// Comincia il giro: l'ambito mescolato, e la prima domanda.
 pub fn start(scope: &Scope, rng: &mut dyn Rng) -> Result<Step> {
-    session::start(&scope.items(), scope.mode.exercise(), rng)
+    session::start(&tasks(scope), lookup, rng)
 }
 
 /// Come continua il giro dopo una risposta.
-pub fn advance(scope: &Scope, queue: &[ItemId], correct: bool, rng: &mut dyn Rng) -> Result<Step> {
-    session::advance(&scope.items(), scope.mode.exercise(), queue, correct, rng)
+pub fn advance(scope: &Scope, queue: &[Task], correct: bool, rng: &mut dyn Rng) -> Result<Step> {
+    session::advance(&tasks(scope), lookup, queue, correct, Retry::UntilRight, rng)
 }
 
 /// Corregge una risposta e la registra.

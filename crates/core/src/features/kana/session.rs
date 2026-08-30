@@ -33,7 +33,7 @@ use crate::features::kana::data::{KanaGroup, Syllabary, table};
 use crate::features::kana::exercise::{KanaInput, KanaRecognition, item_id};
 use crate::shared::error::Result;
 use crate::shared::exercise::{Answer, ExerciseType, ExerciseTypeId, ItemId, Verdict};
-use crate::shared::session;
+use crate::shared::session::{self, Retry, Task};
 use crate::shared::storage::Database;
 
 pub use crate::shared::session::Step;
@@ -52,7 +52,7 @@ pub enum Mode {
 }
 
 impl Mode {
-    fn exercise(self) -> &'static dyn ExerciseType {
+    pub fn exercise(self) -> &'static dyn ExerciseType {
         match self {
             Self::Recognition => &RECOGNITION,
             Self::Input => &INPUT,
@@ -86,14 +86,33 @@ impl Scope {
     }
 }
 
+/// I compiti dell'ambito: gli stessi item, tutti con l'esercizio della modalita'.
+fn tasks(scope: &Scope) -> Vec<Task> {
+    let exercise = scope.mode.exercise_id();
+    scope
+        .items()
+        .into_iter()
+        .map(|item| Task::new(item, exercise.clone()))
+        .collect()
+}
+
+/// Sui kana il giro e' tutto dello stesso esercizio, quindi la ricerca ha una risposta
+/// sola per ciascuno dei due.
+fn lookup(id: &ExerciseTypeId) -> Option<&'static dyn ExerciseType> {
+    [Mode::Recognition, Mode::Input]
+        .into_iter()
+        .find(|m| m.exercise_id() == *id)
+        .map(Mode::exercise)
+}
+
 /// Comincia il giro: l'ambito mescolato, e la prima domanda.
 pub fn start(scope: &Scope, rng: &mut dyn Rng) -> Result<Step> {
-    session::start(&scope.items(), scope.mode.exercise(), rng)
+    session::start(&tasks(scope), lookup, rng)
 }
 
 /// Come continua il giro dopo una risposta.
-pub fn advance(scope: &Scope, queue: &[ItemId], correct: bool, rng: &mut dyn Rng) -> Result<Step> {
-    session::advance(&scope.items(), scope.mode.exercise(), queue, correct, rng)
+pub fn advance(scope: &Scope, queue: &[Task], correct: bool, rng: &mut dyn Rng) -> Result<Step> {
+    session::advance(&tasks(scope), lookup, queue, correct, Retry::UntilRight, rng)
 }
 
 /// Corregge una risposta e la registra.
@@ -153,7 +172,7 @@ mod tests {
         let unici: HashSet<_> = giro.iter().collect();
         assert_eq!(unici.len(), giro.len(), "nessun segno chiesto due volte");
 
-        let ambito: HashSet<_> = scope.items().into_iter().collect();
+        let ambito: HashSet<_> = tasks(&scope).into_iter().collect();
         assert_eq!(
             giro.into_iter().collect::<HashSet<_>>(),
             ambito,
@@ -171,7 +190,7 @@ mod tests {
                     .unwrap()
                     .queue
                     .first()
-                    .map(|i| i.as_str().to_owned())
+                    .map(|t| t.item.as_str().to_owned())
             })
             .collect();
 
@@ -310,7 +329,7 @@ mod tests {
         let scope = base(Mode::Input);
         let mut rng = rng();
 
-        let item = start(&scope, &mut rng).unwrap().queue.remove(0);
+        let item = start(&scope, &mut rng).unwrap().queue.remove(0).item;
 
         let verdict = submit(&db, &scope, &item, &Answer::new("ん"), None, now)
             .await

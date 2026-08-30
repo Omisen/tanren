@@ -13,6 +13,12 @@ import { invoke } from '@tauri-apps/api/core'
 
 import type {
   Grade,
+  Overview,
+  StudyMode,
+  StudyScope,
+  StudySession,
+  Level,
+  Task,
   KanaScope,
   KanaSet,
   KanjiScope,
@@ -103,4 +109,51 @@ export function submitKanjiAnswer(
   responseTimeMs: number | null,
 ): Promise<Verdict> {
   return invoke('submit_kanji_answer', { scope, item, answer, responseTimeMs })
+}
+
+/* --- Il percorso sui kanji ------------------------------------------------- */
+
+/**
+ * Riduce un testo alla forma con cui verra' confrontata una **lettura**.
+ *
+ * E' l'altra normalizzazione rispetto a `normalizeInput`: ripiega tutto sull'hiragana,
+ * perche' su una lettura conta cosa si legge e non in quale sillabario lo si e'
+ * scritto. Chi digita せい a una domanda su セイ ha risposto.
+ */
+export function normalizeReading(input: string): Promise<string> {
+  return invoke('normalize_reading', { input })
+}
+
+/** Quanto si e' consolidato un livello, e quali modalita' sono aperte. */
+export function kanjiOverview(scope: StudyScope): Promise<Overview> {
+  return invoke('kanji_overview', { scope })
+}
+
+/** Fin dove si e' arrivati: il primo livello non ancora consolidato. */
+export function kanjiCurrentLevel(): Promise<Level> {
+  return invoke('kanji_current_level')
+}
+
+/** Comincia un giro di studio: i kanji da presentare e la prima domanda. */
+export function startKanjiStudy(scope: StudyScope): Promise<StudySession> {
+  return invoke('start_kanji_study', { scope })
+}
+
+/** Come continua il giro dopo una risposta. */
+export function nextKanjiStudyStep(
+  mode: StudyMode,
+  queue: Queue,
+  correct: boolean,
+): Promise<Step> {
+  return invoke('next_kanji_study_step', { mode, queue, correct })
+}
+
+/** Corregge una risposta e la registra. Nel Drill non sposta nessuna scadenza. */
+export function submitKanjiStudyAnswer(
+  mode: StudyMode,
+  task: Task,
+  answer: string,
+  responseTimeMs: number | null,
+): Promise<Verdict> {
+  return invoke('submit_kanji_study_answer', { mode, task, answer, responseTimeMs })
 }

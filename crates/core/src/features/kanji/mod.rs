@@ -10,6 +10,7 @@
 pub mod facets;
 pub mod levels;
 pub mod progress;
+pub mod study;
 
 // La versione precedente, in uscita.
 pub mod data;

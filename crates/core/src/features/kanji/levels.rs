@@ -52,8 +52,25 @@ pub const LEVELS: u8 = 69;
 /// I livelli da 1 a 50 sono quelli di WaniKani; dal 51 in poi sono la coda dei joyo
 /// che WaniKani non copre, ordinati per frequenza.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(transparent)]
+// In uscita e' un numero e basta; in entrata passa da `TryFrom`, che rifiuta quelli
+// fuori scala. Senza, un livello 999 arrivato dal confine sfonderebbe l'indice delle
+// tabelle, e la validazione di `new` varrebbe solo per chi la chiama a mano.
+#[serde(into = "u8", try_from = "u8")]
 pub struct Level(u8);
+
+impl From<Level> for u8 {
+    fn from(l: Level) -> Self {
+        l.0
+    }
+}
+
+impl TryFrom<u8> for Level {
+    type Error = String;
+
+    fn try_from(n: u8) -> std::result::Result<Self, Self::Error> {
+        Self::new(n).ok_or_else(|| format!("livello {n} fuori da 1..={LEVELS}"))
+    }
+}
 
 impl Level {
     /// `None` fuori da 1..=[`LEVELS`].
@@ -427,6 +444,17 @@ mod tests {
         assert!(atteso.includes.contains("EDRDG"), "l'attribuzione dell'EDRDG si somma");
         for level in Level::all() {
             assert_eq!(table(level).source(), atteso, "livello {level}");
+        }
+    }
+
+    #[test]
+    fn un_livello_fuori_scala_non_attraversa_il_confine() {
+        assert!(serde_json::from_str::<Level>("3").is_ok());
+        for fuori in ["0", "70", "255"] {
+            assert!(
+                serde_json::from_str::<Level>(fuori).is_err(),
+                "{fuori} non e' un livello e non deve entrare"
+            );
         }
     }
 

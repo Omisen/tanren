@@ -15,6 +15,7 @@
 //! avra' bisogno di maturita' e sblocco si vedra' cosa e' davvero comune.
 
 use chrono::{DateTime, TimeDelta, Utc};
+use serde::{Deserialize, Serialize};
 
 use crate::features::kanji::facets::{Facet, Item, items};
 use crate::features::kanji::levels::Level;
@@ -29,6 +30,11 @@ use crate::shared::storage::{Card, CardFilter, Database};
 /// dati arriveranno.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Pacing {
+    /// Quanti item mettere in un giro di Drill.
+    ///
+    /// Il Drill e' pratica a richiesta: senza un tetto un giro sarebbe lungo quanto
+    /// tutto quello che si e' imparato, cioe' impraticabile.
+    pub drill_size: usize,
     /// Quanti kanji nuovi al giorno, al massimo.
     ///
     /// Cinque e' volutamente prudente: il carico associativo di un kanji e' alto,
@@ -53,6 +59,7 @@ pub struct Pacing {
 impl Default for Pacing {
     fn default() -> Self {
         Self {
+            drill_size: 20,
             daily_new: 5,
             min_retrievability: 0.75,
             floor: TimeDelta::hours(4),
@@ -63,7 +70,8 @@ impl Default for Pacing {
 }
 
 /// In che stato e' un kanji.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Standing {
     /// Mai introdotto.
     New,
@@ -74,7 +82,8 @@ pub enum Standing {
 }
 
 /// A che punto e' un livello.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LevelProgress {
     pub level: Level,
     pub total: usize,
@@ -88,7 +97,8 @@ pub struct LevelProgress {
 }
 
 /// Perche' non si puo' imparare altro adesso.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(tag = "reason", rename_all = "snake_case")]
 pub enum Blocked {
     /// Quello che c'e' gia' non regge abbastanza. E' il freno che conta.
     Consolidate { current: f32, needed: f32 },
@@ -105,7 +115,8 @@ pub enum Blocked {
 /// Il motivo non e' un dettaglio da inghiottire: dire «consolida quello che hai» e
 /// dire «torna fra quattro ore» sono due consigli diversi, e chi studia ha diritto di
 /// sapere quale dei due vale.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(tag = "state", rename_all = "snake_case")]
 pub enum Gate {
     Open { room: usize },
     Closed(Blocked),

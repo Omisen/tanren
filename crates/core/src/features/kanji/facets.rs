@@ -448,6 +448,24 @@ fn fold(meaning: &str) -> String {
     meaning.trim().to_lowercase()
 }
 
+/// Il livello a cui appartiene un item, letto dal suo identificatore.
+///
+/// `None` se l'identificatore non e' di questa materia: e' il modo di riconoscere
+/// quello che non ci riguarda senza doverlo risolvere per intero.
+pub fn level_of(id: &ItemId) -> Option<Level> {
+    id.as_str()
+        .strip_prefix(NAMESPACE)
+        .and_then(|r| r.strip_prefix(':'))
+        .and_then(|r| r.split_once(':'))
+        .and_then(|(level, _)| level.parse().ok())
+        .and_then(Level::new)
+}
+
+/// L'esercizio che sa fare una domanda, se e' di questa materia.
+pub fn exercise_for(id: &ExerciseTypeId) -> Option<&'static dyn ExerciseType> {
+    Facet::from_exercise(id).map(Facet::exercise)
+}
+
 /// La faccetta che un tipo di esercizio rappresenta, se e' di questa materia.
 pub fn facet_of(exercise: &ExerciseTypeId) -> Option<Facet> {
     Facet::from_exercise(exercise)

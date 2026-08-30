@@ -13,6 +13,10 @@
 use serde_json::json;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary};
 use tanren_core::features::kana::session::{Mode, Scope, Step};
+use tanren_core::features::kanji::levels::Level;
+use tanren_core::features::kanji::progress::{Blocked, Gate};
+use tanren_core::features::kanji::study::{Mode as StudyMode, Scope as StudyScope};
+use tanren_core::shared::session::Task;
 use tanren_core::features::kanji::data::Grade;
 use tanren_core::features::kanji::exercise::Family;
 use tanren_core::features::kanji::session::{Mode as KanjiMode, Scope as KanjiScope};
@@ -140,13 +144,28 @@ fn un_passo_della_sessione() {
             },
             asks: None,
         }),
-        queue: vec![ItemId::new("kana:hiragana:か"), ItemId::new("kana:hiragana:き")],
+        queue: vec![
+            Task::new(ItemId::new("kana:hiragana:か"), ExerciseTypeId::new("kana.recognition")),
+            Task::new(ItemId::new("kana:hiragana:き"), ExerciseTypeId::new("kana.recognition")),
+        ],
     };
 
+    // La coda dice su cosa si sta per chiedere e **che cosa** se ne chiede: un giro
+    // puo' mescolare esercizi diversi, come succede sulle faccette di un kanji.
     assert_eq!(
         serde_json::to_value(&step).unwrap()["queue"],
-        json!(["kana:hiragana:か", "kana:hiragana:き"])
+        json!([
+            { "item": "kana:hiragana:か", "exercise": "kana.recognition" },
+            { "item": "kana:hiragana:き", "exercise": "kana.recognition" }
+        ])
     );
+
+    // La coda torna indietro dal frontend com'era arrivata, quindi deve anche
+    // potersi rileggere: e' il punto in cui un giro si spezzerebbe alla seconda
+    // domanda invece che subito.
+    let riletta: Vec<Task> = serde_json::from_value(serde_json::to_value(&step).unwrap()["queue"].clone())
+        .expect("la coda si rilegge");
+    assert_eq!(riletta, step.queue);
 
     // A giro finito la domanda manca, e il frontend lo riconosce da qui.
     assert_eq!(
@@ -207,6 +226,56 @@ fn l_ambito_dei_kanji_attraversa_il_confine_nei_due_versi() {
         serde_json::to_value(Grade::Secondary).unwrap(),
         json!("secondary")
     );
+}
+
+/// Come la porta del Learning attraversa il confine.
+///
+/// Il motivo del rifiuto **deve** arrivare distinguibile: «consolida quello che hai» e
+/// «torna fra quattro ore» sono due consigli diversi, e un `false` non li direbbe.
+#[test]
+fn la_porta_dice_perche_e_chiusa() {
+    assert_eq!(
+        serde_json::to_value(Gate::Open { room: 3 }).unwrap(),
+        json!({ "state": "open", "room": 3 })
+    );
+
+    assert_eq!(
+        serde_json::to_value(Gate::Closed(Blocked::Consolidate {
+            current: 0.5,
+            needed: 0.75,
+        }))
+        .unwrap(),
+        json!({ "state": "closed", "reason": "consolidate", "current": 0.5, "needed": 0.75 })
+    );
+
+    assert_eq!(
+        serde_json::to_value(Gate::Closed(Blocked::DailyCap { done: 5, cap: 5 })).unwrap(),
+        json!({ "state": "closed", "reason": "daily_cap", "done": 5, "cap": 5 })
+    );
+
+    assert_eq!(
+        serde_json::to_value(Gate::Closed(Blocked::NothingNew)).unwrap(),
+        json!({ "state": "closed", "reason": "nothing_new" })
+    );
+}
+
+/// L'ambito di uno studio sui kanji, che il frontend costruisce e il core rilegge.
+#[test]
+fn l_ambito_dello_studio_attraversa_il_confine_nei_due_versi() {
+    let scope = StudyScope {
+        mode: StudyMode::Learning,
+        level: Level::new(3).unwrap(),
+    };
+    assert_eq!(
+        serde_json::to_value(scope).unwrap(),
+        json!({ "mode": "learning", "level": 3 })
+    );
+
+    let riletto: StudyScope = serde_json::from_value(json!({ "mode": "drill", "level": 1 })).unwrap();
+    assert_eq!(riletto.mode, StudyMode::Drill);
+
+    // Un livello fuori scala non deve entrare: le tabelle sono sessantanove.
+    assert!(serde_json::from_value::<StudyScope>(json!({ "mode": "drill", "level": 200 })).is_err());
 }
 
 #[test]

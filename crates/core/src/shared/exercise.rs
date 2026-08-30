@@ -40,6 +40,14 @@ impl ExerciseTypeId {
         Self(Cow::Borrowed(id))
     }
 
+    /// Da una stringa che arriva a runtime, per esempio dall'archivio.
+    ///
+    /// Il costruttore `const` vuole un letterale, che e' giusto per chi il proprio
+    /// nome ce l'ha scritto dentro; questo serve a chi lo rilegge da fuori.
+    pub fn owned(id: impl Into<String>) -> Self {
+        Self(Cow::Owned(id.into()))
+    }
+
     pub fn as_str(&self) -> &str {
         &self.0
     }

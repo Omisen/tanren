@@ -65,6 +65,83 @@ export interface KanjiSet {
   size: number
 }
 
+/* --- Il percorso sui kanji: livelli, faccette, tre modalita' --------------- */
+
+/** Un livello del percorso, da 1 a 69. */
+export type Level = number
+
+/**
+ * In che modo si sta studiando.
+ *
+ * Non sono tre sistemi separati: e' lo stesso giro configurato in modo diverso, e le
+ * differenze sono da dove pesca, se rifa' chi sbaglia, e se nutre FSRS.
+ */
+export type StudyMode =
+  /** Si conoscono kanji nuovi, ed e' qui che le carte nascono. */
+  | 'learning'
+  /** Si rivede cio' che sta per essere dimenticato. Lo decide FSRS. */
+  | 'review'
+  /** Pratica a volonta' su quello che si e' gia' visto. **Non** tocca le scadenze. */
+  | 'drill'
+
+export interface StudyScope {
+  mode: StudyMode
+  level: Level
+}
+
+/** Perche' non si puo' imparare altro adesso. */
+export type Blocked =
+  /** Quello che c'e' gia' non regge abbastanza. E' il freno che conta. */
+  | { reason: 'consolidate'; current: number; needed: number }
+  /** Si e' introdotto troppo di recente. */
+  | { reason: 'too_soon'; until: string }
+  /** La quota di oggi e' finita. */
+  | { reason: 'daily_cap'; done: number; cap: number }
+  /** Non c'e' piu' niente di nuovo in questo livello. */
+  | { reason: 'nothing_new' }
+
+/**
+ * Se si puo' imparare, e altrimenti perche' no.
+ *
+ * Il motivo non e' un dettaglio: dire «consolida quello che hai» e «torna fra quattro
+ * ore» sono due consigli diversi, e chi studia ha diritto di sapere quale vale.
+ */
+export type Gate = { state: 'open'; room: number } | ({ state: 'closed' } & Blocked)
+
+/** A che punto e' un livello. */
+export interface LevelProgress {
+  level: Level
+  total: number
+  new: number
+  learning: number
+  mature: number
+  /** La quota di kanji maturi, da 0 a 1. */
+  ratio: number
+  /** Se il livello e' abbastanza consolidato da aprire il successivo. */
+  complete: boolean
+}
+
+/** Cosa si puo' fare adesso. */
+export interface Available {
+  learning: Gate
+  /** Quante faccette sono scadute, di qualunque livello. */
+  due: number
+  /** Su quante faccette si puo' praticare. */
+  practiced: number
+}
+
+export interface Overview {
+  progress: LevelProgress
+  available: Available
+}
+
+/** Un giro appena cominciato. */
+export interface StudySession {
+  /** I kanji da presentare prima di interrogare. Vuoto fuori dal Learning. */
+  introducing: string[]
+  step: Step
+}
+
 /**
  * Cosa mostrare, con l'indicazione di come va scritto.
  *
@@ -89,7 +166,19 @@ export type AnswerFormat =
  * non si guarda dentro e non si modifica. Chi esce, chi rientra e dove lo decide il
  * core, perche' e' la regola dell'esercizio e non un dettaglio di presentazione.
  */
-export type Queue = string[]
+export type Queue = Task[]
+
+/**
+ * Una domanda da fare: su quale item, e che cosa se ne chiede.
+ *
+ * Un giro puo' mescolare esercizi diversi. Sui kana no, sono tutti uguali; sui kanji
+ * si', perche' dello stesso 生 si chiede il significato, la lettura on e la lettura
+ * kun, e sono tre domande con tre carte e tre scadenze.
+ */
+export interface Task {
+  item: string
+  exercise: string
+}
 
 export interface Question {
   exerciseType: string

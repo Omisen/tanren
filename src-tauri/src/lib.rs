@@ -49,6 +49,12 @@ pub fn run() {
             commands::start_kanji_session,
             commands::next_kanji_step,
             commands::submit_kanji_answer,
+            commands::normalize_reading,
+            commands::kanji_overview,
+            commands::kanji_current_level,
+            commands::start_kanji_study,
+            commands::next_kanji_study_step,
+            commands::submit_kanji_study_answer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

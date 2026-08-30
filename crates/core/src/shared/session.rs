@@ -29,10 +29,12 @@
 use chrono::{DateTime, Utc};
 use rand::Rng;
 use rand::seq::{IndexedRandom, SliceRandom};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use crate::shared::error::Result;
-use crate::shared::exercise::{Answer, ExerciseType, ItemId, Question, QuestionRequest, Verdict};
+use crate::shared::error::{CoreError, Result};
+use crate::shared::exercise::{
+    Answer, ExerciseType, ExerciseTypeId, ItemId, Question, QuestionRequest, Verdict,
+};
 use crate::shared::srs::{Grade, Scheduler};
 use crate::shared::storage::{Card, Database, NewAnswer, Scheduling};
 
@@ -47,6 +49,49 @@ pub const CHOICES: usize = 4;
 /// si impara come ritmo.
 const RETRY_GAP: [usize; 3] = [2, 3, 4];
 
+/// Una domanda da fare: su quale item, e che cosa se ne chiede.
+///
+/// # Perche' la coda non e' fatta di soli item
+///
+/// Perche' un giro puo' mescolare esercizi diversi. Sui kana no, sono tutti uguali;
+/// sui kanji si', perche' dello stesso 生 si chiede il significato, la lettura on e la
+/// lettura kun, e sono tre domande con tre carte e tre scadenze. Il tratto
+/// [`ExerciseType`] era gia' pensato per stare dietro `dyn` proprio per questo.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Task {
+    pub item: ItemId,
+    pub exercise: ExerciseTypeId,
+}
+
+impl Task {
+    pub fn new(item: ItemId, exercise: ExerciseTypeId) -> Self {
+        Self { item, exercise }
+    }
+}
+
+/// Come si trova l'esercizio che sa fare una domanda.
+///
+/// E' una funzione e non un tratto perche' non ha stato: ogni materia ne offre una che
+/// conosce i propri esercizi, e il livello condiviso non deve sapere quali siano.
+pub type Lookup = fn(&ExerciseTypeId) -> Option<&'static dyn ExerciseType>;
+
+/// Cosa fare di un item sbagliato.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Retry {
+    /// Torna in coda poco piu' avanti, e ne esce solo quando lo si indovina.
+    ///
+    /// E' la regola giusta quando si sta fissando qualcosa adesso: la correzione va
+    /// consolidata mentre l'errore e' fresco.
+    UntilRight,
+    /// Si chiede una volta sola.
+    ///
+    /// E' la regola giusta quando **e' FSRS a decidere quando ripresentarlo**:
+    /// richiederlo subito significherebbe rispondere due volte alla stessa domanda e
+    /// contarle entrambe, falsando il dato da cui l'algoritmo impara.
+    Once,
+}
+
 /// Una domanda aperta e la coda che resta da fare.
 ///
 /// La coda e' opaca per chi la riceve: si conserva e si rimanda indietro alla chiamata
@@ -55,7 +100,7 @@ const RETRY_GAP: [usize; 3] = [2, 3, 4];
 #[serde(rename_all = "camelCase")]
 pub struct Step {
     pub question: Option<Question>,
-    pub queue: Vec<ItemId>,
+    pub queue: Vec<Task>,
 }
 
 /// Comincia il giro: l'ambito mescolato, e la prima domanda.
@@ -68,10 +113,24 @@ pub struct Step {
 ///
 /// La casualita' arriva da fuori, come per i distrattori: i test fissano un seme e
 /// ottengono sempre lo stesso giro.
-pub fn start(pool: &[ItemId], exercise: &dyn ExerciseType, rng: &mut dyn Rng) -> Result<Step> {
+pub fn start(pool: &[Task], lookup: Lookup, rng: &mut dyn Rng) -> Result<Step> {
     let mut queue = pool.to_vec();
     queue.shuffle(rng);
-    open(pool, exercise, queue, rng)
+    open(pool, lookup, queue, rng)
+}
+
+/// Apre una coda gia' scelta, senza toccarla.
+///
+/// Serve a chi la coda se l'e' costruita altrove, per esempio chiedendo all'archivio
+/// cosa e' scaduto: li' [`start`] non va bene, perche' rimescolerebbe un ordine gia'
+/// deciso e soprattutto pescherebbe la coda dal pool, che qui e' un'altra cosa.
+pub fn open_queue(
+    pool: &[Task],
+    lookup: Lookup,
+    queue: Vec<Task>,
+    rng: &mut dyn Rng,
+) -> Result<Step> {
+    open(pool, lookup, queue, rng)
 }
 
 /// Come continua il giro dopo una risposta.
@@ -80,13 +139,14 @@ pub fn start(pool: &[ItemId], exercise: &dyn ExerciseType, rng: &mut dyn Rng) ->
 /// avanti: e' l'unico modo di uscirne, quindi una sessione finisce solo quando ogni
 /// item e' stato azzeccato almeno una volta.
 pub fn advance(
-    pool: &[ItemId],
-    exercise: &dyn ExerciseType,
-    queue: &[ItemId],
+    pool: &[Task],
+    lookup: Lookup,
+    queue: &[Task],
     correct: bool,
+    retry: Retry,
     rng: &mut dyn Rng,
 ) -> Result<Step> {
-    open(pool, exercise, requeue(queue, correct, rng), rng)
+    open(pool, lookup, requeue(queue, correct, retry, rng), rng)
 }
 
 /// Formula la domanda in cima alla coda, se ce n'e' una.
@@ -94,21 +154,31 @@ pub fn advance(
 /// E' pura e non tocca il database, quindi e' verificabile con un seme fisso. Serve
 /// anche tecnicamente: il generatore di numeri casuali non deve attraversare un'attesa
 /// asincrona, altrimenti il future non e' `Send` e Tauri non lo accetta.
-fn open(
-    pool: &[ItemId],
-    exercise: &dyn ExerciseType,
-    queue: Vec<ItemId>,
-    rng: &mut dyn Rng,
-) -> Result<Step> {
+fn open(pool: &[Task], lookup: Lookup, queue: Vec<Task>, rng: &mut dyn Rng) -> Result<Step> {
     let question = match queue.first() {
-        Some(item) => Some(exercise.question(
-            QuestionRequest {
-                item,
-                pool,
-                distractors: CHOICES - 1,
-            },
-            rng,
-        )?),
+        Some(task) => {
+            let exercise = lookup(&task.exercise).ok_or_else(|| CoreError::ItemNotSupported {
+                exercise: task.exercise.to_string(),
+                id: task.item.to_string(),
+            })?;
+            // I distrattori si pescano fra gli item su cui si fa la **stessa**
+            // domanda: le trascrizioni fra le trascrizioni, i significati fra i
+            // significati. Mescolare le faccette darebbe opzioni che si scartano
+            // senza sapere niente, perche' non c'entrano.
+            let pool: Vec<ItemId> = pool
+                .iter()
+                .filter(|t| t.exercise == task.exercise)
+                .map(|t| t.item.clone())
+                .collect();
+            Some(exercise.question(
+                QuestionRequest {
+                    item: &task.item,
+                    pool: &pool,
+                    distractors: CHOICES - 1,
+                },
+                rng,
+            )?)
+        }
         None => None,
     };
 
@@ -116,14 +186,14 @@ fn open(
 }
 
 /// Toglie dalla coda l'item appena chiesto, e lo rimette dentro se e' andato male.
-fn requeue(queue: &[ItemId], correct: bool, rng: &mut dyn Rng) -> Vec<ItemId> {
+fn requeue(queue: &[Task], correct: bool, retry: Retry, rng: &mut dyn Rng) -> Vec<Task> {
     let mut rest = queue.to_vec();
     if rest.is_empty() {
         return rest;
     }
 
     let asked = rest.remove(0);
-    if !correct {
+    if !correct && retry == Retry::UntilRight {
         // `choose` torna un'opzione perche' una fetta puo' essere vuota, e questa e'
         // una costante di tre elementi. Se davanti non c'e' abbastanza roba l'item
         // finisce in fondo: piu' lontano di cosi' non si puo' metterlo.
@@ -234,9 +304,18 @@ mod tests {
         }
     }
 
-    fn pool(n: usize) -> Vec<ItemId> {
-        (0..n).map(|i| ItemId::new(format!("finto:{i}"))).collect()
+    fn pool(n: usize) -> Vec<Task> {
+        (0..n)
+            .map(|i| Task::new(ItemId::new(format!("finto:{i}")), Finto::ID))
+            .collect()
     }
+
+    /// La ricerca dell'esercizio finto: ce n'e' uno solo.
+    fn lookup(id: &ExerciseTypeId) -> Option<&'static dyn ExerciseType> {
+        (*id == Finto::ID).then_some(&FINTO as &dyn ExerciseType)
+    }
+
+    static FINTO: Finto = Finto;
 
     fn rng() -> StdRng {
         StdRng::seed_from_u64(7)
@@ -245,14 +324,14 @@ mod tests {
     #[test]
     fn il_giro_copre_l_ambito_una_volta_sola() {
         let items = pool(20);
-        let step = start(&items, &Finto, &mut rng()).unwrap();
+        let step = start(&items, lookup, &mut rng()).unwrap();
 
         assert_eq!(step.queue.len(), 20);
         let unici: std::collections::HashSet<_> = step.queue.iter().collect();
         assert_eq!(unici.len(), 20, "nessun item chiesto due volte");
         assert_eq!(
             step.question.unwrap().item,
-            step.queue[0],
+            step.queue[0].item,
             "si chiede sempre il primo della coda"
         );
     }
@@ -260,15 +339,15 @@ mod tests {
     #[test]
     fn l_ordine_non_e_quello_della_tabella() {
         let items = pool(30);
-        let step = start(&items, &Finto, &mut rng()).unwrap();
+        let step = start(&items, lookup, &mut rng()).unwrap();
         assert_ne!(step.queue, items, "il giro va mescolato");
     }
 
     #[test]
     fn indovinare_toglie_dalla_coda() {
         let items = pool(10);
-        let primo = start(&items, &Finto, &mut rng()).unwrap();
-        let dopo = advance(&items, &Finto, &primo.queue, true, &mut rng()).unwrap();
+        let primo = start(&items, lookup, &mut rng()).unwrap();
+        let dopo = advance(&items, lookup, &primo.queue, true, Retry::UntilRight, &mut rng()).unwrap();
 
         assert_eq!(dopo.queue.len(), 9);
         assert!(!dopo.queue.contains(&primo.queue[0]), "l'item indovinato esce");
@@ -277,9 +356,9 @@ mod tests {
     #[test]
     fn sbagliare_rimette_in_coda_poco_piu_avanti() {
         let items = pool(10);
-        let primo = start(&items, &Finto, &mut rng()).unwrap();
+        let primo = start(&items, lookup, &mut rng()).unwrap();
         let sbagliato = primo.queue[0].clone();
-        let dopo = advance(&items, &Finto, &primo.queue, false, &mut rng()).unwrap();
+        let dopo = advance(&items, lookup, &primo.queue, false, Retry::UntilRight, &mut rng()).unwrap();
 
         assert_eq!(dopo.queue.len(), 10, "la coda non si accorcia");
         let posizione = dopo.queue.iter().position(|i| *i == sbagliato).unwrap();
@@ -294,9 +373,9 @@ mod tests {
         // Con due soli item in coda non c'e' spazio per il distacco previsto: piu'
         // lontano della fine non si puo' mettere.
         let items = pool(2);
-        let primo = start(&items, &Finto, &mut rng()).unwrap();
+        let primo = start(&items, lookup, &mut rng()).unwrap();
         let sbagliato = primo.queue[0].clone();
-        let dopo = advance(&items, &Finto, &primo.queue, false, &mut rng()).unwrap();
+        let dopo = advance(&items, lookup, &primo.queue, false, Retry::UntilRight, &mut rng()).unwrap();
 
         assert_eq!(dopo.queue.last(), Some(&sbagliato));
     }
@@ -304,8 +383,8 @@ mod tests {
     #[test]
     fn il_giro_finisce_senza_domanda() {
         let items = pool(1);
-        let primo = start(&items, &Finto, &mut rng()).unwrap();
-        let dopo = advance(&items, &Finto, &primo.queue, true, &mut rng()).unwrap();
+        let primo = start(&items, lookup, &mut rng()).unwrap();
+        let dopo = advance(&items, lookup, &primo.queue, true, Retry::UntilRight, &mut rng()).unwrap();
 
         assert!(dopo.queue.is_empty());
         assert_eq!(dopo.question, None, "niente coda, niente domanda");
@@ -313,7 +392,7 @@ mod tests {
 
     #[test]
     fn un_ambito_vuoto_non_produce_domande() {
-        let step = start(&[], &Finto, &mut rng()).unwrap();
+        let step = start(&[], lookup, &mut rng()).unwrap();
         assert!(step.queue.is_empty());
         assert_eq!(step.question, None);
     }
