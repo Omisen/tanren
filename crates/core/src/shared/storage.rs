@@ -77,6 +77,12 @@ pub struct AnswerLog {
     /// dal database e potrebbe essere stato scritto da una versione futura con piu'
     /// gradini: [`AnswerLog::grade`] lo interpreta quando serve.
     pub rating: Option<i64>,
+    /// Quanto ci e' voluto a rispondere, in millisecondi. `None` se non misurato.
+    ///
+    /// Si raccoglie sempre e non lo legge ancora nessuno: e' un dato che si puo' solo
+    /// misurare mentre accade. **Non e' un voto**, e la sezione 3 di CLAUDE.md dice
+    /// perche' non deve diventarlo.
+    pub response_time_ms: Option<i64>,
 }
 
 impl AnswerLog {
@@ -95,6 +101,13 @@ pub struct NewAnswer<'a> {
     /// sapere soltanto che c'e' stato.
     pub answer: &'a str,
     pub answered_at: DateTime<Utc>,
+    /// Da quando la domanda e' comparsa a quando l'utente ha risposto, in
+    /// millisecondi. `None` quando chi chiama non l'ha misurato.
+    ///
+    /// Va riempito ovunque si possa: e' l'unico dato di questa tabella che non si puo'
+    /// ricostruire dopo. Serve al dataset, non alla pianificazione, che non deve
+    /// guardarlo.
+    pub response_time_ms: Option<i64>,
     /// Come aggiornare la carta, per le materie che usano la ripetizione spaziata.
     ///
     /// `None` per quelle che non la usano: la risposta entra comunque nello storico,
@@ -358,9 +371,10 @@ impl Database {
         // dispositivi e ordinabile nel tempo senza colonne di appoggio.
         sqlx::query(
             "INSERT INTO answers (
-                 id, item_id, exercise_type, answered_at, correct, answer, rating
+                 id, item_id, exercise_type, answered_at, correct, answer, rating,
+                 response_time_ms
              )
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(Uuid::now_v7().to_string())
         .bind(answer.item_id)
@@ -369,6 +383,7 @@ impl Database {
         .bind(answer.correct)
         .bind(answer.answer)
         .bind(answer.scheduling.map(|s| s.grade.as_i64()))
+        .bind(answer.response_time_ms)
         .execute(&mut *tx)
         .await?;
 
@@ -422,7 +437,8 @@ impl Database {
     /// Lo storico delle risposte su una carta, dalla piu' vecchia.
     pub async fn answers(&self, item_id: &str, exercise_type: &str) -> Result<Vec<AnswerLog>> {
         let answers = sqlx::query_as::<_, AnswerLog>(
-            "SELECT id, item_id, exercise_type, answered_at, correct, answer, rating
+            "SELECT id, item_id, exercise_type, answered_at, correct, answer, rating,
+                    response_time_ms
              FROM answers
              WHERE item_id = ? AND exercise_type = ?
              ORDER BY answered_at ASC, id ASC",
@@ -463,6 +479,7 @@ mod tests {
             correct,
             answer: if correct { "か" } else { "き" },
             answered_at,
+            response_time_ms: Some(1_200),
             scheduling: Some(Scheduling {
                 grade: Grade::from_correct(correct),
                 next: pianificata(answered_at + TimeDelta::days(1)),
@@ -513,6 +530,29 @@ mod tests {
         assert_eq!(storico.len(), 1);
         assert!(!storico[0].correct);
         assert_eq!(storico[0].rating, None);
+
+        // Il tempo di risposta si registra anche qui: non ha niente a che vedere con
+        // la pianificazione, e una materia che non usa la ripetizione spaziata
+        // continua a costruire il dataset.
+        assert_eq!(storico[0].response_time_ms, Some(1_200));
+    }
+
+    #[tokio::test]
+    async fn il_tempo_di_risposta_puo_mancare_e_allora_resta_vuoto() {
+        let db = Database::in_memory().await.unwrap();
+        let now = Utc::now();
+
+        db.record_answer(NewAnswer {
+            response_time_ms: None,
+            ..risposta(true, now)
+        })
+        .await
+        .unwrap();
+
+        // NULL vuol dire "non misurato", non "istantaneo": e' la stessa ragione per
+        // cui `rating` e' nullable, cioe' non raccontare risposte mai avvenute.
+        let storico = db.answers(ITEM, EXERCISE).await.unwrap();
+        assert_eq!(storico[0].response_time_ms, None);
     }
 
     #[tokio::test]
@@ -710,6 +750,7 @@ mod tests {
                 correct: true,
                 answer: "か",
                 answered_at: t0,
+                response_time_ms: Some(1_200),
                 scheduling: Some(Scheduling {
                     grade: Grade::Good,
                     next: primo,

@@ -42,11 +42,19 @@ export function nextStep(scope: Scope, queue: Queue, correct: boolean): Promise<
   return invoke('next_step', { scope, queue, correct })
 }
 
-/** Corregge una risposta e la registra nello storico. */
+/**
+ * Corregge una risposta e la registra nello storico.
+ *
+ * `responseTimeMs` e' quanto e' passato da quando la domanda e' comparsa a quando
+ * l'utente ha risposto. Lo misura il frontend perche' e' l'unico a sapere quando la
+ * domanda e' comparsa davvero; il core lo registra e basta, **non ci giudica sopra**.
+ * `null` quando non e' stato misurato, che non e' la stessa cosa di zero.
+ */
 export function submitAnswer(
   scope: Scope,
   item: string,
   answer: string,
+  responseTimeMs: number | null,
 ): Promise<Verdict> {
-  return invoke('submit_answer', { scope, item, answer })
+  return invoke('submit_answer', { scope, item, answer, responseTimeMs })
 }

@@ -221,11 +221,21 @@ fn question_for(scope: &Scope, item: &ItemId, rng: &mut dyn Rng) -> Result<Quest
 /// quante volte un segno e' stato sbagliato serve a prescindere dalle scadenze. La
 /// carta invece non viene toccata, perche' esiste per tenere lo stato della
 /// ripetizione spaziata e qui non ce n'e' nessuno.
+///
+/// # Il tempo di risposta
+///
+/// `response_time_ms` e' quanto e' passato da quando la domanda e' comparsa a quando
+/// l'utente ha risposto. Lo misura l'interfaccia, perche' e' l'unica a sapere quando
+/// la domanda e' comparsa davvero, e arriva qui per essere solo registrato: **non
+/// entra nel giudizio**, che resta giusto o sbagliato. Si raccoglie fin da ora, anche
+/// se nessuno lo legge, perche' e' l'unico dato dello storico che non si puo'
+/// ricostruire dopo.
 pub async fn submit(
     db: &Database,
     scope: &Scope,
     item: &ItemId,
     answer: &Answer,
+    response_time_ms: Option<i64>,
     now: DateTime<Utc>,
 ) -> Result<Verdict> {
     let exercise = scope.mode.exercise();
@@ -238,6 +248,7 @@ pub async fn submit(
         correct: verdict.is_correct(),
         answer: answer.as_str(),
         answered_at: now,
+        response_time_ms,
         scheduling: None,
     })
     .await?;
@@ -458,7 +469,7 @@ mod tests {
         // Si risale al segno atteso dall'identificatore della domanda.
         let segno = q.item.as_str().rsplit(':').next().unwrap().to_owned();
 
-        let verdict = submit(&db, &scope, &q.item, &Answer::new(&segno), now)
+        let verdict = submit(&db, &scope, &q.item, &Answer::new(&segno), Some(1_500), now)
             .await
             .unwrap();
 
@@ -468,6 +479,10 @@ mod tests {
         let storico = db.answers(q.item.as_str(), esercizio.as_str()).await.unwrap();
         assert_eq!(storico.len(), 1);
         assert!(storico[0].correct);
+
+        // Il tempo di risposta viene registrato anche senza pianificazione: e' dato
+        // per il dataset, non per le scadenze.
+        assert_eq!(storico[0].response_time_ms, Some(1_500));
 
         // Nessuna carta: sui kana non c'e' ripetizione spaziata da tenere.
         assert_eq!(
@@ -485,7 +500,7 @@ mod tests {
 
         let item = start(&scope, &mut rng).unwrap().queue.remove(0);
 
-        let verdict = submit(&db, &scope, &item, &Answer::new("ん"), now)
+        let verdict = submit(&db, &scope, &item, &Answer::new("ん"), None, now)
             .await
             .unwrap();
 
@@ -516,7 +531,7 @@ mod tests {
                 .romaji[0]
                 .clone();
 
-            let verdict = submit(&db, &scope, &q.item, &Answer::new(atteso), now)
+            let verdict = submit(&db, &scope, &q.item, &Answer::new(atteso), Some(900), now)
                 .await
                 .unwrap();
             assert_eq!(verdict, Verdict::Correct);

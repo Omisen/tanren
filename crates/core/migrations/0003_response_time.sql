@@ -1,0 +1,23 @@
+-- Quanto tempo e' passato tra il momento in cui la domanda e' comparsa e il momento
+-- in cui l'utente ha risposto, in millisecondi.
+--
+-- Si raccoglie **sempre**, anche se oggi non lo legge nessuno: e' un dato che si puo'
+-- solo misurare mentre accade, e non ricostruire dopo. Ogni risposta data senza
+-- registrarlo e' una riga che manchera' per sempre al dataset su cui un domani si
+-- guardera' come studia davvero questa persona.
+--
+-- **Non e' un voto, e non deve diventarlo.** Con l'IME reale la latenza misura in
+-- buona parte l'atto di digitare e convertire, cioe' la tastiera, la lunghezza della
+-- parola e le distrazioni del contesto mobile, non la forza del ricordo. Dedurne il
+-- voto immetterebbe rumore sistematico nell'unico input da cui FSRS impara. Gli usi
+-- consentiti stanno nella sezione 3 di CLAUDE.md.
+--
+-- Nullable e senza default, per la stessa ragione di `rating`: le righe gia' scritte
+-- non hanno un tempo misurato, e metterci uno zero racconterebbe di risposte
+-- istantanee che non sono mai avvenute. NULL qui vuol dire "non misurato", non
+-- "veloce".
+--
+-- Il valore e' misurato con un orologio monotono, quindi non puo' essere negativo:
+-- il CHECK e' li' perche' una riga assurda non entri in silenzio.
+ALTER TABLE answers ADD COLUMN response_time_ms INTEGER
+    CHECK (response_time_ms IS NULL OR response_time_ms >= 0);

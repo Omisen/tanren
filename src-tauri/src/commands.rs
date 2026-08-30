@@ -76,18 +76,24 @@ pub fn next_step(scope: Scope, queue: Vec<ItemId>, correct: bool) -> Result<Step
 }
 
 /// Corregge una risposta e la registra.
+///
+/// `response_time_ms` lo misura il frontend, perche' e' l'unico a sapere quando la
+/// domanda e' comparsa sullo schermo. Qui si limita a passare: **non entra nel
+/// giudizio**, e la sezione 3 di CLAUDE.md spiega perche' non deve entrarci mai.
 #[tauri::command]
 pub async fn submit_answer(
     state: State<'_, AppState>,
     scope: Scope,
     item: String,
     answer: String,
+    response_time_ms: Option<i64>,
 ) -> Result<Verdict, CoreError> {
     session::submit(
         &state.db,
         &scope,
         &ItemId::new(item),
         &Answer::new(answer),
+        response_time_ms,
         Utc::now(),
     )
     .await

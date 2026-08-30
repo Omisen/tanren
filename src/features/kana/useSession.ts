@@ -110,9 +110,24 @@ export function useSession(scope: Scope): Session {
   // nello stato. Qui si tiene solo per poterla rimandare al core.
   const queue = useRef<Queue>([])
 
+  // Quando la domanda e' comparsa, per sapere quanto ci si e' messi a rispondere.
+  //
+  // Sta qui e non nel core perche' e' l'unico punto che lo sa davvero: il core
+  // costruisce la domanda, ma tra quel momento e il pixel acceso ci sono la risposta
+  // del ponte e un render. Si legge con `performance.now()`, che e' monotono e non
+  // salta se l'orologio di sistema viene spostato.
+  //
+  // Il valore e' **grezzo di proposito**: resta acceso anche mentre l'app sta in
+  // secondo piano, quindi una domanda lasciata aperta mezz'ora produce mezz'ora. Non
+  // viene tagliato, perche' scegliere ora una soglia la cuocerebbe dentro i dati per
+  // sempre, mentre un valore intero si potra' sempre filtrare quando quei dati si
+  // guarderanno davvero.
+  const shownAt = useRef<number | null>(null)
+
   const install = useCallback(
     (step: Step) => {
       queue.current = step.queue
+      shownAt.current = step.question ? performance.now() : null
       setState(step.question ? { phase: 'asking', question: step.question } : { phase: 'done' })
     },
     [setState],
@@ -160,7 +175,14 @@ export function useSession(scope: Scope): Session {
       const { question } = now
       mark(true)
 
-      submitAnswer(scope, question.item, value)
+      // Si ferma il cronometro qui, sul tocco, e non quando il core risponde: il
+      // ritardo del ponte non e' tempo di chi studia. Consumato subito, cosi' una
+      // seconda risposta non puo' riusare un tempo che non e' il suo.
+      const started = shownAt.current
+      shownAt.current = null
+      const elapsed = started === null ? null : Math.round(performance.now() - started)
+
+      submitAnswer(scope, question.item, value, elapsed)
         .then((verdict) => {
           if (run.current !== token) return
           setState({ phase: 'answered', question, answer: value, verdict })
