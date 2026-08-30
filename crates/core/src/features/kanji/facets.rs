@@ -705,9 +705,9 @@ mod tests {
             Err(CoreError::UnknownItem { .. })
         ));
 
-        // Un identificatore della vecchia forma, col livello dentro: dopo il
-        // disaccoppiamento non e' piu' leggibile, ed e' esattamente cio' che la
-        // migrazione `0004` esiste per non lasciare in giro.
+        // Un identificatore della vecchia forma, col livello dentro. Non e' piu'
+        // leggibile, ed e' voluto: nessun database pubblicato ne contiene, perche' la
+        // versione che scriveva quegli identificatori non e' mai uscita.
         assert!(matches!(
             OnFacet.grade(&ItemId::new("kanji:1:生"), &Answer::new("セイ")),
             Err(CoreError::UnknownItem { .. })

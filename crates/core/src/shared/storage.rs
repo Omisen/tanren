@@ -563,59 +563,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn la_migrazione_toglie_il_livello_dagli_identificatori_dei_kanji() {
-        let db = Database::in_memory().await.unwrap();
-        let now = Utc::now();
-
-        // Si scrive nella forma vecchia passando dall'archivio, poi si applica a mano
-        // la stessa riscrittura della migrazione: le migrazioni girano all'apertura,
-        // quindi qui si prova l'istruzione, non il momento in cui parte.
-        for (item, exercise) in [
-            ("kanji:1:一", "kanji.meaning"),
-            ("kanji:12:生きる", "kanji.okurigana"),
-            ("kana:hiragana:か", "kana.recognition"),
-        ] {
-            db.record_answer(NewAnswer {
-                item_id: item,
-                exercise_type: exercise,
-                correct: true,
-                answer: "x",
-                answered_at: now,
-                response_time_ms: None,
-                scheduling: Some(Scheduling {
-                    grade: Grade::Good,
-                    next: pianificata(now + TimeDelta::days(1)),
-                }),
-            })
-            .await
-            .unwrap();
-        }
-
-        sqlx::query(
-            "UPDATE cards
-             SET item_id = 'kanji:' || substr(item_id, 6 + instr(substr(item_id, 7), ':') + 1)
-             WHERE exercise_type LIKE 'kanji.%'
-               AND item_id LIKE 'kanji:%'
-               AND instr(substr(item_id, 7), ':') > 0",
-        )
-        .execute(&db.pool)
-        .await
-        .unwrap();
-
-        assert!(db.card("kanji:一", "kanji.meaning").await.unwrap().is_some());
-        assert!(db.card("kanji:生きる", "kanji.okurigana").await.unwrap().is_some());
-        // Anche a due cifre di livello, e senza toccare i kana.
-        assert!(db.card("kanji:1:一", "kanji.meaning").await.unwrap().is_none());
-        assert!(
-            db.card("kana:hiragana:か", "kana.recognition")
-                .await
-                .unwrap()
-                .is_some(),
-            "i kana hanno la stessa forma ma per un'altra ragione: non si toccano"
-        );
-    }
-
-    #[tokio::test]
     async fn un_database_nuovo_e_vuoto_ma_gia_migrato() {
         let db = Database::in_memory().await.unwrap();
         assert_eq!(db.card(ITEM, EXERCISE).await.unwrap(), None);
