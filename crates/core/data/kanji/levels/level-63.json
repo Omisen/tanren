@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "level": 63,
+  "source": {
+    "dataset": "kanjium",
+    "commit": "c97ef30c8777de7d5f8e5b04c696a3fe00a2a83a",
+    "committed": "2020-03-30",
+    "licence": "CC BY-SA 4.0",
+    "url": "https://github.com/mifunetoshiro/kanjium",
+    "includes": "EDICT, KANJIDIC, KRADFILE (EDRDG, CC BY-SA 4.0)"
+  },
+  "entries": [
+{"character":"桁","strokes":10,"frequency":2141,"aloneRatio":0.6652,"meanings":["girder"],"on":[],"primaryOn":null,"kun":["けた"],"okurigana":[],"nanori":[],"examples":[],"level":63},
+{"character":"雌","strokes":14,"frequency":2143,"aloneRatio":0.0,"meanings":["feminine","female"],"on":["シ"],"primaryOn":"シ","kun":["め","めす"],"okurigana":[],"nanori":[],"examples":[{"word":"雌雄","reading":"しゆう","meaning":"[noun] male and female (animal)"}],"level":63},
+{"character":"嗅","strokes":13,"frequency":2150,"aloneRatio":0.0,"meanings":["smell","sniff"],"on":["キュウ"],"primaryOn":"キュウ","kun":[],"okurigana":[{"form":"嗅ぐ","readings":["かぐ"],"common":true}],"nanori":[],"examples":[{"word":"嗅覚","reading":"きゅうかく","meaning":"[noun, の adjective] sense of smell"}],"level":63},
+{"character":"唾","strokes":11,"frequency":2154,"aloneRatio":null,"meanings":["saliva"],"on":["ダ"],"primaryOn":"ダ","kun":["つば"],"okurigana":[],"nanori":[],"examples":[{"word":"唾液","reading":"だえき","meaning":"[noun, の adjective] saliva"}],"level":63},
+{"character":"柵","strokes":9,"frequency":2155,"aloneRatio":null,"meanings":["palisade"],"on":["サク"],"primaryOn":"サク","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"鉄柵","reading":"てっさく","meaning":"[noun] iron railing or fence"}],"level":63},
+{"character":"玩","strokes":8,"frequency":2158,"aloneRatio":0.0,"meanings":["toy"],"on":["ガン"],"primaryOn":"ガン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"玩具","reading":"おもちゃ","meaning":"[noun] toy"},{"word":"愛玩","reading":"あいがん","meaning":"[noun, する verb] caring for (esp. a pet or a small object)"}],"level":63},
+{"character":"挫","strokes":10,"frequency":2159,"aloneRatio":0.0,"meanings":["sprain"],"on":["ザ"],"primaryOn":"ザ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"挫折","reading":"ざせつ","meaning":"[noun, する verb] setback"},{"word":"捻挫","reading":"ねんざ","meaning":"[noun, する verb] sprain"}],"level":63},
+{"character":"儒","strokes":16,"frequency":2161,"aloneRatio":null,"meanings":["Confucianism","Confucian"],"on":["ジュ"],"primaryOn":"ジュ","kun":[],"okurigana":[],"nanori":["はか","ひと","みち","やす","よし"],"examples":[{"word":"儒学","reading":"じゅがく","meaning":"[noun] Confucianism"},{"word":"儒教","reading":"じゅきょう","meaning":"[noun, の adjective] Confucianism"}],"level":63},
+{"character":"溺","strokes":13,"frequency":2165,"aloneRatio":0.0,"meanings":["drowning"],"on":["デキ"],"primaryOn":"デキ","kun":[],"okurigana":[{"form":"溺れる","readings":["おぼれる"],"common":true}],"nanori":[],"examples":[{"word":"溺死","reading":"できし","meaning":"[noun, する verb] death by drowning"}],"level":63},
+{"character":"鯨","strokes":19,"frequency":2168,"aloneRatio":0.0,"meanings":["whale"],"on":["ゲイ"],"primaryOn":"ゲイ","kun":["くじら"],"okurigana":[],"nanori":["くじら"],"examples":[{"word":"捕鯨","reading":"ほげい","meaning":"[noun] whaling"}],"level":63},
+{"character":"肪","strokes":8,"frequency":2169,"aloneRatio":0.0,"meanings":["obese","animal fat"],"on":["ボウ"],"primaryOn":"ボウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"脂肪","reading":"しぼう","meaning":"[noun] fat"}],"level":63},
+{"character":"扶","strokes":7,"frequency":2170,"aloneRatio":0.0,"meanings":["aid","lend support to"],"on":["フ"],"primaryOn":"フ","kun":[],"okurigana":[],"nanori":["すけ","たもつ","もと"],"examples":[{"word":"扶助","reading":"ふじょ","meaning":"[noun, する verb] aid"}],"level":63},
+{"character":"閲","strokes":15,"frequency":2171,"aloneRatio":0.0,"meanings":["review"],"on":["エツ"],"primaryOn":"エツ","kun":[],"okurigana":[],"nanori":["かど","み"],"examples":[{"word":"検閲","reading":"けんえつ","meaning":"[noun, の adjective] {1} censorship"},{"word":"閲覧","reading":"えつらん","meaning":"[noun, する verb] {1} inspection"}],"level":63},
+{"character":"堕","strokes":12,"frequency":2174,"aloneRatio":null,"meanings":["degenerate"],"on":["ダ"],"primaryOn":"ダ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"堕落","reading":"だらく","meaning":"[noun, する verb] depravity"}],"level":63},
+{"character":"棺","strokes":12,"frequency":2178,"aloneRatio":null,"meanings":["coffin"],"on":["カン"],"primaryOn":"カン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"石棺","reading":"せっかん","meaning":"[noun] sarcophagus"}],"level":63},
+{"character":"屯","strokes":4,"frequency":2179,"aloneRatio":0.0,"meanings":["barracks","station troops"],"on":["トン"],"primaryOn":"トン","kun":[],"okurigana":[],"nanori":["たむろ","みつ","むら","より"],"examples":[{"word":"駐屯","reading":"ちゅうとん","meaning":"[noun, する verb] stationing (troops)"}],"level":63},
+{"character":"硫","strokes":12,"frequency":2180,"aloneRatio":0.0,"meanings":["sulphur","sulfur"],"on":["リュウ"],"primaryOn":"リュウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"硫黄","reading":"いおう","meaning":"[noun, の adjective] sulfur (S)"},{"word":"硫酸","reading":"りゅうさん","meaning":"[noun] sulfuric acid"}],"level":63},
+{"character":"畔","strokes":10,"frequency":2187,"aloneRatio":null,"meanings":["paddy-ridge","waterside"],"on":["ハン"],"primaryOn":"ハン","kun":[],"okurigana":[],"nanori":["あぜ","くろ","べ"],"examples":[{"word":"湖畔","reading":"こはん","meaning":"[noun, の adjective] lake shore"},{"word":"河畔","reading":"かはん","meaning":"[noun] riverside"}],"level":63},
+{"character":"綻","strokes":14,"frequency":2188,"aloneRatio":0.0,"meanings":["come apart at the seams"],"on":["タン"],"primaryOn":"タン","kun":[],"okurigana":[{"form":"綻びる","readings":["ほころびる"],"common":false}],"nanori":[],"examples":[{"word":"破綻","reading":"はたん","meaning":"[noun, する verb] failure"}],"level":63},
+{"character":"騰","strokes":20,"frequency":2189,"aloneRatio":0.0,"meanings":["inflation","rise"],"on":["トウ"],"primaryOn":"トウ","kun":[],"okurigana":[],"nanori":["のぼる"],"examples":[{"word":"沸騰","reading":"ふっとう","meaning":"[noun, する verb] boiling"},{"word":"高騰","reading":"こうとう","meaning":"[noun, する verb] sudden price jump"}],"level":63},
+{"character":"嘲","strokes":15,"frequency":2190,"aloneRatio":null,"meanings":["derision"],"on":["チョウ"],"primaryOn":"チョウ","kun":[],"okurigana":[{"form":"嘲る","readings":["あざける"],"common":false}],"nanori":[],"examples":[{"word":"嘲笑","reading":"ちょうしょう","meaning":"[noun, する verb] scorn"}],"level":63},
+{"character":"壌","strokes":16,"frequency":2194,"aloneRatio":0.0,"meanings":["lot","arable soil"],"on":["ジョウ"],"primaryOn":"ジョウ","kun":[],"okurigana":[],"nanori":["つち"],"examples":[{"word":"土壌","reading":"どじょう","meaning":"[noun] soil"},{"word":"平壌","reading":"へいじょう","meaning":"[noun] Pyongyang"}],"level":63},
+{"character":"睦","strokes":13,"frequency":2195,"aloneRatio":null,"meanings":["intimate","friendly"],"on":["ボク"],"primaryOn":"ボク","kun":[],"okurigana":[],"nanori":["あつし","ちか","ちかし","とき","とも","のぶ","まこと","む","むつ","むつみ","よし","よしみ"],"examples":[{"word":"親睦","reading":"しんぼく","meaning":"[noun, する verb] friendship"}],"level":63},
+{"character":"褐","strokes":13,"frequency":2199,"aloneRatio":null,"meanings":["brown"],"on":["カツ"],"primaryOn":"カツ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"褐色","reading":"かっしょく","meaning":"[noun, の adjective] dark brown"}],"level":63},
+{"character":"唆","strokes":10,"frequency":2201,"aloneRatio":0.0,"meanings":["tempt","instigate"],"on":["サ"],"primaryOn":"サ","kun":[],"okurigana":[{"form":"唆す","readings":["そそのかす"],"common":false}],"nanori":[],"examples":[{"word":"示唆","reading":"しさ","meaning":"[noun, する verb] suggestion"}],"level":63}
+]
+}

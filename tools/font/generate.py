@@ -72,7 +72,7 @@ COPERTURA = "U+0020-007E,U+3000-30FF,U+31F0-31FF,U+FF01-FF9F"
 # La lista si legge dalle tabelle generate, che sono la fonte di verita' su quali
 # kanji l'app conosce. Cosi' i due generatori restano allineati da soli: se un
 # domani le tabelle cresceranno, bastera' rilanciare questo.
-TABELLE_KANJI = RADICE / "crates" / "core" / "data" / "kanji"
+TABELLE_KANJI = RADICE / "crates" / "core" / "data" / "kanji" / "levels"
 
 
 def kanji() -> str:

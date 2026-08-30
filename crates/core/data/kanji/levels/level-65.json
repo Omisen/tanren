@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "level": 65,
+  "source": {
+    "dataset": "kanjium",
+    "commit": "c97ef30c8777de7d5f8e5b04c696a3fe00a2a83a",
+    "committed": "2020-03-30",
+    "licence": "CC BY-SA 4.0",
+    "url": "https://github.com/mifunetoshiro/kanjium",
+    "includes": "EDICT, KANJIDIC, KRADFILE (EDRDG, CC BY-SA 4.0)"
+  },
+  "entries": [
+{"character":"窒","strokes":11,"frequency":2273,"aloneRatio":0.0,"meanings":["plug up","choke","nitrogen"],"on":["チツ"],"primaryOn":"チツ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"窒素","reading":"ちっそ","meaning":"[noun, の adjective] nitrogen [noun]"}],"level":65},
+{"character":"礁","strokes":17,"frequency":2279,"aloneRatio":null,"meanings":["reef"],"on":["ショウ"],"primaryOn":"ショウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"岩礁","reading":"がんしょう","meaning":"[noun] reef"},{"word":"環礁","reading":"かんしょう","meaning":"[noun] atoll"}],"level":65},
+{"character":"猶","strokes":12,"frequency":2282,"aloneRatio":null,"meanings":["furthermore","waver","delay"],"on":["ユウ"],"primaryOn":"ユウ","kun":[],"okurigana":[],"nanori":["さね","なお","のり","みち","より"],"examples":[{"word":"執行猶予","reading":"しっこうゆうよ","meaning":"[noun, の adjective] stay of execution"}],"level":65},
+{"character":"舶","strokes":11,"frequency":2283,"aloneRatio":0.0,"meanings":["liner","oceangoing ship"],"on":["ハク"],"primaryOn":"ハク","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"船舶","reading":"せんぱく","meaning":"[noun, の adjective] ship"},{"word":"舶来","reading":"はくらい","meaning":"[の adjective, する verb, noun] imported"}],"level":65},
+{"character":"臆","strokes":17,"frequency":2288,"aloneRatio":null,"meanings":["cowardice"],"on":["オク"],"primaryOn":"オク","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"臆病","reading":"おくびょう","meaning":"[な adjective, noun] cowardice"},{"word":"臆病者","reading":"おくびょうもの","meaning":"[noun] coward"}],"level":65},
+{"character":"舷","strokes":11,"frequency":2294,"aloneRatio":0.0,"meanings":["gunwale"],"on":["ゲン"],"primaryOn":"ゲン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"舷側","reading":"げんそく","meaning":"[noun] ship's side"}],"level":65},
+{"character":"謹","strokes":17,"frequency":2295,"aloneRatio":null,"meanings":["discreet","respectfully"],"on":["キン"],"primaryOn":"キン","kun":[],"okurigana":[{"form":"謹む","readings":["つつしむ"],"common":false}],"nanori":["すすむ","ちか","なり","のり","もり"],"examples":[{"word":"謹慎","reading":"きんしん","meaning":"[noun] penitence"}],"level":65},
+{"character":"累","strokes":11,"frequency":2297,"aloneRatio":0.0,"meanings":["accumulate","cumulate"],"on":["ルイ"],"primaryOn":"ルイ","kun":[],"okurigana":[],"nanori":["たか"],"examples":[{"word":"累計","reading":"るいけい","meaning":"[noun, する verb] cumulative total"}],"level":65},
+{"character":"踪","strokes":15,"frequency":2298,"aloneRatio":0.0,"meanings":["footprint","trail"],"on":["ソウ"],"primaryOn":"ソウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"失踪","reading":"しっそう","meaning":"[noun, する verb] absconding"}],"level":65},
+{"character":"桟","strokes":10,"frequency":2302,"aloneRatio":null,"meanings":["scaffold","plank bridge"],"on":["サン"],"primaryOn":"サン","kun":[],"okurigana":[],"nanori":["たな"],"examples":[{"word":"桟橋","reading":"さんばし","meaning":"[noun] wharf"}],"level":65},
+{"character":"悼","strokes":11,"frequency":2305,"aloneRatio":0.0,"meanings":["lament","mourn"],"on":["トウ"],"primaryOn":"トウ","kun":[],"okurigana":[{"form":"悼む","readings":["いたむ"],"common":false}],"nanori":[],"examples":[{"word":"哀悼","reading":"あいとう","meaning":"[noun, する verb, の adjective] condolence"},{"word":"追悼","reading":"ついとう","meaning":"[noun, する verb, の adjective] mourning (dead persons)"}],"level":65},
+{"character":"惧","strokes":11,"frequency":2311,"aloneRatio":0.0,"meanings":["misgivings","disquieting"],"on":["グ"],"primaryOn":"グ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"危惧","reading":"きぐ","meaning":"[noun, する verb] apprehensions"}],"level":65},
+{"character":"瑠","strokes":14,"frequency":2317,"aloneRatio":0.0,"meanings":["marine blue","lapis lazuli"],"on":["ル"],"primaryOn":"ル","kun":[],"okurigana":[],"nanori":["るり"],"examples":[{"word":"瑠璃","reading":"るり","meaning":"[noun] {1} lapis lazuli"}],"level":65},
+{"character":"冶","strokes":7,"frequency":2323,"aloneRatio":null,"meanings":["metallurgy"],"on":["ヤ"],"primaryOn":"ヤ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"冶金","reading":"やきん","meaning":"[noun, の adjective] metallurgy"}],"level":65},
+{"character":"耗","strokes":10,"frequency":2326,"aloneRatio":0.0,"meanings":["decrease","wear away"],"on":["モウ"],"primaryOn":"モウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"消耗","reading":"しょうもう","meaning":"[noun, する verb] exhaustion"}],"onRare":["コウ"],"level":65},
+{"character":"遡","strokes":14,"frequency":2330,"aloneRatio":0.0,"meanings":["go upstream"],"on":["ソ"],"primaryOn":"ソ","kun":[],"okurigana":[{"form":"遡る","readings":["さかのぼる"],"common":true}],"nanori":[],"examples":[{"word":"遡上","reading":"そじょう","meaning":"[noun, する verb] going upstream"}],"level":65},
+{"character":"畏","strokes":9,"frequency":2332,"aloneRatio":null,"meanings":["apprehensive"],"on":["イ"],"primaryOn":"イ","kun":[],"okurigana":[{"form":"畏れる","readings":["おそれる"],"common":false}],"nanori":[],"examples":[{"word":"畏敬","reading":"いけい","meaning":"[noun, する verb] reverence"}],"level":65},
+{"character":"采","strokes":8,"frequency":2336,"aloneRatio":0.0,"meanings":["grab"],"on":["サイ"],"primaryOn":"サイ","kun":[],"okurigana":[],"nanori":["あや","うね","こと"],"examples":[{"word":"采配","reading":"さいはい","meaning":"[noun] {1} baton (of command)"}],"level":65},
+{"character":"拷","strokes":9,"frequency":2337,"aloneRatio":0.0,"meanings":["torture"],"on":["ゴウ"],"primaryOn":"ゴウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"拷問","reading":"ごうもん","meaning":"[noun, する verb, の adjective] torture"}],"level":65},
+{"character":"弊","strokes":15,"frequency":2339,"aloneRatio":0.0,"meanings":["abuse","evil practice"],"on":["ヘイ"],"primaryOn":"ヘイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"弊害","reading":"へいがい","meaning":"[noun] adverse effect"},{"word":"疲弊","reading":"ひへい","meaning":"[noun, する verb] exhaustion"}],"level":65},
+{"character":"賠","strokes":15,"frequency":2342,"aloneRatio":0.0,"meanings":["compensation","compensate"],"on":["バイ"],"primaryOn":"バイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"賠償","reading":"ばいしょう","meaning":"[noun, する verb] reparations"},{"word":"賠償金","reading":"ばいしょうきん","meaning":"[noun] indemnities"}],"level":65},
+{"character":"薪","strokes":16,"frequency":2345,"aloneRatio":null,"meanings":["fuel","firewood"],"on":["シン"],"primaryOn":"シン","kun":["たきぎ"],"okurigana":[],"nanori":[],"examples":[{"word":"薪炭","reading":"しんたん","meaning":"[noun] wood and charcoal"}],"level":65},
+{"character":"宵","strokes":10,"frequency":2360,"aloneRatio":null,"meanings":["wee hours","early evening"],"on":["ショウ"],"primaryOn":"ショウ","kun":["よい"],"okurigana":[],"nanori":["よい"],"examples":[{"word":"徹宵","reading":"てっしょう","meaning":"[noun, する verb] all night"}],"level":65},
+{"character":"殉","strokes":10,"frequency":2361,"aloneRatio":null,"meanings":["martyrdom","die a martyr"],"on":["ジュン"],"primaryOn":"ジュン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"殉職","reading":"じゅんしょく","meaning":"[noun, する verb] dying at one's post"}],"level":65},
+{"character":"泌","strokes":8,"frequency":2369,"aloneRatio":null,"meanings":["ooze","secrete"],"on":["ヒツ","ヒ"],"primaryOn":"ヒツ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"分泌","reading":"ぶんぴ","meaning":"[noun, する verb, の adjective] secretion"},{"word":"分泌","reading":"ぶんぴつ","meaning":"[noun, する verb, の adjective] secretion"},{"word":"泌尿器","reading":"ひにょうき","meaning":"[noun] urinary organs"}],"level":65}
+]
+}

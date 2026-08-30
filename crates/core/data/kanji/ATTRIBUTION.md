@@ -1,35 +1,59 @@
-# Kanji data: source and licence
+# Kanji data: sources and licence
 
-The files in this directory are **derived from KANJIDIC2**, which is the property of the
-Electronic Dictionary Research and Development Group (EDRDG) and of James William Breen.
+The tables in `levels/` are **derived from [kanjium](https://github.com/mifunetoshiro/kanjium)**
+by Uros O., which is itself built on files belonging to the Electronic Dictionary
+Research and Development Group (EDRDG) and James William Breen.
+
+Both licences are the same one, and **they add up rather than replace each other**.
+
+## kanjium
+
+- Repository: <https://github.com/mifunetoshiro/kanjium>
+- Licence: **Creative Commons Attribution-ShareAlike 4.0**
+- Edition used: the `source` field inside each `levels/level-NN.json` records the commit
+  that last touched `data/kanjidb.sqlite`, since kanjium carries no version number.
+
+kanjium asks for this specific wording, and Tanren carries it:
+
+> The pitch accent notation, verb particle data, phonetics, homonyms and other additions
+> or modifications to EDICT, KANJIDIC or KRADFILE were provided by Uros O. through his
+> free database.
+
+## EDRDG: EDICT, KANJIDIC, KRADFILE
+
+Most of what kanjium contains comes from these three, which are the property of the Group
+and are used under its licence.
 
 - Project: <https://www.edrdg.org/wiki/index.php/KANJIDIC_Project>
 - Licence statement: <http://www.edrdg.org/edrdg/licence.html>
 - Licence: **Creative Commons Attribution-ShareAlike 4.0**
-- Edition used: the `source` field inside each `.json` file records the KANJIDIC2
-  `database_version` these tables were generated from.
 
 ## What this means for Tanren
 
-The EDRDG licence applies to the dictionary files "and any data files which are derived
-from them". The tables in this directory are exactly that, so **they are CC BY-SA 4.0**,
-not MIT. The rest of Tanren stays MIT: the code and the data are separate works, and the
-share-alike travels with the data.
+Both statements extend to "any data files which are derived from them". The tables in
+this directory are exactly that, so **they are CC BY-SA 4.0**, not MIT. Tanren's code
+stays MIT: code and data are separate works, and the share-alike travels with the data.
 
-The licence also states, for software that ships the files:
+The EDRDG licence is specific about apps:
 
-> acknowledge the usage and source of the files in the documentation, publicity
-> material, WWW site of the package
->
 > For smartphone and tablet apps, acknowledgement must be made, e.g. on a separate
 > screen accessed from a menu, such as one labelled "About", "Sources", etc. It is not
 > sufficient just to mention it on a start-up/launch page of the app.
 
-So an APK that carries these tables **must have a Sources screen**. That is a condition
-of use, not a nicety.
+**So an APK that ships these tables needs a Sources screen inside the app, naming both
+sources.** It is a condition of use, not a nicety, and it blocks any release that carries
+kanji data. The `source()` field on each table exists partly to feed that screen with the
+exact edition in use.
 
 ## Regenerating
 
-`generate.py` downloads KANJIDIC2 and rewrites the tables. Never edit them by hand: an
-edit would be lost at the next run, and would also quietly diverge from the dictionary
-the `source` field claims.
+`generate.py` downloads what it needs and rewrites `levels/`. Never edit those files by
+hand: an edit would be lost at the next run, and would quietly diverge from the source the
+`source` field claims.
+
+## The grade tables, which are on their way out
+
+`first.json` … `secondary.json` at the top of this directory are the **previous**
+dataset, derived from KANJIDIC2 and organised by Japanese school year. They are still
+read by `features/kanji/data.rs` and go away with the exercise that uses them. Their
+generator has already been replaced by the one for `levels/`.

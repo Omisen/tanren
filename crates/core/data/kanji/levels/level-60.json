@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "level": 60,
+  "source": {
+    "dataset": "kanjium",
+    "commit": "c97ef30c8777de7d5f8e5b04c696a3fe00a2a83a",
+    "committed": "2020-03-30",
+    "licence": "CC BY-SA 4.0",
+    "url": "https://github.com/mifunetoshiro/kanjium",
+    "includes": "EDICT, KANJIDIC, KRADFILE (EDRDG, CC BY-SA 4.0)"
+  },
+  "entries": [
+{"character":"燥","strokes":17,"frequency":1972,"aloneRatio":0.0,"meanings":["parch","dry up"],"on":["ソウ"],"primaryOn":"ソウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"乾燥","reading":"かんそう","meaning":"[noun, する verb] dryness"}],"level":60},
+{"character":"渓","strokes":11,"frequency":1977,"aloneRatio":null,"meanings":["mountain stream","ravine"],"on":["ケイ"],"primaryOn":"ケイ","kun":[],"okurigana":[],"nanori":["たに"],"examples":[{"word":"渓谷","reading":"けいこく","meaning":"[noun] valley"},{"word":"雪渓","reading":"せっけい","meaning":"[noun] snowy valley"}],"level":60},
+{"character":"坪","strokes":8,"frequency":1978,"aloneRatio":null,"meanings":["two-mat area","tsubo"],"on":[],"primaryOn":null,"kun":["つぼ"],"okurigana":[],"nanori":["つぼ"],"examples":[],"level":60},
+{"character":"麓","strokes":19,"frequency":1979,"aloneRatio":null,"meanings":["foot of a mountain"],"on":["ロク"],"primaryOn":"ロク","kun":["ふもと"],"okurigana":[],"nanori":[],"examples":[{"word":"山麓","reading":"さんろく","meaning":"[noun] foot or base of a mountain"}],"level":60},
+{"character":"閑","strokes":12,"frequency":1980,"aloneRatio":null,"meanings":["leisure","quiet"],"on":["カン"],"primaryOn":"カン","kun":[],"okurigana":[],"nanori":["しず","のり","もり","やす","より"],"examples":[{"word":"閑静","reading":"かんせい","meaning":"[な adjective, noun] quiet (e.g. neighbourhood, neighborhood)"}],"level":60},
+{"character":"粛","strokes":11,"frequency":1984,"aloneRatio":0.0,"meanings":["solemn","purge"],"on":["シュク"],"primaryOn":"シュク","kun":[],"okurigana":[],"nanori":["かく","かた","かね","きよし","すすむ","すみ","ただ","たり","とし","はや","まさ"],"examples":[{"word":"粛清","reading":"しゅくせい","meaning":"[noun, する verb] (political) purge"},{"word":"自粛","reading":"じしゅく","meaning":"[noun, する verb] {1} self-control"}],"level":60},
+{"character":"漬","strokes":14,"frequency":1988,"aloneRatio":null,"meanings":["pickling","pickle"],"on":[],"primaryOn":null,"kun":[],"okurigana":[{"form":"漬ける","readings":["つける"],"common":false},{"form":"漬かる","readings":["つかる"],"common":false}],"nanori":["ひた"],"examples":[{"word":"漬物","reading":"つけもの","meaning":"[noun] tsukemono"}],"level":60},
+{"character":"胎","strokes":9,"frequency":1989,"aloneRatio":null,"meanings":["womb","fetus"],"on":["タイ"],"primaryOn":"タイ","kun":[],"okurigana":[],"nanori":["はら","み","もと"],"examples":[{"word":"胎児","reading":"たいじ","meaning":"[noun, の adjective] fetus"}],"level":60},
+{"character":"薫","strokes":16,"frequency":1995,"aloneRatio":1.0,"meanings":["fragrant","balmy"],"on":["クン"],"primaryOn":"クン","kun":[],"okurigana":[{"form":"薫る","readings":["かおる"],"common":false}],"nanori":["かお","かおり","かおる","くる","しく","しげ","ただ","つとむ","にお","のぶ","ひで","ふさ","ほお","まさ","ゆき"],"examples":[{"word":"薫風","reading":"くんぷう","meaning":"[noun] balmy breeze"}],"level":60},
+{"character":"蛮","strokes":12,"frequency":1996,"aloneRatio":null,"meanings":["barbarian"],"on":["バン"],"primaryOn":"バン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"野蛮","reading":"やばん","meaning":"[な adjective, noun] savage"}],"level":60},
+{"character":"怠","strokes":9,"frequency":1997,"aloneRatio":0.0,"meanings":["neglect","remiss"],"on":["タイ"],"primaryOn":"タイ","kun":[],"okurigana":[{"form":"怠る","readings":["おこたる"],"common":true},{"form":"怠ける","readings":["なまける"],"common":false}],"nanori":["やす"],"examples":[{"word":"怠惰","reading":"たいだ","meaning":"[な adjective, noun] laziness"},{"word":"怠慢","reading":"たいまん","meaning":"[な adjective, noun, の adjective] negligence"}],"level":60},
+{"character":"乞","strokes":3,"frequency":1998,"aloneRatio":null,"meanings":["beg"],"on":[],"primaryOn":null,"kun":[],"okurigana":[{"form":"乞う","readings":["こう"],"common":true}],"nanori":[],"examples":[],"level":60},
+{"character":"襟","strokes":18,"frequency":2000,"aloneRatio":1.0,"meanings":["collar"],"on":["キン"],"primaryOn":"キン","kun":["えり"],"okurigana":[],"nanori":["えり","ひも"],"examples":[{"word":"襟元","reading":"えりもと","meaning":"[noun] front of neck"},{"word":"胸襟","reading":"きょうきん","meaning":"[noun] one's heart"}],"level":60},
+{"character":"醒","strokes":16,"frequency":2001,"aloneRatio":0.0,"meanings":["awakening"],"on":["セイ"],"primaryOn":"セイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"覚醒剤","reading":"かくせいざい","meaning":"[noun] stimulant (e.g. psychoactive drugs like methamphetamine, ritalin, etc.)"}],"level":60},
+{"character":"詠","strokes":12,"frequency":2002,"aloneRatio":0.0,"meanings":["recitation","recite poetry"],"on":["エイ"],"primaryOn":"エイ","kun":[],"okurigana":[{"form":"詠む","readings":["よむ"],"common":true}],"nanori":["うた","かぬ","かね","なが"],"examples":[{"word":"朗詠","reading":"ろうえい","meaning":"[noun, する verb] recitation (of Japanese or Chinese poem)"}],"level":60},
+{"character":"沸","strokes":8,"frequency":2008,"aloneRatio":0.0,"meanings":["seethe","boil"],"on":["フツ"],"primaryOn":"フツ","kun":[],"okurigana":[{"form":"沸く","readings":["わく"],"common":true},{"form":"沸かす","readings":["わかす"],"common":false}],"nanori":[],"examples":[{"word":"沸騰","reading":"ふっとう","meaning":"[noun, する verb] boiling"},{"word":"煮沸","reading":"しゃふつ","meaning":"[noun, する verb] boiling up"}],"level":60},
+{"character":"岬","strokes":8,"frequency":2009,"aloneRatio":1.0,"meanings":["headland","cape"],"on":[],"primaryOn":null,"kun":["みさき"],"okurigana":[],"nanori":["みさき"],"examples":[],"level":60},
+{"character":"栽","strokes":10,"frequency":2011,"aloneRatio":0.0,"meanings":["plantation","plant"],"on":["サイ"],"primaryOn":"サイ","kun":[],"okurigana":[],"nanori":["たね"],"examples":[{"word":"栽培","reading":"さいばい","meaning":"[noun, する verb] cultivation"}],"level":60},
+{"character":"錠","strokes":16,"frequency":2012,"aloneRatio":1.0,"meanings":["lock","pill"],"on":["ジョウ"],"primaryOn":"ジョウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"手錠","reading":"てじょう","meaning":"[noun] handcuffs"},{"word":"錠剤","reading":"じょうざい","meaning":"[noun] pill"}],"level":60},
+{"character":"餅","strokes":15,"frequency":2015,"aloneRatio":null,"meanings":["mochi"],"on":["ヘイ"],"primaryOn":"ヘイ","kun":["もち"],"okurigana":[],"nanori":[],"examples":[{"word":"煎餅","reading":"せんべい","meaning":"[noun] rice cookie"}],"level":60},
+{"character":"該","strokes":13,"frequency":2017,"aloneRatio":0.0,"meanings":["above-stated","correspond to"],"on":["ガイ"],"primaryOn":"ガイ","kun":[],"okurigana":[],"nanori":["かた","かぬ","かね","もり"],"examples":[{"word":"該当","reading":"がいとう","meaning":"[noun, する verb] corresponding to"}],"level":60},
+{"character":"妬","strokes":8,"frequency":2020,"aloneRatio":0.0,"meanings":["jealous"],"on":["ト"],"primaryOn":"ト","kun":[],"okurigana":[{"form":"妬む","readings":["ねたむ"],"common":false}],"nanori":[],"examples":[{"word":"嫉妬","reading":"しっと","meaning":"[noun, する verb] jealousy"}],"level":60},
+{"character":"酵","strokes":14,"frequency":2024,"aloneRatio":0.0,"meanings":["fermentation","ferment"],"on":["コウ"],"primaryOn":"コウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"発酵","reading":"はっこう","meaning":"[noun, する verb, の adjective] fermentation"},{"word":"酵母","reading":"こうぼ","meaning":"[noun] yeast"},{"word":"酵素","reading":"こうそ","meaning":"[noun, の adjective] enzyme"}],"level":60},
+{"character":"曖","strokes":17,"frequency":2028,"aloneRatio":0.0,"meanings":["unclear"],"on":["アイ"],"primaryOn":"アイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"曖昧","reading":"あいまい","meaning":"[な adjective, noun] {1} vague"}],"level":60},
+{"character":"洪","strokes":9,"frequency":2031,"aloneRatio":0.0,"meanings":["deluge","flood"],"on":["コウ"],"primaryOn":"コウ","kun":[],"okurigana":[],"nanori":["おお","ひろ","ひろし"],"examples":[{"word":"洪水","reading":"こうずい","meaning":"[noun] flood"}],"level":60}
+]
+}

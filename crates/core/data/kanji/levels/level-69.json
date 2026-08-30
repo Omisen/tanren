@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "level": 69,
+  "source": {
+    "dataset": "kanjium",
+    "commit": "c97ef30c8777de7d5f8e5b04c696a3fe00a2a83a",
+    "committed": "2020-03-30",
+    "licence": "CC BY-SA 4.0",
+    "url": "https://github.com/mifunetoshiro/kanjium",
+    "includes": "EDICT, KANJIDIC, KRADFILE (EDRDG, CC BY-SA 4.0)"
+  },
+  "entries": [
+{"character":"恣","strokes":10,"frequency":2940,"aloneRatio":null,"meanings":["arbitrary","selfish"],"on":["シ"],"primaryOn":"シ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"恣意","reading":"しい","meaning":"[noun] arbitrariness"}],"level":69},
+{"character":"丙","strokes":5,"frequency":2950,"aloneRatio":null,"meanings":["third class","third"],"on":["ヘイ"],"primaryOn":"ヘイ","kun":[],"okurigana":[],"nanori":["あき","あきらか","え","ひのえ"],"examples":[{"word":"丙種","reading":"へいしゅ","meaning":"[noun] C-grade"}],"level":69},
+{"character":"虞","strokes":13,"frequency":2955,"aloneRatio":null,"meanings":["uneasiness","fears"],"on":[],"primaryOn":null,"kun":["おそれ"],"okurigana":[],"nanori":["すけ","もち","やす"],"examples":[],"level":69},
+{"character":"劾","strokes":8,"frequency":2956,"aloneRatio":0.0,"meanings":["censure","expose crimes"],"on":["ガイ"],"primaryOn":"ガイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"弾劾","reading":"だんがい","meaning":"[noun, する verb, の adjective] impeachment"}],"level":69},
+{"character":"迭","strokes":8,"frequency":2959,"aloneRatio":null,"meanings":["transfer","alternate"],"on":["テツ"],"primaryOn":"テツ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"更迭","reading":"こうてつ","meaning":"[noun, する verb] change"}],"level":69},
+{"character":"沃","strokes":7,"frequency":2970,"aloneRatio":null,"meanings":["irrigate"],"on":["ヨク"],"primaryOn":"ヨク","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"肥沃","reading":"ひよく","meaning":"[な adjective, noun] fertility"}],"level":69},
+{"character":"逓","strokes":10,"frequency":3024,"aloneRatio":null,"meanings":["parcel post","relay"],"on":["テイ"],"primaryOn":"テイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"逓信","reading":"ていしん","meaning":"[noun] communications (e.g. post, tele.)"}],"level":69},
+{"character":"痘","strokes":12,"frequency":3055,"aloneRatio":null,"meanings":["pox","smallpox"],"on":["トウ"],"primaryOn":"トウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"天然痘","reading":"てんねんとう","meaning":"[noun] smallpox"}],"level":69},
+{"character":"捗","strokes":10,"frequency":3085,"aloneRatio":0.0,"meanings":["make headway"],"on":["チョク"],"primaryOn":"チョク","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"進捗","reading":"しんちょく","meaning":"[noun, する verb] progress"}],"level":69},
+{"character":"酪","strokes":13,"frequency":3130,"aloneRatio":null,"meanings":["dairy products"],"on":["ラク"],"primaryOn":"ラク","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"酪農","reading":"らくのう","meaning":"[noun] dairy (farm)"}],"level":69},
+{"character":"斤","strokes":4,"frequency":3133,"aloneRatio":null,"meanings":["axe","catty"],"on":["キン"],"primaryOn":"キン","kun":[],"okurigana":[],"nanori":["のり"],"examples":[{"word":"斤量","reading":"きんりょう","meaning":"[noun] weight"}],"level":69},
+{"character":"塑","strokes":13,"frequency":3156,"aloneRatio":null,"meanings":["model"],"on":["ソ"],"primaryOn":"ソ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"彫塑","reading":"ちょうそ","meaning":"[noun, の adjective] {1} carving"}],"level":69},
+{"character":"朕","strokes":10,"frequency":3177,"aloneRatio":null,"meanings":["majestic plural","imperial we"],"on":["チン"],"primaryOn":"チン","kun":[],"okurigana":[],"nanori":[],"examples":[],"level":69},
+{"character":"憬","strokes":15,"frequency":3186,"aloneRatio":null,"meanings":["desire","hanker"],"on":["ケイ"],"primaryOn":"ケイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"憧憬","reading":"しょうけい","meaning":"[noun, する verb] longing"}],"level":69},
+{"character":"訃","strokes":9,"frequency":3231,"aloneRatio":0.0,"meanings":["obituary"],"on":["フ"],"primaryOn":"フ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"訃報","reading":"ふほう","meaning":"[noun] news of a person's death"}],"level":69},
+{"character":"謄","strokes":17,"frequency":3303,"aloneRatio":null,"meanings":["mimeograph","facsimile","transcribe"],"on":["トウ"],"primaryOn":"トウ","kun":[],"okurigana":[],"nanori":["かり","のぼる"],"examples":[{"word":"戸籍謄本","reading":"こせきとうほん","meaning":"[noun] official copy of the family register"},{"word":"謄本","reading":"とうほん","meaning":"[noun] {1} certified copy"}],"level":69},
+{"character":"頰","strokes":16,"frequency":3329,"aloneRatio":null,"meanings":["cheek"],"on":[],"primaryOn":null,"kun":["ほお"],"okurigana":[],"nanori":[],"examples":[],"level":69},
+{"character":"塡","strokes":13,"frequency":3396,"aloneRatio":null,"meanings":["stuff up"],"on":["テン"],"primaryOn":"テン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"塡補","reading":"てんぽ","meaning":"[noun, する verb] {1} supplementation"},{"word":"補塡","reading":"ほてん","meaning":"[noun, する verb] compensating"}],"level":69},
+{"character":"剝","strokes":10,"frequency":null,"aloneRatio":null,"meanings":["peel off"],"on":["ハク"],"primaryOn":"ハク","kun":[],"okurigana":[{"form":"剝がす","readings":["はがす"],"common":false},{"form":"剝ぐ","readings":["はぐ"],"common":false},{"form":"剝げる","readings":["はげる"],"common":false},{"form":"剝がれる","readings":["はがれる"],"common":false}],"nanori":[],"examples":[{"word":"剝製","reading":"はくせい","meaning":"[noun, する verb, の adjective] {1} stuffing"}],"level":69},
+{"character":"楷","strokes":13,"frequency":null,"aloneRatio":null,"meanings":["square character style","block letters"],"on":["カイ"],"primaryOn":"カイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"楷書","reading":"かいしょ","meaning":"[noun] square style of handwriting"}],"level":69},
+{"character":"璽","strokes":19,"frequency":null,"aloneRatio":null,"meanings":["imperial seal","emperor's seal"],"on":["ジ"],"primaryOn":"ジ","kun":[],"okurigana":[],"nanori":["しるし"],"examples":[{"word":"御璽","reading":"ぎょじ","meaning":"[noun] imperial seal"}],"level":69},
+{"character":"繭","strokes":18,"frequency":null,"aloneRatio":null,"meanings":["cocoon"],"on":["ケン"],"primaryOn":"ケン","kun":["まゆ"],"okurigana":[],"nanori":["まゆ"],"examples":[{"word":"繭糸","reading":"けんし","meaning":"[noun] silk thread"}],"level":69},
+{"character":"錮","strokes":16,"frequency":null,"aloneRatio":null,"meanings":["imprisonment","weld"],"on":["コ"],"primaryOn":"コ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"禁錮","reading":"きんこ","meaning":"[noun, する verb] imprisonment"}],"level":69},
+{"character":"頒","strokes":13,"frequency":null,"aloneRatio":0.0,"meanings":["partition","distribute widely"],"on":["ハン"],"primaryOn":"ハン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"頒布","reading":"はんぷ","meaning":"[noun, する verb] distribution"}],"level":69}
+]
+}

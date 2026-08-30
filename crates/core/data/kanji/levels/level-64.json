@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "level": 64,
+  "source": {
+    "dataset": "kanjium",
+    "commit": "c97ef30c8777de7d5f8e5b04c696a3fe00a2a83a",
+    "committed": "2020-03-30",
+    "licence": "CC BY-SA 4.0",
+    "url": "https://github.com/mifunetoshiro/kanjium",
+    "includes": "EDICT, KANJIDIC, KRADFILE (EDRDG, CC BY-SA 4.0)"
+  },
+  "entries": [
+{"character":"嫡","strokes":14,"frequency":2203,"aloneRatio":null,"meanings":["legitimate wife","legitimate child"],"on":["チャク"],"primaryOn":"チャク","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"嫡子","reading":"ちゃくし","meaning":"[noun] legitimate child"}],"level":64},
+{"character":"畿","strokes":15,"frequency":2208,"aloneRatio":0.0,"meanings":["capital suburbs"],"on":["キ"],"primaryOn":"キ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"近畿","reading":"きんき","meaning":"[noun] Kinki (region around Osaka, Kyoto, Nara)"}],"level":64},
+{"character":"腎","strokes":13,"frequency":2209,"aloneRatio":0.5263,"meanings":["kidney"],"on":["ジン"],"primaryOn":"ジン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"腎臓","reading":"じんぞう","meaning":"[noun, の adjective] kidney"}],"level":64},
+{"character":"倣","strokes":10,"frequency":2210,"aloneRatio":0.0,"meanings":["emulate","copy after"],"on":["ホウ"],"primaryOn":"ホウ","kun":[],"okurigana":[{"form":"倣う","readings":["ならう"],"common":true}],"nanori":["より"],"examples":[{"word":"模倣","reading":"もほう","meaning":"[noun, する verb, の adjective] imitation"}],"level":64},
+{"character":"淫","strokes":11,"frequency":2213,"aloneRatio":null,"meanings":["lewd"],"on":["イン"],"primaryOn":"イン","kun":[],"okurigana":[{"form":"淫ら","readings":["みだら"],"common":false}],"nanori":[],"examples":[{"word":"淫行","reading":"いんこう","meaning":"[noun] obscenity"}],"level":64},
+{"character":"斑","strokes":12,"frequency":2214,"aloneRatio":0.0,"meanings":["speckled"],"on":["ハン"],"primaryOn":"ハン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"斑点","reading":"はんてん","meaning":"[noun, の adjective] speck"}],"level":64},
+{"character":"逝","strokes":10,"frequency":2217,"aloneRatio":0.0,"meanings":["departed","depart this life"],"on":["セイ"],"primaryOn":"セイ","kun":[],"okurigana":[{"form":"逝く","readings":["いく","ゆく"],"common":false}],"nanori":[],"examples":[{"word":"急逝","reading":"きゅうせい","meaning":"[noun, する verb] sudden death"},{"word":"逝去","reading":"せいきょ","meaning":"[noun, する verb] (honorific) death"}],"level":64},
+{"character":"栃","strokes":9,"frequency":2219,"aloneRatio":null,"meanings":["horse chestnut"],"on":[],"primaryOn":null,"kun":["とち"],"okurigana":[],"nanori":[],"examples":[{"word":"栃木","reading":"とちぎ","meaning":"[noun] Tochigi (city)"}],"level":64},
+{"character":"抹","strokes":8,"frequency":2224,"aloneRatio":0.0,"meanings":["rub","wipe"],"on":["マツ"],"primaryOn":"マツ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"抹殺","reading":"まっさつ","meaning":"[noun, する verb] erasure"},{"word":"抹消","reading":"まっしょう","meaning":"[noun, する verb] erasure"}],"level":64},
+{"character":"臼","strokes":6,"frequency":2225,"aloneRatio":null,"meanings":["mortar"],"on":["キュウ"],"primaryOn":"キュウ","kun":["うす"],"okurigana":[],"nanori":[],"examples":[{"word":"脱臼","reading":"だっきゅう","meaning":"[noun, する verb] dislocation"},{"word":"臼歯","reading":"きゅうし","meaning":"[noun] molar"}],"level":64},
+{"character":"淑","strokes":11,"frequency":2228,"aloneRatio":null,"meanings":["graceful"],"on":["シュク"],"primaryOn":"シュク","kun":[],"okurigana":[],"nanori":["きみ","きよ","きよし","すえ","すみ","とし","ひで","ふかし","よ","よし"],"examples":[{"word":"淑女","reading":"しゅくじょ","meaning":"[noun] lady"},{"word":"淑徳","reading":"しゅくとく","meaning":"[noun] womanly virtues"}],"level":64},
+{"character":"硝","strokes":12,"frequency":2230,"aloneRatio":0.0,"meanings":["nitrate","niter"],"on":["ショウ"],"primaryOn":"ショウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"硝酸","reading":"しょうさん","meaning":"[noun, の adjective] nitric acid"}],"level":64},
+{"character":"咽","strokes":9,"frequency":2235,"aloneRatio":null,"meanings":["windpipe"],"on":["イン"],"primaryOn":"イン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"咽喉","reading":"いんこう","meaning":"[noun, の adjective] throat"},{"word":"咽頭","reading":"いんとう","meaning":"[な adjective, noun, の adjective] pharynx"}],"level":64},
+{"character":"鋳","strokes":15,"frequency":2245,"aloneRatio":0.0,"meanings":["casting","cast"],"on":["チュウ"],"primaryOn":"チュウ","kun":[],"okurigana":[{"form":"鋳る","readings":["いる"],"common":false}],"nanori":["い"],"examples":[{"word":"鋳型","reading":"いがた","meaning":"[noun] mold"},{"word":"鋳造","reading":"ちゅうぞう","meaning":"[noun, する verb, の adjective] casting"}],"level":64},
+{"character":"醸","strokes":20,"frequency":2246,"aloneRatio":0.0,"meanings":["brew"],"on":["ジョウ"],"primaryOn":"ジョウ","kun":[],"okurigana":[{"form":"醸す","readings":["かもす"],"common":true}],"nanori":[],"examples":[{"word":"醸造","reading":"じょうぞう","meaning":"[noun, する verb] brewing"}],"level":64},
+{"character":"捻","strokes":11,"frequency":2248,"aloneRatio":0.0,"meanings":["wrenching"],"on":["ネン"],"primaryOn":"ネン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"捻挫","reading":"ねんざ","meaning":"[noun, する verb] sprain"}],"level":64},
+{"character":"韻","strokes":19,"frequency":2249,"aloneRatio":1.0,"meanings":["rhyme"],"on":["イン"],"primaryOn":"イン","kun":[],"okurigana":[],"nanori":["おと"],"examples":[{"word":"韻律","reading":"いんりつ","meaning":"[noun, の adjective] (linguistics) rhythm"}],"level":64},
+{"character":"勾","strokes":4,"frequency":2250,"aloneRatio":0.0,"meanings":["flexed","hooked"],"on":["コウ"],"primaryOn":"コウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"勾配","reading":"こうばい","meaning":"[noun] slope"}],"level":64},
+{"character":"廉","strokes":13,"frequency":2252,"aloneRatio":0.0,"meanings":["bargain","incorrupt","cheap"],"on":["レン"],"primaryOn":"レン","kun":[],"okurigana":[],"nanori":["おさ","かど","きよ","きよし","すが","すなお","ただし","やす","ゆき"],"examples":[{"word":"廉価","reading":"れんか","meaning":"[な adjective, noun] low price"}],"level":64},
+{"character":"蔽","strokes":15,"frequency":2255,"aloneRatio":0.0,"meanings":["cover over"],"on":["ヘイ"],"primaryOn":"ヘイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"隠蔽","reading":"いんぺい","meaning":"[noun, する verb] concealment"}],"level":64},
+{"character":"煩","strokes":13,"frequency":2257,"aloneRatio":0.0,"meanings":["anxiety","vexed"],"on":["ハン"],"primaryOn":"ハン","kun":[],"okurigana":[{"form":"煩う","readings":["わずらう"],"common":false},{"form":"煩わす","readings":["わずらわす"],"common":false},{"form":"煩わしい","readings":["わずらわしい"],"common":false}],"nanori":[],"examples":[{"word":"煩悩","reading":"ぼんのう","meaning":"[noun] {1} worldly desires"},{"word":"煩雑","reading":"はんざつ","meaning":"[な adjective, noun] complex"}],"onRare":["ボン"],"level":64},
+{"character":"冥","strokes":10,"frequency":2259,"aloneRatio":0.0,"meanings":["Hades"],"on":["メイ","ミョウ"],"primaryOn":"メイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"冥利","reading":"みょうり","meaning":"[noun] providence"},{"word":"冥想","reading":"めいそう","meaning":"[noun, する verb] meditation"}],"level":64},
+{"character":"媛","strokes":12,"frequency":2262,"aloneRatio":0.0,"meanings":["beautiful woman"],"on":["エン"],"primaryOn":"エン","kun":["ひめ"],"okurigana":[],"nanori":["ひめ"],"examples":[{"word":"才媛","reading":"さいえん","meaning":"[noun] literary woman"}],"level":64},
+{"character":"慨","strokes":13,"frequency":2264,"aloneRatio":null,"meanings":["rue","deplore"],"on":["ガイ"],"primaryOn":"ガイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"憤慨","reading":"ふんがい","meaning":"[noun, する verb] indignation"}],"level":64},
+{"character":"准","strokes":10,"frequency":2267,"aloneRatio":0.5,"meanings":["quasi-","junior"],"on":["ジュン"],"primaryOn":"ジュン","kun":[],"okurigana":[],"nanori":["のり"],"examples":[{"word":"批准","reading":"ひじゅん","meaning":"[noun, する verb] ratification"}],"level":64}
+]
+}

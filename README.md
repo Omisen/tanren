@@ -227,10 +227,19 @@ in <code>public/fonts/OFL.txt</code>.
 <br>
 
 <sub>
-The kanji tables are derived from <b><a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project">KANJIDIC2</a></b>,
-the property of the <b>Electronic Dictionary Research and Development Group</b>,<br>
-used under <b><a href="http://www.edrdg.org/edrdg/licence.html">CC BY-SA 4.0</a></b>. The
-licence extends to derived data, so those tables carry it too while the code stays MIT.<br>
+The kanji tables are derived from <b><a href="https://github.com/mifunetoshiro/kanjium">kanjium</a></b>
+by Uros O., which builds on <b>EDICT</b>, <b>KANJIDIC</b> and <b>KRADFILE</b>,<br>
+the property of the <b>Electronic Dictionary Research and Development Group</b>. Both are
+used under <b><a href="http://www.edrdg.org/edrdg/licence.html">CC BY-SA 4.0</a></b>,<br>
+which extends to derived data, so those tables carry it too while the code stays MIT.
+</sub>
+
+<br>
+
+<sub>
+"The pitch accent notation, verb particle data, phonetics, homonyms and other additions or
+modifications<br>to EDICT, KANJIDIC or KRADFILE were provided by Uros O. through his free
+database."<br>
 Details in <code>crates/core/data/kanji/ATTRIBUTION.md</code>.
 </sub>
 

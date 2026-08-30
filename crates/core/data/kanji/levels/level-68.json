@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "level": 68,
+  "source": {
+    "dataset": "kanjium",
+    "commit": "c97ef30c8777de7d5f8e5b04c696a3fe00a2a83a",
+    "committed": "2020-03-30",
+    "licence": "CC BY-SA 4.0",
+    "url": "https://github.com/mifunetoshiro/kanjium",
+    "includes": "EDICT, KANJIDIC, KRADFILE (EDRDG, CC BY-SA 4.0)"
+  },
+  "entries": [
+{"character":"賦","strokes":15,"frequency":2613,"aloneRatio":null,"meanings":["levy","installment"],"on":["フ"],"primaryOn":"フ","kun":[],"okurigana":[],"nanori":["ます"],"examples":[{"word":"月賦","reading":"げっぷ","meaning":"[noun] monthly installment (instalment)"},{"word":"賦課","reading":"ふか","meaning":"[noun, する verb] levy"}],"level":68},
+{"character":"哺","strokes":10,"frequency":2614,"aloneRatio":0.0,"meanings":["suckle"],"on":["ホ"],"primaryOn":"ホ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"哺乳瓶","reading":"ほにゅうびん","meaning":"[noun] baby bottle"}],"level":68},
+{"character":"凸","strokes":5,"frequency":2617,"aloneRatio":0.0,"meanings":["convex"],"on":["トツ"],"primaryOn":"トツ","kun":[],"okurigana":[],"nanori":["たかし"],"examples":[{"word":"凸版","reading":"とっぱん","meaning":"[noun, の adjective] letterpress"},{"word":"凹凸","reading":"おうとつ","meaning":"[noun, な adjective, の adjective] unevenness"}],"level":68},
+{"character":"痢","strokes":12,"frequency":2622,"aloneRatio":0.0,"meanings":["diarrhea"],"on":["リ"],"primaryOn":"リ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"下痢","reading":"げり","meaning":"[noun, する verb, の adjective] diarrhoea"}],"level":68},
+{"character":"麺","strokes":16,"frequency":2628,"aloneRatio":null,"meanings":["noodles"],"on":["メン"],"primaryOn":"メン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"拉麺","reading":"ラーメン","meaning":"[noun] ramen"}],"level":68},
+{"character":"矯","strokes":17,"frequency":2635,"aloneRatio":null,"meanings":["rectify"],"on":["キョウ"],"primaryOn":"キョウ","kun":[],"okurigana":[{"form":"矯める","readings":["ためる"],"common":false}],"nanori":["いさみ","たけし","ただ"],"examples":[{"word":"矯正","reading":"きょうせい","meaning":"[noun, する verb, の adjective] correction"}],"level":68},
+{"character":"辣","strokes":14,"frequency":2638,"aloneRatio":null,"meanings":["harsh","bitter"],"on":["ラツ"],"primaryOn":"ラツ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"辣腕","reading":"らつわん","meaning":"[な adjective, noun] shrewdness"}],"level":68},
+{"character":"毀","strokes":13,"frequency":2648,"aloneRatio":null,"meanings":["break"],"on":["キ"],"primaryOn":"キ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"毀損","reading":"きそん","meaning":"[noun, する verb] damage"}],"level":68},
+{"character":"羞","strokes":11,"frequency":2652,"aloneRatio":null,"meanings":["ashamed","humiliate"],"on":["シュウ"],"primaryOn":"シュウ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"羞恥心","reading":"しゅうちしん","meaning":"[noun] shyness"}],"level":68},
+{"character":"嘱","strokes":15,"frequency":2666,"aloneRatio":0.0,"meanings":["entrust","charge with"],"on":["ショク"],"primaryOn":"ショク","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"嘱望","reading":"しょくぼう","meaning":"[noun, する verb] (having great) expectation"},{"word":"委嘱","reading":"いしょく","meaning":"[noun, する verb] entrusting (with)"}],"level":68},
+{"character":"氾","strokes":5,"frequency":2689,"aloneRatio":null,"meanings":["widespread"],"on":["ハン"],"primaryOn":"ハン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"氾濫","reading":"はんらん","meaning":"[noun, する verb] overflowing"}],"level":68},
+{"character":"箋","strokes":14,"frequency":2710,"aloneRatio":null,"meanings":["stationery"],"on":["セン"],"primaryOn":"セン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"便箋","reading":"びんせん","meaning":"[noun] writing paper"}],"level":68},
+{"character":"蚕","strokes":10,"frequency":2721,"aloneRatio":0.0,"meanings":["silkworm"],"on":["サン"],"primaryOn":"サン","kun":["かいこ"],"okurigana":[],"nanori":[],"examples":[{"word":"養蚕","reading":"ようさん","meaning":"[noun, の adjective] sericulture"}],"level":68},
+{"character":"遵","strokes":15,"frequency":2746,"aloneRatio":0.0,"meanings":["abide by","obey"],"on":["ジュン"],"primaryOn":"ジュン","kun":[],"okurigana":[],"nanori":["ちか","のぶ","ゆき","より"],"examples":[{"word":"遵守","reading":"じゅんしゅ","meaning":"[noun, する verb] compliance"}],"level":68},
+{"character":"彙","strokes":13,"frequency":2752,"aloneRatio":0.0,"meanings":["glossary"],"on":["イ"],"primaryOn":"イ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"語彙","reading":"ごい","meaning":"[noun, の adjective] (linguistics) vocabulary"}],"level":68},
+{"character":"憾","strokes":16,"frequency":2783,"aloneRatio":null,"meanings":["remorse","strongly regret"],"on":["カン"],"primaryOn":"カン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"遺憾","reading":"いかん","meaning":"[な adjective, noun] regrettable"}],"level":68},
+{"character":"惰","strokes":12,"frequency":2790,"aloneRatio":null,"meanings":["lazy"],"on":["ダ"],"primaryOn":"ダ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"怠惰","reading":"たいだ","meaning":"[な adjective, noun] laziness"},{"word":"惰性","reading":"だせい","meaning":"[noun] inertia"}],"level":68},
+{"character":"倹","strokes":10,"frequency":2797,"aloneRatio":null,"meanings":["frugal"],"on":["ケン"],"primaryOn":"ケン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"倹約","reading":"けんやく","meaning":"[な adjective, noun, する verb, の adjective] thrift"}],"level":68},
+{"character":"諧","strokes":16,"frequency":2802,"aloneRatio":null,"meanings":["humour","orderliness"],"on":["カイ"],"primaryOn":"カイ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"俳諧","reading":"はいかい","meaning":"[noun] {1} haikai"}],"level":68},
+{"character":"衷","strokes":10,"frequency":2805,"aloneRatio":0.0,"meanings":["inmost","inner heart"],"on":["チュウ"],"primaryOn":"チュウ","kun":[],"okurigana":[],"nanori":["あつ","ただ","ただし","よし"],"examples":[{"word":"和洋折衷","reading":"わようせっちゅう","meaning":"[noun, の adjective] a blending of Japanese and Western styles"},{"word":"折衷","reading":"せっちゅう","meaning":"[noun, する verb, の adjective] compromise"},{"word":"衷心","reading":"ちゅうしん","meaning":"[noun] innermost feelings"}],"level":68},
+{"character":"墾","strokes":16,"frequency":2808,"aloneRatio":null,"meanings":["ground-breaking","reclaim"],"on":["コン"],"primaryOn":"コン","kun":[],"okurigana":[],"nanori":["つとむ","ひらく"],"examples":[{"word":"開墾","reading":"かいこん","meaning":"[noun, する verb] cultivating new land"}],"level":68},
+{"character":"厘","strokes":9,"frequency":2830,"aloneRatio":1.0,"meanings":["rin","thousandth"],"on":["リン"],"primaryOn":"リン","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"九分九厘","reading":"くぶくりん","meaning":"[adverbial noun, temporal noun] ten to one"}],"level":68},
+{"character":"摯","strokes":15,"frequency":2851,"aloneRatio":null,"meanings":["clasp"],"on":["シ"],"primaryOn":"シ","kun":[],"okurigana":[],"nanori":[],"examples":[{"word":"真摯","reading":"しんし","meaning":"[な adjective, noun] sincerity"}],"level":68},
+{"character":"款","strokes":12,"frequency":2872,"aloneRatio":null,"meanings":["goodwill","article"],"on":["カン"],"primaryOn":"カン","kun":[],"okurigana":[],"nanori":["すけ","ただ","まさ","ゆく","よし"],"examples":[{"word":"借款","reading":"しゃっかん","meaning":"[noun] (international) loan"},{"word":"定款","reading":"ていかん","meaning":"[noun] articles of incorporation"},{"word":"約款","reading":"やっかん","meaning":"[noun] agreement"}],"level":68},
+{"character":"弐","strokes":6,"frequency":2926,"aloneRatio":null,"meanings":["two"],"on":["ニ"],"primaryOn":"ニ","kun":[],"okurigana":[],"nanori":["すけ"],"examples":[{"word":"弐万円","reading":"にまんえん","meaning":"[noun] 20,000 Yen"}],"level":68}
+]
+}
