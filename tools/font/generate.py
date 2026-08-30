@@ -5,9 +5,10 @@ M PLUS Rounded 1c intero pesa 3,3 MB. Imbarcarlo tutto significherebbe portarsi
 dietro migliaia di kanji per un'app che oggi mostra due sillabari. Ritagliato
 sui caratteri veri sta in poche decine di kB.
 
-Va rieseguito quando l'insieme dei caratteri cambia, cioe' quando arriveranno i
-kanji: allora COPERTURA cresce e il file si rifa'. Non e' un passo della build,
-si lancia a mano come `crates/core/data/kana/generate.py`.
+Va rieseguito quando l'insieme dei caratteri cambia. I kanji sono gia' dentro, e
+la loro lista viene letta dalle tabelle generate invece che scritta qui: cosi' i
+due generatori restano allineati da soli. Non e' un passo della build, si lancia
+a mano come `crates/core/data/kana/generate.py`.
 
     pip install fonttools brotli
     python tools/font/generate.py
@@ -64,6 +65,30 @@ COPYRIGHT = "Copyright 2016 The Rounded M+ Project Authors."
 #                    normalizzazione
 COPERTURA = "U+0020-007E,U+3000-30FF,U+31F0-31FF,U+FF01-FF9F"
 
+# I kanji non si possono dare per intervalli: i 2.136 joyo sono sparsi per tutto
+# il blocco CJK, e prendere il blocco intero vorrebbe dire imbarcare ventimila
+# ideogrammi per mostrarne duemila.
+#
+# La lista si legge dalle tabelle generate, che sono la fonte di verita' su quali
+# kanji l'app conosce. Cosi' i due generatori restano allineati da soli: se un
+# domani le tabelle cresceranno, bastera' rilanciare questo.
+TABELLE_KANJI = RADICE / "crates" / "core" / "data" / "kanji"
+
+
+def kanji() -> str:
+    """I caratteri delle tabelle dei kanji, piu' quelli che l'interfaccia scrive."""
+    import json
+
+    caratteri = set()
+    for file in sorted(TABELLE_KANJI.glob("*.json")):
+        for voce in json.loads(file.read_text(encoding="utf-8"))["entries"]:
+            caratteri.add(voce["character"])
+
+    # 漢字 sta nella scelta della materia e 中 sull'anno delle medie: sono joyo,
+    # quindi gia' dentro, ma l'insieme e' l'unione esplicita di cosa l'app scrive.
+    caratteri.update("漢字中")
+    return "".join(sorted(caratteri))
+
 
 def scarica(url: str, dove: Path) -> None:
     print(f"  scarico {dove.name}")
@@ -81,7 +106,7 @@ def main() -> int:
 
     USCITA.mkdir(parents=True, exist_ok=True)
     intero = USCITA / f"{NOME}-intero.ttf"
-    ritagliato = USCITA / f"{NOME}-kana.woff2"
+    ritagliato = USCITA / f"{NOME}-jp.woff2"
 
     scarica(SORGENTE, intero)
 
@@ -94,11 +119,15 @@ def main() -> int:
     righe[0] = COPYRIGHT
     (USCITA / "OFL.txt").write_text("\n".join(righe), encoding="utf-8")
 
-    print("  ritaglio")
+    voci = kanji()
+    print(f"  ritaglio: {len(voci)} kanji piu' i kana e il latino")
+    lista = USCITA / "kanji.txt"
+    lista.write_text(voci, encoding="utf-8")
     subprocess.run(
         [
             sys.executable, "-m", "fontTools.subset", str(intero),
             f"--unicodes={COPERTURA}",
+            f"--text-file={lista}",
             "--flavor=woff2",
             f"--output-file={ritagliato}",
             "--layout-features=*",
@@ -107,6 +136,7 @@ def main() -> int:
         ],
         check=True,
     )
+    lista.unlink()
 
     # Il .ttf intero e' solo materia prima: non va imbarcato nell'app, e
     # `public/` finisce tutto dentro il binario.

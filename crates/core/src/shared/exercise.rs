@@ -105,6 +105,17 @@ pub struct Question {
     pub item: ItemId,
     pub prompt: Prompt,
     pub format: AnswerFormat,
+    /// Che cosa si vuole sapere, quando lo stimolo da solo non lo dice.
+    ///
+    /// I kana non ne hanno bisogno: visto か, c'e' una cosa sola da chiedere. Un kanji
+    /// no, perche' 生 ha letture on e letture kun e mostrarlo senza dire quale si vuole
+    /// e' una domanda con due risposte diverse.
+    ///
+    /// **E' un'etichetta da mappare, non testo da mostrare.** Il core dice `on`,
+    /// l'interfaccia decide che si scrive «On reading»: e' la stessa regola dei gruppi
+    /// dei kana, che attraversano il confine come `dakuten` e diventano «Voiced» di la'.
+    /// Cosi' il core non si porta dentro la lingua dell'interfaccia.
+    pub asks: Option<String>,
 }
 
 /// Cio' che l'utente ha prodotto: il testo digitato, o il valore dell'opzione scelta.
@@ -158,7 +169,14 @@ pub struct QuestionRequest<'a> {
 /// L'implementazione conosce il proprio contenuto e se lo va a prendere da sola: il
 /// livello condiviso non sa cosa sia un kana. Il tratto e' pensato per essere usato
 /// dietro `dyn`, cosi' una sessione puo' tenere insieme esercizi di materie diverse.
-pub trait ExerciseType {
+///
+/// # Perche' `Sync`
+///
+/// Perche' un riferimento all'esercizio attraversa l'attesa asincrona della scrittura
+/// nello storico, e Tauri accetta solo future `Send`. Non e' un vincolo che stringe:
+/// un esercizio non conserva stato fra una chiamata e l'altra, per la stessa ragione
+/// per cui non conserva la domanda posta, quindi in pratica sono tutti struct vuoti.
+pub trait ExerciseType: Sync {
     fn id(&self) -> ExerciseTypeId;
 
     /// Costruisce la domanda. L'`rng` arriva da fuori invece di essere preso dal

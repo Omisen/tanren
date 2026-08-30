@@ -4,18 +4,26 @@
  * Nessun altro modulo dovrebbe importare `invoke` direttamente: tenendo le chiamate
  * qui, i nomi dei comandi e le loro firme stanno in un posto solo, e la UI vede
  * funzioni tipizzate invece di stringhe.
+ *
+ * I comandi portano il nome della materia (`start_kana_session`, `start_kanji_session`)
+ * perche' con due materie un `start_session` non direbbe di quale.
  */
 
 import { invoke } from '@tauri-apps/api/core'
 
-import type { KanaSet, Queue, Scope, Step, Syllabary, Verdict } from './types'
+import type {
+  Grade,
+  KanaScope,
+  KanaSet,
+  KanjiScope,
+  KanjiSet,
+  Queue,
+  Step,
+  Syllabary,
+  Verdict,
+} from './types'
 
 export * from './types'
-
-/** Le famiglie di un sillabario, con quanti segni contengono. */
-export function kanaCatalogue(syllabary: Syllabary): Promise<KanaSet[]> {
-  return invoke('kana_catalogue', { syllabary })
-}
 
 /**
  * Riduce un testo alla forma con cui verra' confrontato, sillabario compreso.
@@ -28,9 +36,14 @@ export function normalizeInput(input: string): Promise<string> {
   return invoke('normalize_input', { input })
 }
 
-/** Comincia una sessione: la coda mescolata e la prima domanda. */
-export function startSession(scope: Scope): Promise<Step> {
-  return invoke('start_session', { scope })
+/** Le famiglie di un sillabario, con quanti segni contengono. */
+export function kanaCatalogue(syllabary: Syllabary): Promise<KanaSet[]> {
+  return invoke('kana_catalogue', { syllabary })
+}
+
+/** Comincia una sessione sui kana: la coda mescolata e la prima domanda. */
+export function startKanaSession(scope: KanaScope): Promise<Step> {
+  return invoke('start_kana_session', { scope })
 }
 
 /**
@@ -38,8 +51,12 @@ export function startSession(scope: Scope): Promise<Step> {
  *
  * La coda torna al core com'era arrivata: chi esce e chi rientra lo decide lui.
  */
-export function nextStep(scope: Scope, queue: Queue, correct: boolean): Promise<Step> {
-  return invoke('next_step', { scope, queue, correct })
+export function nextKanaStep(
+  scope: KanaScope,
+  queue: Queue,
+  correct: boolean,
+): Promise<Step> {
+  return invoke('next_kana_step', { scope, queue, correct })
 }
 
 /**
@@ -50,11 +67,40 @@ export function nextStep(scope: Scope, queue: Queue, correct: boolean): Promise<
  * domanda e' comparsa davvero; il core lo registra e basta, **non ci giudica sopra**.
  * `null` quando non e' stato misurato, che non e' la stessa cosa di zero.
  */
-export function submitAnswer(
-  scope: Scope,
+export function submitKanaAnswer(
+  scope: KanaScope,
   item: string,
   answer: string,
   responseTimeMs: number | null,
 ): Promise<Verdict> {
-  return invoke('submit_answer', { scope, item, answer, responseTimeMs })
+  return invoke('submit_kana_answer', { scope, item, answer, responseTimeMs })
+}
+
+/** Le famiglie di letture di un anno di scuola, con quanti item contengono. */
+export function kanjiCatalogue(grade: Grade): Promise<KanjiSet[]> {
+  return invoke('kanji_catalogue', { grade })
+}
+
+/** Comincia una sessione sui kanji. */
+export function startKanjiSession(scope: KanjiScope): Promise<Step> {
+  return invoke('start_kanji_session', { scope })
+}
+
+/** Come continua il giro sui kanji dopo una risposta. */
+export function nextKanjiStep(
+  scope: KanjiScope,
+  queue: Queue,
+  correct: boolean,
+): Promise<Step> {
+  return invoke('next_kanji_step', { scope, queue, correct })
+}
+
+/** Corregge una risposta sui kanji e la registra nello storico. */
+export function submitKanjiAnswer(
+  scope: KanjiScope,
+  item: string,
+  answer: string,
+  responseTimeMs: number | null,
+): Promise<Verdict> {
+  return invoke('submit_kanji_answer', { scope, item, answer, responseTimeMs })
 }

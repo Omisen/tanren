@@ -40,11 +40,15 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            commands::kana_catalogue,
             commands::normalize_input,
-            commands::start_session,
-            commands::next_step,
-            commands::submit_answer,
+            commands::kana_catalogue,
+            commands::start_kana_session,
+            commands::next_kana_step,
+            commands::submit_kana_answer,
+            commands::kanji_catalogue,
+            commands::start_kanji_session,
+            commands::next_kanji_step,
+            commands::submit_kanji_answer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

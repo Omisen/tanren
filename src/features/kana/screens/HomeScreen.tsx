@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 import {
   kanaCatalogue,
@@ -7,7 +7,9 @@ import {
   type Syllabary,
 } from '@/shared/bridge'
 import { Button } from '@/shared/ui/Button'
+import { Card, Note } from '@/shared/ui/Card'
 import { Chip } from '@/shared/ui/Chip'
+import { Field } from '@/shared/ui/Field'
 import { Screen } from '@/shared/ui/Screen'
 import { useUi } from '@/shared/store/ui'
 
@@ -17,19 +19,26 @@ const SYLLABARIES = [
 ] as const
 
 const MODES = [
-  { value: 'recognition', label: 'Riconoscimento', caption: 'Scegli la lettura' },
-  { value: 'input', label: 'Scrittura', caption: 'Digita con l’IME' },
+  { value: 'recognition', label: 'Recognition', caption: 'Pick the reading' },
+  { value: 'input', label: 'Writing', caption: 'Type with the IME' },
 ] as const
 
 const GROUP_LABELS: Record<KanaGroup, string> = {
   base: 'Base',
-  dakuten: 'Sonori',
-  handakuten: 'Semisonori',
-  yoon: 'Combinazioni',
+  dakuten: 'Voiced',
+  handakuten: 'Semi-voiced',
+  yoon: 'Combinations',
 }
 
-export function HomeScreen() {
-  const { scope, setSyllabary, setMode, toggleGroup, goTo } = useUi()
+/**
+ * La scelta dell'ambito sui kana.
+ *
+ * La scelta della materia arriva dall'alto come nodo gia' fatto: comporla e' compito
+ * della radice, che e' l'unica a conoscerle tutte. Questa schermata sa solo di kana, e
+ * con la regola di non incrocio fra feature non potrebbe nemmeno nominare i kanji.
+ */
+export function KanaHomeScreen({ subjects }: { subjects: ReactNode }) {
+  const { kana: scope, setSyllabary, setKanaMode, toggleGroup, goTo } = useUi()
   // Il catalogo si porta dietro il sillabario a cui appartiene. Cosi' cambiando
   // scelta il risultato vecchio smette di valere da solo, senza doverlo azzerare a
   // mano dentro l'effetto e far ripartire un altro render.
@@ -67,12 +76,14 @@ export function HomeScreen() {
       title="Tanren"
       action={
         <Button disabled={scope.groups.length === 0} onClick={() => goTo('session')}>
-          {total > 0 ? `Inizia con ${total} segni` : 'Inizia'}
+          {total > 0 ? `Start with ${total} characters` : 'Start'}
         </Button>
       }
     >
       <div className="flex flex-col gap-7">
-        <Field label="Sillabario">
+        {subjects}
+
+        <Field label="Syllabary">
           <div className="grid grid-cols-2 gap-2">
             {SYLLABARIES.map((s) => (
               <Card
@@ -89,9 +100,9 @@ export function HomeScreen() {
           </div>
         </Field>
 
-        <Field label="Famiglie">
-          {failed && <Note>Il catalogo non è raggiungibile.</Note>}
-          {!failed && !sets && <Note>Carico…</Note>}
+        <Field label="Families">
+          {failed && <Note>The catalogue is not reachable.</Note>}
+          {!failed && !sets && <Note>Loading…</Note>}
           {sets && (
             <div className="flex flex-wrap gap-2">
               {sets.map((s) => (
@@ -108,13 +119,13 @@ export function HomeScreen() {
           )}
         </Field>
 
-        <Field label="Esercizio">
+        <Field label="Exercise">
           <div className="grid grid-cols-2 gap-2">
             {MODES.map((m) => (
               <Card
                 key={m.value}
                 pressed={scope.mode === m.value}
-                onClick={() => setMode(m.value)}
+                onClick={() => setKanaMode(m.value)}
               >
                 <span className="text-base">{m.label}</span>
                 <span className="text-muted text-xs">{m.caption}</span>
@@ -125,42 +136,4 @@ export function HomeScreen() {
       </div>
     </Screen>
   )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-muted text-xs font-medium tracking-[0.2em] uppercase">
-        {label}
-      </h2>
-      {children}
-    </section>
-  )
-}
-
-function Card({
-  pressed,
-  onClick,
-  children,
-}: {
-  pressed: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      onClick={onClick}
-      className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-xl border transition-colors active:opacity-70 ${
-        pressed ? 'border-selected bg-selected-wash' : 'border-hairline bg-ink-soft'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function Note({ children }: { children: React.ReactNode }) {
-  return <p className="text-muted text-sm">{children}</p>
 }

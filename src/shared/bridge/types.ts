@@ -12,22 +12,56 @@ export type Syllabary = 'hiragana' | 'katakana'
 /** Le famiglie di segni, dalle piu' semplici alle combinazioni. */
 export type KanaGroup = 'base' | 'dakuten' | 'handakuten' | 'yoon'
 
-/** In che modo si sta allenando. */
-export type Mode =
+/** In che modo ci si allena sui kana. */
+export type KanaMode =
   /** Si vede il segno e si sceglie la trascrizione. */
   | 'recognition'
   /** Si vede la trascrizione e si scrive il segno con l'IME. */
   | 'input'
 
 /** Cosa si sta allenando. `groups` vuoto significa tutte le famiglie. */
-export interface Scope {
+export interface KanaScope {
   syllabary: Syllabary
   groups: KanaGroup[]
-  mode: Mode
+  mode: KanaMode
 }
 
 export interface KanaSet {
   group: KanaGroup
+  size: number
+}
+
+/** L'anno di scuola in cui un kanji si insegna. `secondary` sono medie e superiori. */
+export type Grade =
+  | 'first'
+  | 'second'
+  | 'third'
+  | 'fourth'
+  | 'fifth'
+  | 'sixth'
+  | 'secondary'
+
+/**
+ * Quale lettura di un kanji si sta allenando.
+ *
+ * `on` e `kun` mostrano il kanji da solo e dicono quale lettura vogliono;
+ * `okurigana` mostra la forma scritta col suo okurigana (生きる), che dice gia' da se'
+ * cosa chiede e infatti arriva con `asks` a `null`.
+ */
+export type Family = 'on' | 'kun' | 'okurigana'
+
+/** In che modo ci si allena sui kanji. La scrittura con l'IME arriva dopo. */
+export type KanjiMode = 'recognition'
+
+/** Cosa si sta allenando. `families` vuoto significa tutte. */
+export interface KanjiScope {
+  grade: Grade
+  families: Family[]
+  mode: KanjiMode
+}
+
+export interface KanjiSet {
+  family: Family
   size: number
 }
 
@@ -59,10 +93,19 @@ export type Queue = string[]
 
 export interface Question {
   exerciseType: string
-  /** L'identificatore del segno, da rimandare indietro con la risposta. */
+  /** L'identificatore dell'item, da rimandare indietro con la risposta. */
   item: string
   prompt: Prompt
   format: AnswerFormat
+  /**
+   * Che cosa si vuole sapere, quando lo stimolo da solo non lo dice.
+   *
+   * I kana non ne hanno bisogno e lo lasciano a `null`; un kanji si', perche' 生 ha
+   * letture on e letture kun. **E' un'etichetta da mappare, non testo da mostrare:**
+   * il core dice `on`, la schermata decide che si scrive «On reading», come gia'
+   * succede per i gruppi dei kana.
+   */
+  asks: string | null
 }
 
 /** Una domanda aperta e la coda che resta. `question` a `null` vuol dire giro finito. */
@@ -74,8 +117,8 @@ export interface Step {
 /**
  * Com'e' andata una risposta.
  *
- * Non porta nessuna scadenza: sui kana non c'e' ripetizione spaziata, il segno torna
- * al prossimo giro e basta.
+ * Non porta nessuna scadenza: nessuna delle materie di oggi usa la ripetizione
+ * spaziata, l'item torna al prossimo giro e basta.
  */
 export type Verdict =
   | { outcome: 'correct' }

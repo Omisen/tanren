@@ -8,15 +8,17 @@
    rettangoli vuoti.
 
    E' M PLUS Rounded 1c ritagliato ai soli caratteri che l'app puo' mostrare, da
-   3,3 MB a 37 kB. Il ritaglio lo fa `tools/font/generate.py`, che va rieseguito
-   quando arriveranno i kanji.
+   3,3 MB a 405 kB: kana, latino, e i 2.136 joyo. Era 37 kB finche' c'erano solo i
+   kana, e i kanji sono quasi tutto il resto. Il ritaglio lo fa
+   `tools/font/generate.py`, che legge la lista dei kanji dalle tabelle generate,
+   e va rieseguito quando quelle cambiano.
 
    `font-display: block` e non `swap`: con swap si vedrebbe prima il ripiego di
    sistema e poi il salto alla forma giusta, proprio sul segno che si sta
    studiando. Meglio un istante di nulla che insegnare la forma sbagliata. */
 @font-face {
   font-family: "M PLUS Rounded 1c";
-  src: url("/fonts/MPLUSRounded1c-kana.woff2") format("woff2");
+  src: url("/fonts/MPLUSRounded1c-jp.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -117,14 +119,33 @@
      risolte tutte e due le cose senza cambiare tinta. */
   --color-type-kana: #0e7f72;
 
-  /* Ancora da definire: `--color-type-radical`, `--color-type-kanji`,
-     `--color-type-vocab` e la scala `--color-srs-*`. Si scelgono quando quei tipi
-     e quegli stati esisteranno davvero, perche' inventarli adesso vuol dire
-     indovinare.
-     Quando sara' il momento: il rosso e' occupato da `accent`, il verde da `ok` e
-     ora il verde-azzurro dai kana, quindi lo spazio libero e' **blu, viola e
-     magenta**. E vanno **ricalibrati per il fondo scuro**: un colore di categoria
-     scelto per stare su bianco, come quelli dei riferimenti, su nero non regge. */
+  /* I kanji. Misurato come il verde-azzurro, e con lo stesso criterio: quello che
+     decide e' la **distanza minima**, cioe' da quale colore gia' in uso rischia di
+     essere scambiato.
+       `paper` sopra    5,63x   (larghissimo: ne bastavano 3,00x per il testo grande)
+       contro `ink`     2,95x   (il blocco stacca dalla pagina)
+       da `accent`      0,324   in OKLab
+       da `ok`          0,314
+       da `type-kana`   0,210
+     La distanza piu' piccola, 0,210 dai kana, e' comunque piu' larga dei 0,153 fra
+     i kana e `ok`, che il progetto ha gia' accettato dopo averli corretti.
+     **Scartati su misura, non su gusto:** un blu piu' puro (`#2563b0`) distava
+     0,147 dai kana, cioe' meno di quel precedente, e due categorie confondibili
+     sono peggio di due significati confondibili; un magenta (`#a83274`) distava
+     0,147 da `accent`, e finire addosso al rosso che dice «sbagliato» e' il caso
+     peggiore di tutti, perche' quel colore compare nella stessa schermata.
+     L'indaco tiene la distanza piu' grande proprio da `accent`, che e' la
+     separazione che conta di piu'. */
+  --color-type-kanji: #4a52c8;
+
+  /* Ancora da definire: `--color-type-radical`, `--color-type-vocab` e la scala
+     `--color-srs-*`. Si scelgono quando quei tipi e quegli stati esisteranno
+     davvero, perche' inventarli adesso vuol dire indovinare.
+     Quando sara' il momento: il rosso e' di `accent`, il verde di `ok`, il
+     verde-azzurro dei kana e l'indaco dei kanji, quindi resta **viola e magenta**,
+     con l'avvertenza che il magenta si avvicina all'accento. E vanno
+     **ricalibrati per il fondo scuro**: un colore di categoria scelto per stare su
+     bianco, come quelli dei riferimenti, su nero non regge. */
 
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   /* I ripieghi restano dietro a quello imbarcato: servono solo se il woff2 non

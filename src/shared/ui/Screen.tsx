@@ -31,7 +31,7 @@ export function Screen({
           <button
             type="button"
             onClick={onBack}
-            aria-label="Torna indietro"
+            aria-label="Go back"
             className="text-muted -ml-2 flex size-11 items-center justify-center text-2xl active:opacity-60"
           >
             ←

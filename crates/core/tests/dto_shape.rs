@@ -13,6 +13,9 @@
 use serde_json::json;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary};
 use tanren_core::features::kana::session::{Mode, Scope, Step};
+use tanren_core::features::kanji::data::Grade;
+use tanren_core::features::kanji::exercise::Family;
+use tanren_core::features::kanji::session::{Mode as KanjiMode, Scope as KanjiScope};
 use tanren_core::shared::error::CoreError;
 use tanren_core::shared::exercise::{
     AnswerFormat, ExerciseTypeId, ItemId, Prompt, Question, Verdict,
@@ -27,6 +30,7 @@ fn una_domanda_a_scelta_multipla() {
         format: AnswerFormat::Choice {
             options: vec!["ka".into(), "ki".into()],
         },
+        asks: None,
     };
 
     assert_eq!(
@@ -35,7 +39,8 @@ fn una_domanda_a_scelta_multipla() {
             "exerciseType": "kana.recognition",
             "item": "kana:hiragana:か",
             "prompt": { "script": "japanese", "text": "か" },
-            "format": { "mode": "choice", "options": ["ka", "ki"] }
+            "format": { "mode": "choice", "options": ["ka", "ki"] },
+            "asks": null
         })
     );
 }
@@ -47,6 +52,7 @@ fn una_domanda_a_input_libero() {
         item: ItemId::new("kana:katakana:カ"),
         prompt: Prompt::Latin("ka".into()),
         format: AnswerFormat::Input,
+        asks: None,
     };
 
     assert_eq!(
@@ -55,7 +61,36 @@ fn una_domanda_a_input_libero() {
             "exerciseType": "kana.input",
             "item": "kana:katakana:カ",
             "prompt": { "script": "latin", "text": "ka" },
-            "format": { "mode": "input" }
+            "format": { "mode": "input" },
+            "asks": null
+        })
+    );
+}
+
+/// Una domanda che deve dire cosa chiede, come quelle sui kanji.
+///
+/// `asks` e' un'etichetta da mappare e non testo da mostrare: chi la legge di la' del
+/// confine deve trovarci `on`, non «On reading».
+#[test]
+fn una_domanda_che_precisa_cosa_chiede() {
+    let q = Question {
+        exercise_type: ExerciseTypeId::new("kanji.recognition"),
+        item: ItemId::new("kanji:first:on:生"),
+        prompt: Prompt::Japanese("生".into()),
+        format: AnswerFormat::Choice {
+            options: vec!["セイ".into(), "ジン".into()],
+        },
+        asks: Some("on".into()),
+    };
+
+    assert_eq!(
+        serde_json::to_value(&q).unwrap(),
+        json!({
+            "exerciseType": "kanji.recognition",
+            "item": "kanji:first:on:生",
+            "prompt": { "script": "japanese", "text": "生" },
+            "format": { "mode": "choice", "options": ["セイ", "ジン"] },
+            "asks": "on"
         })
     );
 }
@@ -86,6 +121,7 @@ fn un_passo_della_sessione() {
             format: AnswerFormat::Choice {
                 options: vec!["ka".into()],
             },
+            asks: None,
         }),
         queue: vec![ItemId::new("kana:hiragana:か"), ItemId::new("kana:hiragana:き")],
     };
@@ -125,6 +161,35 @@ fn l_ambito_attraversa_il_confine_nei_due_versi() {
     // L'ambito arriva dal frontend, quindi deve anche potersi rileggere.
     let riletto: Scope = serde_json::from_value(serde_json::to_value(&scope).unwrap()).unwrap();
     assert_eq!(riletto, scope);
+}
+
+/// L'ambito dei kanji, che il frontend costruisce e il core rilegge.
+#[test]
+fn l_ambito_dei_kanji_attraversa_il_confine_nei_due_versi() {
+    let scope = KanjiScope {
+        grade: Grade::First,
+        families: vec![Family::On, Family::Okurigana],
+        mode: KanjiMode::Recognition,
+    };
+    assert_eq!(
+        serde_json::to_value(&scope).unwrap(),
+        json!({
+            "grade": "first",
+            "families": ["on", "okurigana"],
+            "mode": "recognition"
+        })
+    );
+
+    let riletto: KanjiScope =
+        serde_json::from_value(serde_json::to_value(&scope).unwrap()).unwrap();
+    assert_eq!(riletto, scope);
+
+    // Il grado `secondary` e' il grado 8 di KANJIDIC2, e attraversa col suo nome e non
+    // con un numero: di la' del confine si legge, non si conta.
+    assert_eq!(
+        serde_json::to_value(Grade::Secondary).unwrap(),
+        json!("secondary")
+    );
 }
 
 #[test]

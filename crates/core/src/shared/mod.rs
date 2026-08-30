@@ -6,6 +6,7 @@
 pub mod content;
 pub mod error;
 pub mod exercise;
+pub mod session;
 pub mod srs;
 pub mod storage;
 pub mod text;

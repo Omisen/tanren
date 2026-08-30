@@ -152,6 +152,9 @@ impl ExerciseType for KanaRecognition {
             item: request.item.clone(),
             prompt: Prompt::Japanese(kana.character.clone()),
             format: AnswerFormat::Choice { options },
+            // Visto un kana c'e' una cosa sola da chiedere, quindi non c'e' niente da
+            // precisare. Un kanji invece ha piu' famiglie di letture e deve dirlo.
+            asks: None,
         })
     }
 
@@ -195,6 +198,7 @@ impl ExerciseType for KanaInput {
             item: request.item.clone(),
             prompt: Prompt::Latin(romaji.to_string()),
             format: AnswerFormat::Input,
+            asks: None,
         })
     }
 

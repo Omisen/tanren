@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { normalizeInput } from '@/shared/bridge'
 import { Button } from '@/shared/ui/Button'
 
 /**
@@ -23,15 +22,27 @@ import { Button } from '@/shared/ui/Button'
  * campo si mostra la forma normalizzata, ma solo quando differisce da quella scritta:
  * altrimenti sarebbe una riga che ripete il campo e non insegna niente. La
  * normalizzazione la fa il core, non questo file.
+ *
+ * # Perche' `normalize` arriva da fuori
+ *
+ * Perche' non ce n'e' una sola. Sui kana conta la **grafia**, quindi si usa la pulizia
+ * che non ripiega sull'hiragana: rispondere か a una domanda su カ e' sbagliato. Dove
+ * conta la **lettura**, come sara' per i kanji, ne serve un'altra. Il campo mostra
+ * quello che la materia gli dice, e non sceglie al posto suo.
  */
 export function AnswerField({
   disabled,
   given,
+  placeholder,
+  normalize,
   onSubmit,
 }: {
   disabled: boolean
   /** La risposta gia' data, se si sta guardando l'esito. */
   given: string | null
+  placeholder: string
+  /** Come il core ridurra' la risposta prima di giudicarla. */
+  normalize: (input: string) => Promise<string>
   onSubmit: (value: string) => void
 }) {
   const [value, setValue] = useState('')
@@ -54,14 +65,14 @@ export function AnswerField({
     if (!shown) return
 
     const token = (run.current += 1)
-    normalizeInput(shown)
+    normalize(shown)
       .then((text) => {
         if (run.current === token) setPreview({ source: shown, text })
       })
       .catch(() => {
         // Senza anteprima si risponde lo stesso: e' un aiuto, non un requisito.
       })
-  }, [shown])
+  }, [shown, normalize])
 
   const normalized = preview?.source === shown ? preview.text : ''
 
@@ -83,8 +94,8 @@ export function AnswerField({
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
-        aria-label="La tua risposta"
-        placeholder="Scrivi il segno"
+        aria-label="Your answer"
+        placeholder={placeholder}
         onChange={(e) => setValue(e.target.value)}
         onCompositionStart={() => {
           composing.current = true
@@ -107,7 +118,7 @@ export function AnswerField({
       <p className="text-muted min-h-5 text-center text-xs">
         {normalized && normalized !== shown && (
           <>
-            vale come{' '}
+            counts as{' '}
             <span className="font-jp text-muted" lang="ja">
               {normalized}
             </span>
@@ -117,7 +128,7 @@ export function AnswerField({
 
       {!given && (
         <Button disabled={disabled || shown.trim() === ''} onClick={submit}>
-          Controlla
+          Check
         </Button>
       )}
     </div>
