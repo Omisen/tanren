@@ -130,6 +130,11 @@ The first run compiles the whole Rust dependency tree and takes a few minutes. L
 runs are immediate. The window opens in portrait shape, because the design targets the
 phone first.
 
+**There is no desktop download, and that is deliberate.** Android is the only surface you
+cannot use without an executable, so the release carries an APK and nothing else. On a
+desktop you clone and run the command above. Building and hosting three binaries for three
+operating systems would be three build chains to maintain for the secondary case.
+
 ### Useful commands
 
 | Command | What it does |
@@ -138,7 +143,7 @@ phone first.
 | `npm run dev` | frontend only in the browser, without the Rust core |
 | `npm run build` | production build of the frontend |
 | `npm run lint` | oxlint, including the cross feature import rules |
-| `npm run tauri build` | desktop executable |
+| `npm run tauri build -- --no-bundle` | desktop executable, without the packaging step |
 | `cargo check --workspace` | compile everything on the Rust side |
 | `cargo test -p tanren-core` | domain tests, without starting Tauri |
 
