@@ -2,26 +2,20 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 
 import {
   kanjiCurrentLevel,
-  kanjiGrid,
-  kanjiLevelCount,
   kanjiOverview,
   type Gate,
-  type KanjiCell,
   type Level,
   type Overview,
-  type Standing,
   type StudyMode,
 } from '@/shared/bridge'
 import { Button } from '@/shared/ui/Button'
-import { Field } from '@/shared/ui/Field'
-import { Note } from '@/shared/ui/Card'
 import { Screen } from '@/shared/ui/Screen'
 import { useUi } from '@/shared/store/ui'
 
-import { KanjiSheet } from '../KanjiSheet'
+import { LevelBlock } from '../LevelBlock'
 
 /**
- * Il percorso sui kanji: dove sei, cosa c'e' in questo livello, cosa puoi fare.
+ * La home dei kanji: dove sei, e cosa puoi fare adesso.
  *
  * # Perche' non e' piu' un filtro
  *
@@ -32,10 +26,21 @@ import { KanjiSheet } from '../KanjiSheet'
  * madrelingua. Qui il centro e' il kanji, l'asse e' un percorso, e l'avanzamento e' una
  * cosa che si vede.
  *
- * # I livelli si guardano tutti, si studiano solo quelli aperti
+ * # Perche' qui e' rimasto poco
  *
- * Un livello piu' avanti si puo' aprire e sfogliare: sapere cosa arrivera' non e'
- * barare. Ma i tre bottoni restano spenti, perche' il percorso e' sequenziale.
+ * Faceva tre mestieri: diceva dove sei, mostrava cosa c'e' nel livello e offriva cosa
+ * fare. Il terzo e' l'unico che si fa ogni giorno, e stava schiacciato in fondo sotto
+ * gli altri due. Ora restano il banner del livello a cui si e' arrivati e i **tre
+ * bottoni**, che diventano quello che sono sempre stati, cioe' il motivo per cui si
+ * apre l'app; il selettore dei livelli e la griglia sono passati alla vista dei
+ * livelli, che si consulta di rado.
+ *
+ * # Il livello qui e' uno solo, ed e' quello vero
+ *
+ * Non si sceglie piu' quale guardare: il livello e' quello a cui si e' arrivati, letto
+ * dal core. Da qui sparisce quindi anche l'idea di un livello **chiuso**, perche' su
+ * quello raggiunto non si e' mai chiusi: guardare piu' avanti si fa nella vista dei
+ * livelli, che infatti non studia niente.
  */
 
 const MODES: { value: StudyMode; label: string; caption: string }[] = [
@@ -53,27 +58,14 @@ export function KanjiHomeScreen({
   about: ReactNode
 }) {
   const { kanji: scope, setLevel, study, goTo } = useUi()
-  const [reached, setReached] = useState<Level | null>(null)
-  const [count, setCount] = useState<number | null>(null)
   const [overview, setOverview] = useState<{ level: Level; data: Overview | null } | null>(null)
-  const [grid, setGrid] = useState<{ level: Level; cells: KanjiCell[] } | null>(null)
-  const [opened, setOpened] = useState<KanjiCell | null>(null)
 
   // Fin dove si e' arrivati lo sa il core: e' il primo livello non ancora consolidato.
   // Si chiede una volta sola, e la schermata ci si porta sopra.
   useEffect(() => {
     let current = true
     kanjiCurrentLevel()
-      .then((level) => {
-        if (!current) return
-        setReached(level)
-        setLevel(level)
-      })
-      .catch(() => current && setReached(1))
-    // Quanti livelli esistano lo dice il core: scriverlo qui vorrebbe dire tenere due
-    // copie dello stesso numero e vederle divergere alla prima rigenerazione.
-    kanjiLevelCount()
-      .then((n) => current && setCount(n))
+      .then((level) => current && setLevel(level))
       .catch(() => {})
     return () => {
       current = false
@@ -89,9 +81,6 @@ export function KanjiHomeScreen({
     kanjiOverview({ ...scope, level })
       .then((data) => current && setOverview({ level, data }))
       .catch(() => current && setOverview({ level, data: null }))
-    kanjiGrid(level)
-      .then((cells) => current && setGrid({ level, cells }))
-      .catch(() => current && setGrid({ level, cells: [] }))
 
     return () => {
       current = false
@@ -102,227 +91,46 @@ export function KanjiHomeScreen({
   }, [scope.level])
 
   const fresh = overview?.level === scope.level ? overview.data : undefined
-  const cells = grid?.level === scope.level ? grid.cells : null
-  const locked = reached !== null && scope.level > reached
 
   const start = useCallback((mode: StudyMode) => study(mode), [study])
 
   return (
-    <>
-      <Screen
-        textured
-        title="Tanren"
-        trailing={about}
-        action={
-          <div className="flex flex-col gap-2">
-            {MODES.map((m) => (
-              <ModeButton
-                key={m.value}
-                mode={m}
-                locked={locked}
-                overview={fresh}
-                onStart={start}
-              />
-            ))}
-          </div>
-        }
-      >
-        <div className="flex flex-col gap-7">
-          {subjects}
-
-          <Field label="Level">
-            <LevelPile
-              level={scope.level}
-              reached={reached}
-              count={count}
-              progress={fresh?.progress}
-              onPick={setLevel}
-            />
-          </Field>
-
-          <Field label={locked ? 'Locked, but you can look' : 'Kanji'}>
-            {cells === null && <Note>Loading…</Note>}
-            {cells !== null && <Grid cells={cells} onOpen={setOpened} />}
-          </Field>
-
-          <Button variant="quiet" onClick={() => goTo('dashboard')}>
-            Progress across all levels
-          </Button>
+    <Screen
+      textured
+      title="Tanren"
+      trailing={about}
+      action={
+        <div className="flex flex-col gap-2">
+          {MODES.map((m) => (
+            <ModeButton key={m.value} mode={m} overview={fresh} onStart={start} />
+          ))}
         </div>
-      </Screen>
+      }
+    >
+      <div className="flex flex-col gap-7">
+        {subjects}
 
-      {/* La scheda si apre anche sui livelli chiusi: guardare cosa arrivera' non e'
-          barare, ed e' l'unico modo di farsi un'idea del percorso. */}
-      {opened && (
-        <KanjiSheet
-          level={scope.level}
-          character={opened.character}
-          standing={opened.standing}
-          onClose={() => setOpened(null)}
-        />
-      )}
-    </>
-  )
-}
+        <LevelBlock level={scope.level} progress={fresh?.progress} />
 
-/**
- * Dove sei nel percorso.
- *
- * Il livello guardato sta in grande, quelli attorno rimpiccioliti: a colpo d'occhio si
- * deve leggere «sei qui, questo viene dopo». La barra dice quanto e' consolidato, che
- * e' la cosa che apre il livello successivo.
- */
-function LevelPile({
-  level,
-  reached,
-  count,
-  progress,
-  onPick,
-}: {
-  level: Level
-  reached: Level | null
-  /** Quanti livelli esistono. `null` finche' il core non lo ha detto. */
-  count: number | null
-  progress?: Overview['progress']
-  onPick: (level: Level) => void
-}) {
-  const around = [level - 2, level - 1, level, level + 1, level + 2].filter(
-    (l) => l >= 1 && (count === null || l <= count),
-  )
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="border-hairline bg-ink-soft flex flex-col gap-3 rounded-2xl border p-4">
-        <div className="flex items-baseline justify-between">
-          <p className="text-3xl tabular-nums">Level {level}</p>
-          <State level={level} reached={reached} progress={progress} />
-        </div>
-
-        {progress && (
-          <>
-            <div
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={progress.total}
-              aria-valuenow={progress.mature}
-              aria-label="Kanji consolidated in this level"
-              className="bg-ink h-1.5 overflow-hidden rounded-full"
-            >
-              <div
-                className="bg-type-kanji h-full transition-[width] duration-300"
-                style={{ width: `${progress.ratio * 100}%` }}
-              />
-            </div>
-            <p className="text-muted text-xs">
-              {progress.mature} consolidated · {progress.learning} in progress ·{' '}
-              {progress.new} to meet
-            </p>
-          </>
-        )}
+        <Button variant="quiet" onClick={() => goTo('levels')}>
+          Browse the levels
+        </Button>
       </div>
-
-      <div className="flex items-end justify-center gap-2">
-        {around.map((l) => (
-          <button
-            key={l}
-            type="button"
-            aria-pressed={l === level}
-            aria-label={`Level ${l}`}
-            onClick={() => onPick(l)}
-            className={`rounded-lg border tabular-nums transition-colors active:opacity-70 ${
-              l === level
-                ? 'border-selected bg-selected-wash text-paper px-4 py-2 text-base'
-                : 'border-hairline text-muted px-3 py-1 text-sm'
-            }`}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function State({
-  level,
-  reached,
-  progress,
-}: {
-  level: Level
-  reached: Level | null
-  progress?: Overview['progress']
-}) {
-  if (reached === null) return null
-  if (level > reached) return <Tag>locked</Tag>
-  if (progress?.complete) return <Tag tone="done">complete</Tag>
-  return <Tag tone="current">in progress</Tag>
-}
-
-function Tag({ children, tone }: { children: ReactNode; tone?: 'done' | 'current' }) {
-  const styles =
-    tone === 'done'
-      ? 'text-ok'
-      : tone === 'current'
-        ? 'text-type-kanji'
-        : 'text-inactive'
-  return (
-    <span className={`text-xs font-medium tracking-[0.2em] uppercase ${styles}`}>{children}</span>
-  )
-}
-
-/**
- * I kanji del livello, nell'ordine per frequenza.
- *
- * Il colore dice a che punto sei su ciascuno, e non e' un colore nuovo: e' quello
- * della categoria a due intensita'. Piu' lo sai, piu' e' pieno. Fare tre token nuovi
- * per gli stati SRS e' una decisione da prendere apposta, non di straforo.
- */
-const STANDING: Record<Standing, string> = {
-  new: 'border-hairline text-muted',
-  learning: 'border-type-kanji/40 bg-type-kanji/15 text-paper',
-  mature: 'border-type-kanji bg-type-kanji text-paper',
-}
-
-function Grid({
-  cells,
-  onOpen,
-}: {
-  cells: KanjiCell[]
-  onOpen: (cell: KanjiCell) => void
-}) {
-  if (cells.length === 0) return <Note>Nothing here.</Note>
-
-  return (
-    <div className="grid grid-cols-6 gap-1.5">
-      {cells.map((c) => (
-        <button
-          key={c.character}
-          type="button"
-          onClick={() => onOpen(c)}
-          aria-label={`${c.character}, ${c.standing}`}
-          className={`font-jp flex aspect-square items-center justify-center rounded-lg border text-xl transition-colors active:opacity-70 ${STANDING[c.standing]}`}
-          lang="ja"
-        >
-          {c.character}
-        </button>
-      ))}
-    </div>
+    </Screen>
   )
 }
 
 /** Un bottone che, quando non si puo' premere, dice perche'. */
 function ModeButton({
   mode,
-  locked,
   overview,
   onStart,
 }: {
   mode: { value: StudyMode; label: string; caption: string }
-  locked: boolean
   overview?: Overview | null
   onStart: (mode: StudyMode) => void
 }) {
-  const reason = why(mode.value, locked, overview)
+  const reason = why(mode.value, overview)
 
   return (
     <div className="flex flex-col gap-1">
@@ -354,8 +162,7 @@ function count(mode: StudyMode, overview?: Overview | null): string {
  * «Torna domani» non insegna niente. «Consolida quello che hai» e «torna fra tre ore»
  * sono due consigli diversi, e chi studia ha diritto di sapere quale dei due vale.
  */
-function why(mode: StudyMode, locked: boolean, overview?: Overview | null): string | null {
-  if (locked) return 'Finish the earlier levels first.'
+function why(mode: StudyMode, overview?: Overview | null): string | null {
   if (!overview) return 'Loading…'
 
   if (mode === 'review') {

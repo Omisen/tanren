@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { KanaHomeScreen } from '@/features/kana/screens/HomeScreen'
 import { KanaSessionScreen } from '@/features/kana/screens/SessionScreen'
-import { KanjiDashboardScreen } from '@/features/kanji/screens/DashboardScreen'
+import { KanjiLevelsScreen } from '@/features/kanji/screens/LevelsScreen'
 import { KanjiHomeScreen } from '@/features/kanji/screens/HomeScreen'
 import { KanjiStudyScreen } from '@/features/kanji/screens/SessionScreen'
 import { useUi } from '@/shared/store/ui'
@@ -37,9 +37,9 @@ export default function App() {
     return subject === 'kana' ? <KanaSessionScreen /> : <KanjiStudyScreen />
   }
 
-  // La dashboard e' solo dei kanji: e' la misura del loro percorso, e i kana un
-  // percorso non ce l'hanno.
-  if (screen === 'dashboard') return <KanjiDashboardScreen />
+  // I livelli sono solo dei kanji: e' il loro percorso, e i kana un percorso non ce
+  // l'hanno.
+  if (screen === 'levels') return <KanjiLevelsScreen />
 
   // Le fonti sono una cosa dell'app, non di una materia: la licenza dei dati obbliga
   // ad attribuire dentro il mezzo in cui l'app viaggia, e qui e' l'unico posto che le
