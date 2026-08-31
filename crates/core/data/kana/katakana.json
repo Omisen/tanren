@@ -883,6 +883,158 @@
       ],
       "group": "yoon",
       "row": "ra"
+    },
+    {
+      "character": "ファ",
+      "romaji": [
+        "fa"
+      ],
+      "group": "gairaion",
+      "row": "fa"
+    },
+    {
+      "character": "フィ",
+      "romaji": [
+        "fi"
+      ],
+      "group": "gairaion",
+      "row": "fa"
+    },
+    {
+      "character": "フェ",
+      "romaji": [
+        "fe"
+      ],
+      "group": "gairaion",
+      "row": "fa"
+    },
+    {
+      "character": "フォ",
+      "romaji": [
+        "fo"
+      ],
+      "group": "gairaion",
+      "row": "fa"
+    },
+    {
+      "character": "ヴァ",
+      "romaji": [
+        "va"
+      ],
+      "group": "gairaion",
+      "row": "va"
+    },
+    {
+      "character": "ヴィ",
+      "romaji": [
+        "vi"
+      ],
+      "group": "gairaion",
+      "row": "va"
+    },
+    {
+      "character": "ヴ",
+      "romaji": [
+        "vu"
+      ],
+      "group": "gairaion",
+      "row": "va"
+    },
+    {
+      "character": "ヴェ",
+      "romaji": [
+        "ve"
+      ],
+      "group": "gairaion",
+      "row": "va"
+    },
+    {
+      "character": "ヴォ",
+      "romaji": [
+        "vo"
+      ],
+      "group": "gairaion",
+      "row": "va"
+    },
+    {
+      "character": "ティ",
+      "romaji": [
+        "thi"
+      ],
+      "group": "gairaion",
+      "row": "thi"
+    },
+    {
+      "character": "トゥ",
+      "romaji": [
+        "twu"
+      ],
+      "group": "gairaion",
+      "row": "thi"
+    },
+    {
+      "character": "ディ",
+      "romaji": [
+        "dhi"
+      ],
+      "group": "gairaion",
+      "row": "dhi"
+    },
+    {
+      "character": "ドゥ",
+      "romaji": [
+        "dwu"
+      ],
+      "group": "gairaion",
+      "row": "dhi"
+    },
+    {
+      "character": "ウィ",
+      "romaji": [
+        "wi"
+      ],
+      "group": "gairaion",
+      "row": "wi"
+    },
+    {
+      "character": "ウェ",
+      "romaji": [
+        "we"
+      ],
+      "group": "gairaion",
+      "row": "wi"
+    },
+    {
+      "character": "ウォ",
+      "romaji": [
+        "who"
+      ],
+      "group": "gairaion",
+      "row": "wi"
+    },
+    {
+      "character": "チェ",
+      "romaji": [
+        "che"
+      ],
+      "group": "gairaion",
+      "row": "che"
+    },
+    {
+      "character": "ジェ",
+      "romaji": [
+        "je"
+      ],
+      "group": "gairaion",
+      "row": "je"
+    },
+    {
+      "character": "シェ",
+      "romaji": [
+        "she"
+      ],
+      "group": "gairaion",
+      "row": "she"
     }
   ]
 }

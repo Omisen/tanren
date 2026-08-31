@@ -13,11 +13,18 @@ import type { Kanji } from '@/shared/bridge'
  * Non sono la stessa scelta e non si implicano: 生 significa «life» e si legge セイ, ma
  * sono due fatti indipendenti.
  *
+ * **Nessuna delle due compare quando non c'e' niente da distinguere.** Marcare come
+ * principale l'unica voce presente non dice niente a nessuno: e' una parola in piu'
+ * sulla scheda che non toglie un dubbio, perche' il dubbio non c'era. Vale per i 719
+ * kanji con un significato solo come per le letture, e i due assi devono comportarsi
+ * allo stesso modo, altrimenti la stessa scheda segue due regole diverse a dieci
+ * righe di distanza.
+ *
  * E le due primarie di lettura non si derivano allo stesso modo: la on pesa i
  * composti, la kun guarda come si legge il kanji **da solo**, perche' dentro un
- * composto una kun prende la forma legata, che e' un'altra lettura. La primaria kun
- * compare quindi di rado, su quattro kanji soltanto: dove il dato non decide non si
- * marca niente.
+ * composto una kun prende la forma legata, che e' un'altra lettura. Dove il dato non
+ * decide non si marca niente, e succede spesso: la kun e' valorizzata su 557 kanji,
+ * quasi tutti perche' ne hanno una sola.
  *
  * # Perche' le on sono in katakana e le kun in hiragana
  *
@@ -35,7 +42,7 @@ export function KanjiCard({ kanji }: { kanji: Kanji }) {
         </div>
         <p className="text-center text-xl">
           {kanji.meanings[0]}
-          <Primary />
+          {kanji.meanings.length > 1 && <Primary />}
         </p>
         {kanji.meanings.length > 1 && (
           <p className="text-muted text-center text-sm">{kanji.meanings.slice(1).join(', ')}</p>

@@ -23,11 +23,24 @@ const MODES = [
   { value: 'input', label: 'Writing', caption: 'Type with the IME' },
 ] as const
 
-const GROUP_LABELS: Record<KanaGroup, string> = {
-  base: 'Base',
-  dakuten: 'Voiced',
-  handakuten: 'Semi-voiced',
-  yoon: 'Combinations',
+/**
+ * Come si chiamano le famiglie, coi termini giapponesi e senza glossa.
+ *
+ * Sono i nomi che usa chi studia, e tradurli («Voiced», «Combinations») dava una parola
+ * che non si incontra da nessun'altra parte: qui l'immersione costa niente, perche' i
+ * segni della famiglia sono li' accanto a spiegarla meglio di un'etichetta.
+ *
+ * `japanese` dice se il nome e' scritto in giapponese, e serve a due cose che vanno
+ * insieme: il font imbarcato e l'attributo di lingua. Senza, 外来音 finirebbe nel
+ * ripiego di sistema, cioe' rettangoli vuoti su un Linux senza font CJK, che e'
+ * esattamente il caso per cui il font e' imbarcato.
+ */
+const GROUP_LABELS: Record<KanaGroup, { text: string; japanese?: boolean }> = {
+  base: { text: 'Base' },
+  dakuten: { text: 'Dakuten' },
+  handakuten: { text: 'Handakuten' },
+  yoon: { text: 'Yōon' },
+  gairaion: { text: '外来音', japanese: true },
 }
 
 /**
@@ -74,6 +87,10 @@ export function KanaHomeScreen({
   const sets = fresh?.sets ?? null
   const failed = fresh?.sets === null
 
+  // Si guarda cosa il **catalogo** offre e non cosa e' rimasto selezionato: i 外来音
+  // esistono solo in katakana, quindi tornando all'hiragana quella scelta non ha piu'
+  // un insieme dietro. Filtrando qui, la selezione sopravvive al giro di andata e
+  // ritorno fra i due sillabari senza che si possa partire su una coda vuota.
   const chosen = sets?.filter((s) => scope.groups.includes(s.group)) ?? []
   const total = chosen.reduce((sum, s) => sum + s.size, 0)
 
@@ -83,7 +100,7 @@ export function KanaHomeScreen({
       title="Tanren"
       trailing={about}
       action={
-        <Button disabled={scope.groups.length === 0} onClick={() => goTo('session')}>
+        <Button disabled={chosen.length === 0} onClick={() => goTo('session')}>
           {total > 0 ? `Start with ${total} characters` : 'Start'}
         </Button>
       }
@@ -119,7 +136,12 @@ export function KanaHomeScreen({
                   pressed={scope.groups.includes(s.group)}
                   onClick={() => toggleGroup(s.group)}
                 >
-                  {GROUP_LABELS[s.group]}
+                  <span
+                    className={GROUP_LABELS[s.group].japanese ? 'font-jp' : undefined}
+                    lang={GROUP_LABELS[s.group].japanese ? 'ja' : undefined}
+                  >
+                    {GROUP_LABELS[s.group].text}
+                  </span>
                   <span className="text-muted ml-2 text-xs">{s.size}</span>
                 </Chip>
               ))}

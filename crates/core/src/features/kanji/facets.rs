@@ -13,7 +13,7 @@
 //! | [`Facet::Meaning`] | 生 | scelta multipla | i suoi significati |
 //! | [`Facet::On`] | 生, dicendo «on» | si digita | セイ, ショウ |
 //! | [`Facet::Kun`] | 生, dicendo «kun» | si digita | き, なま |
-//! | [`Facet::Okurigana`] | 生きる, che dice gia' tutto | si digita | いきる |
+//! | [`Facet::Okurigana`] | 生きる, che dice gia' tutto | si digita | い |
 //!
 //! # Perche' l'okurigana e' un item a se' e non una faccetta del kanji
 //!
@@ -182,12 +182,15 @@ impl Resolved {
             Facet::Meaning => self.kanji.meanings.clone(),
             Facet::On => [&self.kanji.on[..], &self.kanji.on_rare[..]].concat(),
             Facet::Kun => [&self.kanji.kun[..], &self.kanji.kun_rare[..]].concat(),
+            // La sola parte coperta dal kanji, non la parola intera: l'okurigana
+            // e' gia' sotto gli occhi di chi risponde, quindi chiederlo sarebbe
+            // chiedere di ricopiarlo. Vedi `Okurigana::stem`.
             Facet::Okurigana => self
                 .kanji
                 .okurigana
                 .iter()
                 .find(|o| o.form == self.form)
-                .map(|o| o.readings.clone())
+                .map(|o| o.stem.clone())
                 .unwrap_or_default(),
         }
     }
@@ -678,15 +681,32 @@ mod tests {
         assert_eq!(q.asks, None, "生きる dice gia' da se' cosa si vuole");
         assert_eq!(q.format, AnswerFormat::Input);
         assert!(
-            OkuriganaFacet.grade(&item, &Answer::new("いきる")).unwrap().is_correct()
+            OkuriganaFacet.grade(&item, &Answer::new("い")).unwrap().is_correct(),
+            "si chiede la lettura della parte kanji"
+        );
+    }
+
+    #[test]
+    fn l_okurigana_visibile_non_si_ridigita() {
+        // La domanda mostra 大きい, quindi il きい e' gia' sotto gli occhi: chiederlo
+        // vorrebbe dire farlo ricopiare. Si risponde おお, e おおきい e' sbagliato.
+        let item = id("大きい");
+        assert!(OkuriganaFacet.grade(&item, &Answer::new("おお")).unwrap().is_correct());
+        assert!(
+            !OkuriganaFacet
+                .grade(&item, &Answer::new("おおきい"))
+                .unwrap()
+                .is_correct(),
+            "la parola intera comprende quello che la domanda gia' mostra"
         );
     }
 
     #[test]
     fn una_forma_con_due_letture_le_accetta_entrambe() {
-        // 行く si legge sia いく sia ゆく: due risposte buone alla stessa domanda.
+        // 行く si legge sia いく sia ゆく, cioe' la parte kanji e' い oppure ゆ:
+        // due risposte buone alla stessa domanda.
         let item = id("行く");
-        for lettura in ["いく", "ゆく"] {
+        for lettura in ["い", "ゆ"] {
             assert!(
                 OkuriganaFacet.grade(&item, &Answer::new(lettura)).unwrap().is_correct(),
                 "{lettura} e' una lettura di 行く"

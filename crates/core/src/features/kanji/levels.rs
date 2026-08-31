@@ -114,7 +114,22 @@ impl std::fmt::Display for Level {
 pub struct Okurigana {
     /// Il kanji col suo okurigana.
     pub form: String,
+    /// Come si legge la forma **intera**, okurigana compreso: `生きる` fa `いきる`.
+    ///
+    /// E' quello che si mostra su una scheda, non quello su cui si viene giudicati:
+    /// per quello c'e' [`Okurigana::stem`].
     pub readings: Vec<String>,
+    /// Come si legge la sola parte coperta dal **kanji**: `生きる` fa `い`.
+    ///
+    /// E' la lettura che l'esercizio chiede, e la ragione e' che l'okurigana e' gia'
+    /// stampato sulla domanda: chiedere `いきる` su `生きる` vuol dire far ricopiare
+    /// il `きる` che si vede. L'okurigana e' li' per **disambiguare** quale lettura
+    /// del kanji si applica (大 e' おお oppure だい, e il きい dice おお), non per
+    /// essere indovinato.
+    ///
+    /// **Puo' averne piu' d'una**, ed e' lo stesso caso di `readings`: `開く` e' あ
+    /// oppure ひら. Sono due risposte buone alla stessa domanda.
+    pub stem: Vec<String>,
     /// Se quella forma e' una parola che si incontra davvero.
     ///
     /// Lo dicono due segnali indipendenti: il corpus di Wikipedia la contiene, oppure

@@ -135,10 +135,18 @@ def spezza_kun(regolari: list[str], rare: list[str]) -> tuple[list, list, list]:
 
     kanjium scrive l'okurigana fra parentesi piene: `い（きる）` vuol dire che il
     kanji copre solo `い` e il resto si scrive in kana. La forma scritta e' quindi
-    `生きる` e si legge `いきる`.
+    `生きる`, la parte coperta dal kanji si legge `い` e la parola intera `いきる`.
+
+    **Lo spacco della fonte si tiene, non si riattacca.** Il dizionario dice gia' dove
+    finisce il kanji e dove comincia l'okurigana, ed e' l'informazione che serve
+    all'esercizio: sulla forma 大きい il きい e' **stampato sulla card**, quindi la
+    risposta da chiedere e' おお e non おおきい, altrimenti si fa digitare qualcosa che
+    e' gia' sotto gli occhi. Qui si restituiscono le letture della sola parte kanji,
+    con la coda come chiave; la lettura della parola intera si ricompone attaccandole.
 
     **Una forma puo' avere piu' letture ed e' un item solo**: 行く si legge sia いく
-    sia ゆく. Sono due risposte buone alla stessa domanda, non due domande.
+    sia ゆく, cioe' la parte kanji e' い oppure ゆ. Sono due risposte buone alla stessa
+    domanda, non due domande.
     """
     nude, nude_rare = [], []
     forme: dict[str, list[str]] = {}
@@ -146,7 +154,7 @@ def spezza_kun(regolari: list[str], rare: list[str]) -> tuple[list, list, list]:
         for r in elenco:
             m = re.match(r"^([^（]+)（([^）]+)）$", r)
             if m:
-                forme.setdefault(m.group(2), []).append(m.group(1) + m.group(2))
+                forme.setdefault(m.group(2), []).append(m.group(1))
             else:
                 dove.append(r)
     return nude, nude_rare, forme
@@ -402,13 +410,17 @@ def main() -> int:
             "okurigana": [
                 {
                     "form": kanji + coda,
-                    "readings": sorted(set(letture_forma)),
+                    # `stem` e' quello su cui si viene giudicati, `readings` quello
+                    # che si mostra: l'okurigana e' visibile, quindi chiederlo
+                    # sarebbe chiedere di ricopiare.
+                    "readings": sorted({testa + coda for testa in teste}),
+                    "stem": sorted(set(teste)),
                     # Se quella forma e' una parola che si incontra: la dice il
                     # corpus, o la classe di frequenza di edict. Serve a chi
                     # costruira' l'esercizio, non al contenuto: qui non si taglia.
                     "common": (kanji + coda) in comuni or corpus.get(kanji + coda, 0) > 0,
                 }
-                for coda, letture_forma in forme.items()
+                for coda, teste in forme.items()
             ],
             "nanori": [n for n in (nanori or "").split("、") if n],
             "examples": [

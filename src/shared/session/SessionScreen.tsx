@@ -468,26 +468,58 @@ function Meter({ tally, unit }: { tally: Tally; unit: string }) {
  *
  * Perche' `vh` segua davvero lo spazio utile serve che la WebView si restringa con la
  * tastiera: lo fa `MainActivity.kt`, vedi la nota sugli insets.
+ *
+ * # Perche' il blocco si allarga e il corpo scende
+ *
+ * Lo stimolo non e' sempre un carattere solo: じゃ ne fa due, 大きい tre, e si arriva
+ * a **cinque** (恐ろしい ne fa quattro, e due forme cinque). Con un corpo fisso dentro
+ * un quadrato fisso il testo andava a capo e usciva sopra e sotto il blocco.
+ *
+ * La regola e' che il blocco **si adatta a quanti glifi deve tenere**, e lo fa in due
+ * modi che si danno il cambio. Prima si allarga: l'altezza resta legata al `vh`, la
+ * larghezza cresce col contenuto e il quadrato di prima resta il **minimo**, quindi
+ * con un carattere solo non cambia niente rispetto a ieri. Quando allargarsi non
+ * basta piu', cioe' quando i glifi non ci starebbero nella larghezza dello schermo,
+ * scende il corpo. Il `min()` fa scattare il secondo solo dove serve il secondo.
+ *
+ * Allargare **prima** di rimpicciolire non e' un dettaglio: un blocco quadrato che
+ * tiene cinque glifi li ridurrebbe a un quinto della sua altezza, cioe' a una
+ * dimensione in cui i tratti non si distinguono piu', ed e' proprio quello che la
+ * regola 2 chiede di non fare.
  */
+/** Il lato del blocco, che e' anche la sua altezza: vedi la nota sul `vh`. */
+const LATO = 'clamp(5.5rem,24vh,17rem)'
+
+/**
+ * Lo spazio in cui i glifi devono stare in larghezza.
+ *
+ * `main` rientra di `px-4` e il blocco di altrettanto, quindi 4rem in tutto.
+ */
+const LARGHEZZA_UTILE = 'calc(100vw - 4rem)'
+
 function Stage({ prompt, accent }: { prompt: Prompt; accent: string }) {
   const japanese = prompt.script === 'japanese'
+  // Si contano i **glifi**, non le unita' di codice: `[...]` non spezza una coppia
+  // surrogata a meta'.
+  const glifi = [...prompt.text].length
+  // Quanto e' largo un glifo in em. I giapponesi sono a larghezza piena, anche i kana
+  // piccoli di じゃ; il latino e' piu' stretto, ma porta `tracking-wide`.
+  const passo = japanese ? 1 : 0.66
+  const eroe = japanese ? 'clamp(2.75rem,12vh,8.5rem)' : 'clamp(1.75rem,10.5vh,6rem)'
+  const corpo = `min(${eroe}, calc(${LARGHEZZA_UTILE} / ${(glifi * passo).toFixed(2)}))`
 
   return (
     <div
-      className={`${accent} flex aspect-square h-[clamp(5.5rem,24vh,17rem)] items-center justify-center rounded-3xl px-3`}
+      className={`${accent} flex h-[var(--lato)] max-w-full min-w-[var(--lato)] items-center justify-center rounded-3xl px-4`}
+      style={{ '--lato': LATO } as React.CSSProperties}
     >
-      {japanese ? (
-        <p
-          className="font-jp text-[clamp(2.75rem,12vh,8.5rem)] leading-none text-paper"
-          lang="ja"
-        >
-          {prompt.text}
-        </p>
-      ) : (
-        <p className="text-[clamp(1.75rem,10.5vh,6rem)] leading-none tracking-wide text-paper">
-          {prompt.text}
-        </p>
-      )}
+      <p
+        className={`leading-none whitespace-nowrap text-paper ${japanese ? 'font-jp' : 'tracking-wide'}`}
+        style={{ fontSize: corpo }}
+        lang={japanese ? 'ja' : undefined}
+      >
+        {prompt.text}
+      </p>
     </div>
   )
 }

@@ -40,6 +40,12 @@ pub enum KanaGroup {
     Handakuten,
     /// Combinazioni con ゃ, ゅ, ょ: きゃ, しゅ, りょ.
     Yoon,
+    /// I 外来音, i suoni presi da altre lingue: ファ, ヴ, ティ, チェ.
+    ///
+    /// **Esiste solo in katakana.** Non e' una scelta di presentazione: l'hiragana
+    /// questi suoni non li scrive, quindi chiederla sull'hiragana non da' una
+    /// famiglia vuota per caso, la da' vuota per definizione.
+    Gairaion,
 }
 
 /// Un singolo segno del sillabario.
@@ -141,7 +147,12 @@ mod tests {
             let t = table(s);
             assert_eq!(t.version(), 1);
             assert_eq!(t.syllabary(), s);
-            assert_eq!(t.all().len(), 107, "sillabario {s:?}");
+            // Il katakana ne ha 19 in piu': i 外来音, che l'hiragana non ha.
+            let attese = match s {
+                Syllabary::Hiragana => 107,
+                Syllabary::Katakana => 126,
+            };
+            assert_eq!(t.all().len(), attese, "sillabario {s:?}");
         }
     }
 
@@ -154,6 +165,23 @@ mod tests {
             assert_eq!(t.group(KanaGroup::Handakuten).count(), 5);
             assert_eq!(t.group(KanaGroup::Yoon).count(), 36);
         }
+    }
+
+    #[test]
+    fn i_gairaion_stanno_solo_nel_katakana() {
+        assert_eq!(
+            table(Syllabary::Hiragana)
+                .group(KanaGroup::Gairaion)
+                .count(),
+            0,
+            "l'hiragana non scrive i suoni presi da fuori"
+        );
+        assert_eq!(
+            table(Syllabary::Katakana)
+                .group(KanaGroup::Gairaion)
+                .count(),
+            19
+        );
     }
 
     #[test]
@@ -202,9 +230,18 @@ mod tests {
     }
 
     #[test]
-    fn le_due_tabelle_sono_allineate() {
+    fn le_due_tabelle_sono_allineate_sulle_famiglie_condivise() {
+        // Le quattro famiglie condivise **sono** la stessa tabella in due grafie, e qui
+        // si verifica voce per voce. I 外来音 no, e non e' l'invariante che si allenta
+        // per far tornare il test: e' il suo perimetro detto per intero. Un suono che
+        // l'hiragana non scrive non ha un hiragana a cui corrispondere, quindi
+        // pretendere qui una coppia vorrebbe dire pretendere che esista.
         let hira = table(Syllabary::Hiragana).all();
-        let kata = table(Syllabary::Katakana).all();
+        let kata: Vec<_> = table(Syllabary::Katakana)
+            .all()
+            .iter()
+            .filter(|k| k.group != KanaGroup::Gairaion)
+            .collect();
         assert_eq!(hira.len(), kata.len());
 
         for (h, k) in hira.iter().zip(kata) {

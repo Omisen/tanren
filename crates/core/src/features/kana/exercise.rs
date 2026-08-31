@@ -314,7 +314,11 @@ mod tests {
                     .unwrap_or_else(|| panic!("{} senza prompt", kana.character));
                 assert!(visti.insert(p), "prompt ripetuto: {p}");
             }
-            assert_eq!(visti.len(), 107);
+            // Contro la tabella e non contro un numero scritto qui: quello che si
+            // vuole sapere e' che nessun segno resti senza e che nessuno divida il
+            // suo con un altro, e vale a qualunque dimensione. Il katakana ne ha 19
+            // in piu' dell'hiragana da quando ci sono i 外来音.
+            assert_eq!(visti.len(), table(syllabary).all().len());
         }
     }
 

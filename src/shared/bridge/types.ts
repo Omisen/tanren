@@ -10,7 +10,7 @@
 export type Syllabary = 'hiragana' | 'katakana'
 
 /** Le famiglie di segni, dalle piu' semplici alle combinazioni. */
-export type KanaGroup = 'base' | 'dakuten' | 'handakuten' | 'yoon'
+export type KanaGroup = 'base' | 'dakuten' | 'handakuten' | 'yoon' | 'gairaion'
 
 /** In che modo ci si allena sui kana. */
 export type KanaMode =
@@ -137,7 +137,15 @@ export interface KanjiCell {
 /** Una forma scritta col suo okurigana: 生きる, che si legge いきる. */
 export interface Okurigana {
   form: string
+  /** Come si legge la forma intera: 生きる fa いきる. E' quello che si mostra. */
   readings: string[]
+  /**
+   * Come si legge la sola parte coperta dal kanji: 生きる fa い.
+   *
+   * E' quello su cui l'esercizio giudica, perche' l'okurigana sta gia' nella
+   * domanda e chiederlo vorrebbe dire farlo ricopiare.
+   */
+  stem: string[]
   /** Se e' una parola che si incontra davvero. */
   common: boolean
 }

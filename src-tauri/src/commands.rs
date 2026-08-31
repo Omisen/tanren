@@ -30,18 +30,27 @@ pub struct KanaSet {
 #[tauri::command]
 pub fn kana_catalogue(syllabary: Syllabary) -> Vec<KanaSet> {
     let t = table(syllabary);
-    [
+    // I 外来音 esistono solo in katakana, e la conseguenza sta tutta qui: il catalogo e'
+    // gia' per sillabario, quindi basta non elencarli per l'hiragana e la schermata,
+    // che disegna quello che riceve, non ha bisogno di nessuna condizione. La regola
+    // vive nel posto che sa cosa sia un sillabario.
+    let mut groups = vec![
         KanaGroup::Base,
         KanaGroup::Dakuten,
         KanaGroup::Handakuten,
         KanaGroup::Yoon,
-    ]
-    .into_iter()
-    .map(|group| KanaSet {
-        group,
-        size: t.group(group).count(),
-    })
-    .collect()
+    ];
+    if syllabary == Syllabary::Katakana {
+        groups.push(KanaGroup::Gairaion);
+    }
+
+    groups
+        .into_iter()
+        .map(|group| KanaSet {
+            group,
+            size: t.group(group).count(),
+        })
+        .collect()
 }
 
 /// Riduce un testo alla forma con cui viene confrontato, sillabario compreso.
