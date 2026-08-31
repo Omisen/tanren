@@ -345,6 +345,34 @@ impl Database {
         Ok(last)
     }
 
+    /// Una preferenza, se e' stata scritta.
+    ///
+    /// Torna `None` sia quando la chiave non c'e' sia quando non e' mai stata toccata:
+    /// per chi legge sono la stessa cosa, cioe' «vale il default».
+    pub async fn setting(&self, key: &str) -> Result<Option<String>> {
+        let riga: Option<(String,)> = sqlx::query_as("SELECT value FROM settings WHERE key = ?")
+            .bind(key)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(riga.map(|(v,)| v))
+    }
+
+    /// Scrive una preferenza, sovrascrivendo quella di prima.
+    pub async fn set_setting(&self, key: &str, value: &str, now: DateTime<Utc>) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+        )
+        .bind(key)
+        .bind(value)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
     /// Le carte da studiare adesso, le piu' arretrate per prime.
     ///
     /// Le carte mai studiate hanno `due_at` a NULL e SQLite le ordina prima di tutte

@@ -8,7 +8,7 @@ use chrono::Utc;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, table};
 use tanren_core::features::kana::session as kana;
 use tanren_core::features::kanji::levels::{Kanji, Level, table as levels_table};
-use tanren_core::features::kanji::progress::{LevelProgress, LevelSummary, Pacing};
+use tanren_core::features::kanji::progress::{self, LevelProgress, LevelSummary};
 use tanren_core::features::kanji::study;
 use tanren_core::shared::credits::Credit;
 use tanren_core::shared::error::CoreError;
@@ -145,7 +145,7 @@ pub async fn kanji_overview(
     state: State<'_, AppState>,
     scope: study::Scope,
 ) -> Result<Overview, CoreError> {
-    let pacing = Pacing::default();
+    let pacing = progress::pacing(&state.db).await?;
     let now = Utc::now();
     Ok(Overview {
         progress: study::progress(&state.db, &scope, &pacing).await?,
@@ -185,10 +185,44 @@ pub fn kanji_level_count() -> u8 {
     tanren_core::features::kanji::levels::LEVELS
 }
 
+/// Le preferenze dell'utente, coi limiti entro cui puo' muoverle.
+///
+/// I limiti arrivano dal core insieme al valore invece di essere scritti nella
+/// schermata: sono una decisione di dominio, e duplicarli di la' vorrebbe dire avere
+/// due verita' che possono sganciarsi.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Settings {
+    pub daily_new: usize,
+    pub daily_new_min: usize,
+    pub daily_new_max: usize,
+}
+
+/// Quante cose l'utente ha deciso, e fra quali limiti poteva.
+#[tauri::command]
+pub async fn settings(state: State<'_, AppState>) -> Result<Settings, CoreError> {
+    let pacing = progress::pacing(&state.db).await?;
+    Ok(Settings {
+        daily_new: pacing.daily_new,
+        daily_new_min: *progress::DAILY_NEW_RANGE.start(),
+        daily_new_max: *progress::DAILY_NEW_RANGE.end(),
+    })
+}
+
+/// Cambia quanti kanji nuovi si incontrano per lezione.
+#[tauri::command]
+pub async fn set_kanji_daily_new(
+    state: State<'_, AppState>,
+    value: usize,
+) -> Result<(), CoreError> {
+    progress::set_daily_new(&state.db, value, Utc::now()).await
+}
+
 /// Fin dove si e' arrivati: il primo livello non ancora consolidato.
 #[tauri::command]
 pub async fn kanji_current_level(state: State<'_, AppState>) -> Result<Level, CoreError> {
-    tanren_core::features::kanji::progress::current_level(&state.db, &Pacing::default()).await
+    let pacing = progress::pacing(&state.db).await?;
+    progress::current_level(&state.db, &pacing).await
 }
 
 /// Una cella della griglia di un livello.
@@ -207,9 +241,8 @@ pub async fn kanji_grid(
     state: State<'_, AppState>,
     level: Level,
 ) -> Result<Vec<KanjiCell>, CoreError> {
-    let stati =
-        tanren_core::features::kanji::progress::standings(&state.db, level, &Pacing::default())
-            .await?;
+    let pacing = progress::pacing(&state.db).await?;
+    let stati = progress::standings(&state.db, level, &pacing).await?;
 
     Ok(stati
         .into_iter()
@@ -229,8 +262,8 @@ pub async fn kanji_grid(
 pub async fn kanji_dashboard(
     state: State<'_, AppState>,
 ) -> Result<Vec<LevelSummary>, CoreError> {
-    tanren_core::features::kanji::progress::all_levels(&state.db, &Pacing::default(), Utc::now())
-        .await
+    let pacing = progress::pacing(&state.db).await?;
+    progress::all_levels(&state.db, &pacing, Utc::now()).await
 }
 
 /// I kanji chiesti, per intero.
@@ -267,7 +300,8 @@ pub async fn start_kanji_study(
     state: State<'_, AppState>,
     scope: study::Scope,
 ) -> Result<StudySession, CoreError> {
-    let plan = study::plan(&state.db, &scope, &Pacing::default(), Utc::now()).await?;
+    let pacing = progress::pacing(&state.db).await?;
+    let plan = study::plan(&state.db, &scope, &pacing, Utc::now()).await?;
     let step = {
         let mut rng = rand::rng();
         study::start(&plan, &mut rng)?

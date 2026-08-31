@@ -33,6 +33,21 @@ pub enum CoreError {
     /// La pianificazione della ripetizione non e' andata a buon fine.
     #[error("errore di pianificazione: {message}")]
     Scheduling { message: String },
+
+    /// Una preferenza e' stata scritta con un valore che non sta nei limiti.
+    ///
+    /// Chi passa di qui e' un comando, non una persona: l'interfaccia offre solo i
+    /// valori validi, quindi arrivare fuori intervallo vuol dire che a chiamare e'
+    /// stato qualcos'altro. Meglio rifiutare che accomodare in silenzio, perche' un
+    /// valore accomodato si ritroverebbe poi in uno stato che nessuna schermata sa
+    /// mostrare.
+    #[error("{setting} deve stare fra {min} e {max}, non {value}")]
+    SettingOutOfRange {
+        setting: String,
+        value: i64,
+        min: i64,
+        max: i64,
+    },
 }
 
 impl From<sqlx::Error> for CoreError {

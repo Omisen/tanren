@@ -48,6 +48,8 @@ pub fn run() {
             commands::next_kana_step,
             commands::submit_kana_answer,
             commands::normalize_reading,
+            commands::settings,
+            commands::set_kanji_daily_new,
             commands::kanji_overview,
             commands::kanji_grid,
             commands::kanji_dashboard,

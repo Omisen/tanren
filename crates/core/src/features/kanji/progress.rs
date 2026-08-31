@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::features::kanji::facets::{Facet, Item, items};
 use crate::features::kanji::levels::{Level, table};
-use crate::shared::error::Result;
+use crate::shared::error::{CoreError, Result};
 use crate::shared::srs::retrievability;
 use crate::shared::storage::{Card, CardFilter, Database};
 
@@ -37,8 +37,20 @@ pub struct Pacing {
     pub drill_size: usize,
     /// Quanti kanji nuovi al giorno, al massimo.
     ///
-    /// Cinque e' volutamente prudente: il carico associativo di un kanji e' alto,
-    /// perche' non e' un ricordo ma tre o quattro.
+    /// **Tre di default, e l'utente puo' portarlo da 1 a 6.**
+    ///
+    /// Era cinque, ed e' sceso dopo aver studiato davvero. Il motivo e' che qui un
+    /// kanji si introduce come **blocco intero**, significato piu' letture piu' le
+    /// forme con okurigana tutte nella stessa lezione, mentre altrove le faccette si
+    /// danno a scaglioni: cinque kanji cosi' fanno una ventina di cose nuove in una
+    /// sessione, si confondono fra loro e non si consolidano.
+    ///
+    /// **E' un tampone, non la cura.** La densita' vera si toglie scaglionando le
+    /// faccette di un kanji, che e' un lavoro a se'; questo riduce quanti blocchi
+    /// densi arrivano insieme, non quanto e' denso ognuno.
+    ///
+    /// Il default protegge chi non tocca niente, il tetto di 6 lascia passare chi ha
+    /// gia' capito quanto regge.
     pub daily_new: usize,
     /// Quanto devono reggere in media le faccette che si stanno portando avanti
     /// perche' si possa introdurre altro. E' il freno principale.
@@ -60,13 +72,64 @@ impl Default for Pacing {
     fn default() -> Self {
         Self {
             drill_size: 20,
-            daily_new: 5,
+            daily_new: DAILY_NEW_DEFAULT,
             min_retrievability: 0.75,
             floor: TimeDelta::hours(4),
             mature_days: 21.0,
             unlock_ratio: 0.9,
         }
     }
+}
+
+/// La chiave con cui la preferenza sta nell'archivio.
+///
+/// Porta il nome della materia perche' l'archivio e' uno solo per tutte: un domani i
+/// kana potrebbero volere il proprio ritmo, e `daily_new` da solo non direbbe di chi.
+const DAILY_NEW_KEY: &str = "kanji.daily_new";
+
+/// Quanti kanji nuovi per lezione, quando l'utente non ha scelto.
+pub const DAILY_NEW_DEFAULT: usize = 3;
+
+/// Il minimo e il massimo che l'utente puo' scegliere.
+///
+/// Sotto 1 non ci sarebbe nessuna lezione; sopra 6 si torna nel territorio in cui i
+/// blocchi si confondono fra loro, che e' il motivo per cui il default e' sceso.
+pub const DAILY_NEW_RANGE: std::ops::RangeInclusive<usize> = 1..=6;
+
+/// Il ritmo com'e' configurato adesso, non com'e' nato.
+///
+/// Tutto quello che non e' scelto dall'utente resta il default: qui si legge una sola
+/// preferenza perche' una sola e' configurabile, e le altre restano decisioni del
+/// progetto finche' non si dimostra che vadano aperte.
+///
+/// Una preferenza scritta male vale come **assente**: un valore che non e' un numero,
+/// o che non sta nei limiti, non deve impedire di aprire l'app. Fuori intervallo si
+/// puo' finire anche solo abbassando il tetto in una versione futura.
+pub async fn pacing(db: &Database) -> Result<Pacing> {
+    let mut pacing = Pacing::default();
+
+    if let Some(grezzo) = db.setting(DAILY_NEW_KEY).await?
+        && let Ok(n) = grezzo.parse::<usize>()
+        && DAILY_NEW_RANGE.contains(&n)
+    {
+        pacing.daily_new = n;
+    }
+
+    Ok(pacing)
+}
+
+/// Cambia quanti kanji nuovi si introducono per lezione.
+pub async fn set_daily_new(db: &Database, value: usize, now: DateTime<Utc>) -> Result<()> {
+    if !DAILY_NEW_RANGE.contains(&value) {
+        return Err(CoreError::SettingOutOfRange {
+            setting: DAILY_NEW_KEY.to_owned(),
+            value: value as i64,
+            min: *DAILY_NEW_RANGE.start() as i64,
+            max: *DAILY_NEW_RANGE.end() as i64,
+        });
+    }
+
+    db.set_setting(DAILY_NEW_KEY, &value.to_string(), now).await
 }
 
 /// In che stato e' un kanji.
@@ -794,6 +857,70 @@ mod tests {
                 until: "2026-03-16T00:00:00Z".parse().unwrap(),
             })
         );
+    }
+
+    #[tokio::test]
+    async fn il_ritmo_senza_preferenze_e_quello_di_default() {
+        let db = db().await;
+        assert_eq!(pacing(&db).await.unwrap().daily_new, DAILY_NEW_DEFAULT);
+    }
+
+    #[tokio::test]
+    async fn la_preferenza_scritta_si_rilegge() {
+        let db = db().await;
+        set_daily_new(&db, 6, mattina()).await.unwrap();
+        assert_eq!(pacing(&db).await.unwrap().daily_new, 6);
+
+        // Riscrivere sostituisce invece di accumulare.
+        set_daily_new(&db, 1, mattina()).await.unwrap();
+        assert_eq!(pacing(&db).await.unwrap().daily_new, 1);
+    }
+
+    #[tokio::test]
+    async fn fuori_intervallo_si_rifiuta_invece_di_accomodare() {
+        let db = db().await;
+        for fuori in [0, 7, 100] {
+            assert!(
+                set_daily_new(&db, fuori, mattina()).await.is_err(),
+                "{fuori} non e' un valore che l'interfaccia offra"
+            );
+        }
+        // E niente e' stato scritto: si resta al default.
+        assert_eq!(pacing(&db).await.unwrap().daily_new, DAILY_NEW_DEFAULT);
+    }
+
+    #[tokio::test]
+    async fn una_preferenza_illeggibile_vale_come_assente() {
+        let db = db().await;
+        // Puo' succedere abbassando il tetto in una versione futura, o con un database
+        // toccato a mano: aprire l'app deve restare possibile.
+        for scritta in ["9", "", "tre"] {
+            db.set_setting(DAILY_NEW_KEY, scritta, mattina()).await.unwrap();
+            assert_eq!(
+                pacing(&db).await.unwrap().daily_new,
+                DAILY_NEW_DEFAULT,
+                "{scritta:?} non deve impedire di partire"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn la_quota_del_giorno_segue_la_preferenza() {
+        let db = db().await;
+        set_daily_new(&db, 2, mattina()).await.unwrap();
+        let pacing = pacing(&db).await.unwrap();
+        let now = mattina();
+
+        // Due sole introduzioni bastano a chiudere la porta, dove col default ne
+        // servirebbero tre.
+        for k in table(primo()).all().iter().take(2) {
+            impara(&db, primo(), &k.character, 40.0, now).await;
+        }
+
+        let gate = learning_gate(&db, primo(), &pacing, now + pacing.floor)
+            .await
+            .unwrap();
+        assert!(matches!(gate, Gate::Closed(Blocked::Wait { .. })), "{gate:?}");
     }
 
     #[tokio::test]

@@ -314,3 +314,16 @@ export type CoreError =
 export function isCoreError(error: unknown): error is CoreError {
   return typeof error === 'object' && error !== null && 'kind' in error
 }
+
+/**
+ * Le preferenze, col loro intervallo valido.
+ *
+ * Ce n'e' una sola perche' una sola e' stata aperta: le altre grandezze del ritmo
+ * restano decisioni del progetto finche' non si dimostra che vadano scelte.
+ */
+export interface Settings {
+  /** Quanti kanji nuovi per lezione. */
+  dailyNew: number
+  dailyNewMin: number
+  dailyNewMax: number
+}

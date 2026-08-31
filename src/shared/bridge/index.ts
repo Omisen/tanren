@@ -25,6 +25,7 @@ import type {
   KanaScope,
   KanaSet,
   Queue,
+  Settings,
   Step,
   Syllabary,
   Verdict,
@@ -56,6 +57,22 @@ export function credits(): Promise<Credit[]> {
 /** La versione dell'app, come la dichiara il pacchetto. */
 export function appVersion(): Promise<string> {
   return invoke('app_version')
+}
+
+/**
+ * Quello che l'utente ha scelto, coi limiti entro cui poteva sceglierlo.
+ *
+ * I limiti arrivano insieme al valore e non sono scritti nella schermata: sono una
+ * decisione di dominio, e tenerne una copia di qua vorrebbe dire avere due verita' che
+ * prima o poi si sganciano.
+ */
+export function settings(): Promise<Settings> {
+  return invoke('settings')
+}
+
+/** Cambia quanti kanji nuovi si incontrano per lezione. */
+export function setKanjiDailyNew(value: number): Promise<void> {
+  return invoke('set_kanji_daily_new', { value })
 }
 
 /** Le famiglie di un sillabario, con quanti segni contengono. */

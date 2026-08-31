@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { KanaHomeScreen } from '@/features/kana/screens/HomeScreen'
 import { KanaSessionScreen } from '@/features/kana/screens/SessionScreen'
 import { KanjiDashboardScreen } from '@/features/kanji/screens/DashboardScreen'
@@ -6,6 +8,7 @@ import { KanjiStudyScreen } from '@/features/kanji/screens/SessionScreen'
 import { useUi } from '@/shared/store/ui'
 
 import { AboutScreen } from './AboutScreen'
+import { SettingsDrawer } from './SettingsDrawer'
 import { SubjectPicker } from './SubjectPicker'
 
 /**
@@ -25,6 +28,10 @@ import { SubjectPicker } from './SubjectPicker'
 export default function App() {
   const screen = useUi((s) => s.screen)
   const subject = useUi((s) => s.subject)
+  const goTo = useUi((s) => s.goTo)
+  // Aperto o chiuso e' stato effimero come la schermata, ma non serve allo store:
+  // nessun altro deve saperlo, e chiudendo l'app va perso come si deve.
+  const [settings, setSettings] = useState(false)
 
   if (screen === 'session') {
     return subject === 'kana' ? <KanaSessionScreen /> : <KanjiStudyScreen />
@@ -40,32 +47,50 @@ export default function App() {
   if (screen === 'about') return <AboutScreen />
 
   const subjects = <SubjectPicker />
-  const about = <AboutButton />
-  return subject === 'kana' ? (
-    <KanaHomeScreen subjects={subjects} about={about} />
-  ) : (
-    <KanjiHomeScreen subjects={subjects} about={about} />
+  const about = <SettingsButton onOpen={() => setSettings(true)} />
+  return (
+    <>
+      {subject === 'kana' ? (
+        <KanaHomeScreen subjects={subjects} about={about} />
+      ) : (
+        <KanjiHomeScreen subjects={subjects} about={about} />
+      )}
+
+      {settings && (
+        <SettingsDrawer
+          onClose={() => setSettings(false)}
+          onSources={() => {
+            setSettings(false)
+            goTo('about')
+          }}
+        />
+      )}
+    </>
   )
 }
 
 /**
- * La via per le fonti.
+ * La via per le impostazioni, e da li' per le fonti.
  *
  * In cima e non nella fascia in fondo: quella e' della cosa che si fa decine di volte,
  * e questa si tocca di rado. Ma dev'esserci **in tutte e due le schermate iniziali**,
- * perche' l'obbligo di attribuzione non dipende da quale materia si sta guardando.
+ * perche' l'obbligo di attribuzione non dipende da quale materia si sta guardando, e
+ * ora anche perche' le impostazioni non sono di una materia sola.
+ *
+ * **Un bottone solo e non due.** Le fonti erano qui e adesso sono una riga dentro il
+ * menu: mettere due icone in un'intestazione bassa, su un telefono, per una via che si
+ * percorre una volta l'anno, costerebbe piu' spazio di quanto renda. La ⓘ diventa
+ * quindi la rotella, e le fonti restano a un tocco di distanza in piu'.
  */
-function AboutButton() {
-  const goTo = useUi((s) => s.goTo)
-
+function SettingsButton({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       type="button"
-      onClick={() => goTo('about')}
-      aria-label="Sources and licences"
+      onClick={onOpen}
+      aria-label="Settings"
       className="text-muted flex size-11 items-center justify-center text-lg active:opacity-60"
     >
-      ⓘ
+      ⚙
     </button>
   )
 }
