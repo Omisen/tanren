@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/Button'
 import { Card, Note } from '@/shared/ui/Card'
 import { Chip } from '@/shared/ui/Chip'
 import { Field } from '@/shared/ui/Field'
+import { LogoMark } from '@/shared/ui/LogoMark'
 import { Screen } from '@/shared/ui/Screen'
 import { useUi } from '@/shared/store/ui'
 
@@ -108,6 +109,7 @@ export function KanaHomeScreen({
     <Screen
       textured
       title="Tanren"
+      mark={<LogoMark />}
       trailing={about}
       action={
         <Button disabled={chosen.length === 0} onClick={() => goTo('session')}>

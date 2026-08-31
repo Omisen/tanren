@@ -9,6 +9,7 @@ import {
   type StudyMode,
 } from '@/shared/bridge'
 import { Button } from '@/shared/ui/Button'
+import { LogoMark } from '@/shared/ui/LogoMark'
 import { Screen } from '@/shared/ui/Screen'
 import { useUi } from '@/shared/store/ui'
 
@@ -98,6 +99,7 @@ export function KanjiHomeScreen({
     <Screen
       textured
       title="Tanren"
+      mark={<LogoMark />}
       trailing={about}
       action={
         <div className="flex flex-col gap-2">

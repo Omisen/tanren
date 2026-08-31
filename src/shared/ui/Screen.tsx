@@ -13,6 +13,7 @@ export function Screen({
   onBack,
   action,
   trailing,
+  mark,
   textured = false,
   children,
 }: {
@@ -28,6 +29,15 @@ export function Screen({
    * decine di volte; questa si tocca di rado e non deve rubarle il posto.
    */
   trailing?: ReactNode
+  /**
+   * Il marchio a sinistra del titolo.
+   *
+   * Arriva come nodo e non come booleano perche' `Screen` non deve sapere che esiste un
+   * logo: lo mettono le due schermate iniziali, che sono le uniche a portare il
+   * **wordmark** invece del nome di dove ti trovi. Accanto a «Kanji» o a «Learn» un
+   * marchio direbbe che quello e' il nome dell'app, e non lo e'.
+   */
+  mark?: ReactNode
   /** Il reticolo di sfondo. Solo dove non c'e' uno stimolo da proteggere. */
   textured?: boolean
   children: ReactNode
@@ -45,9 +55,12 @@ export function Screen({
             ←
           </button>
         )}
-        <h1 className="text-muted text-sm font-medium tracking-[0.2em] uppercase">
-          {title}
-        </h1>
+        <div className="flex items-center gap-2">
+          {mark}
+          <h1 className="text-muted text-sm font-medium tracking-[0.2em] uppercase">
+            {title}
+          </h1>
+        </div>
         {trailing && <div className="ml-auto">{trailing}</div>}
       </header>
 
