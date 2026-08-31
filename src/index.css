@@ -215,10 +215,67 @@
     }
   }
 
-  /* Chi ha chiesto meno movimento al sistema non lo riceve. */
+  /* La tendina che entra dal bordo destro, e il velo che la accompagna.
+     Uscire e' un filo piu' rapido che entrare, perche' chi chiude ha gia' deciso.
+
+     **L'uscita ha un fotogramma chiave suo e non e' l'entrata al contrario**, che pure
+     sarebbe stato piu' corto da scrivere. Provato, e non funziona: cambiando solo la
+     direzione il nome dell'animazione resta lo stesso, quindi il browser non ne fa
+     partire una nuova. Quella di prima e' gia' finita, e il risultato e' che il
+     pannello **salta** allo stato finale rovesciato senza muoversi e senza emettere la
+     fine dell'animazione, cioe' resta aperto per sempre, perche' e' proprio quella fine
+     che gli dice di smontarsi. Due nomi diversi, due animazioni vere. */
+  .drawer-in {
+    animation: drawer-in 220ms ease-out both;
+  }
+
+  .drawer-out {
+    animation: drawer-out 180ms ease-in both;
+  }
+
+  .scrim-in {
+    animation: scrim-in 220ms ease-out both;
+  }
+
+  .scrim-out {
+    animation: scrim-out 180ms ease-in both;
+  }
+
+  @keyframes drawer-in {
+    from {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes drawer-out {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes scrim-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes scrim-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  /* Chi ha chiesto meno movimento al sistema non lo riceve.
+     Attenzione: qui l'animazione non viene tolta ma **azzerata**. La chiusura della
+     tendina aspetta la fine dell'animazione per smontarsi, e con `animation: none`
+     quell'evento non arriverebbe mai, lasciando il pannello aperto per sempre. */
   @media (prefers-reduced-motion: reduce) {
-    .enter {
-      animation: none;
+    .enter,
+    .drawer-in,
+    .drawer-out,
+    .scrim-in,
+    .scrim-out {
+      animation-duration: 1ms;
     }
   }
 }
