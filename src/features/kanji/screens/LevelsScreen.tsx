@@ -17,7 +17,14 @@ import { KanjiSheet } from '../KanjiSheet'
 import { LevelBlock } from '../LevelBlock'
 
 /**
- * Il percorso intero, da consultare.
+ * I kanji del percorso, da consultare.
+ *
+ * # Perche' si chiama coi kanji e non coi livelli
+ *
+ * Il bottone che porta qui diceva «Browse the levels», e puntava alla cosa sbagliata:
+ * il livello e' gia' scritto nel banner sopra, e chi comincia **non sa cosa contenga**
+ * un livello, quindi la parola non gli promette niente. Quello che incuriosisce sono i
+ * kanji, cioe' cosa c'e' dentro; che siano divisi in livelli lo si scopre entrando.
  *
  * # Cosa misura, e cosa no
  *
@@ -84,7 +91,7 @@ export function KanjiLevelsScreen() {
 
   return (
     <>
-      <Screen title="Levels" onBack={() => goTo('home')}>
+      <Screen title="Kanji" onBack={() => goTo('home')}>
         {levels === null && <Note>Loading…</Note>}
         {levels === 'failed' && <Note>The path could not be loaded.</Note>}
 
@@ -112,7 +119,12 @@ export function KanjiLevelsScreen() {
               />
             )}
 
-            {cells === null ? <Note>Loading…</Note> : <Grid cells={cells} onOpen={setOpened} />}
+            {shown &&
+              (cells === null ? (
+                <GridSkeleton count={shown.total} />
+              ) : (
+                <Grid cells={cells} onOpen={setOpened} />
+              ))}
 
             <p className="text-muted text-xs">
               This is what spaced repetition knows, and only Learn and Review feed it.
@@ -204,11 +216,49 @@ const STANDING: Record<Standing, string> = {
   mature: 'border-type-kanji bg-type-kanji text-paper',
 }
 
+/**
+ * La geometria della griglia, scritta una volta sola.
+ *
+ * La usano la griglia vera e il suo segnaposto, e devono essere **identiche**: e' tutto
+ * il punto del segnaposto, e due copie di queste classi si sganciarebbero al primo
+ * ritocco a una delle due.
+ */
+const GRIGLIA = 'grid grid-cols-6 gap-1.5'
+
+/**
+ * Lo spazio della griglia mentre i kanji arrivano.
+ *
+ * # Perche' non basta scrivere «Loading…»
+ *
+ * Perche' quella riga e' alta una riga, e la griglia e' alta cinque: cambiando livello
+ * il blocco si accartocciava da circa trecento pixel a venti e si riapriva un istante
+ * dopo, trascinandosi dietro tutto quello che sta sotto. Sono due salti in una frazione
+ * di secondo, ed e' quello che si vede: non sono i kanji di prima che restano, perche'
+ * quelli spariscono dal primo disegno utile (la griglia si mostra solo se e' del
+ * livello che si sta guardando). E' il vuoto che si apre e si richiude.
+ *
+ * # Perche' il conteggio e' esatto e non stimato
+ *
+ * Quante caselle servano lo dice gia' il dato che la schermata ha in mano: la riga del
+ * livello porta il suo `total`, arrivato con l'interrogazione unica. Quindi il
+ * segnaposto ha **la misura giusta**, non una probabile, e il riquadro non si muove di
+ * un pixel fra il vuoto e il pieno.
+ */
+function GridSkeleton({ count }: { count: number }) {
+  return (
+    <div className={GRIGLIA} aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="border-hairline-soft aspect-square rounded-lg border" />
+      ))}
+    </div>
+  )
+}
+
 function Grid({ cells, onOpen }: { cells: KanjiCell[]; onOpen: (cell: KanjiCell) => void }) {
   if (cells.length === 0) return <Note>Nothing here.</Note>
 
   return (
-    <div className="grid grid-cols-6 gap-1.5">
+    <div className={GRIGLIA}>
       {cells.map((c) => (
         <button
           key={c.character}
