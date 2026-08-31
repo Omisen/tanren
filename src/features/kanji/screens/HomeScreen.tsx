@@ -102,7 +102,7 @@ export function KanjiHomeScreen({
       mark={<LogoMark />}
       trailing={about}
       action={
-        <div className="flex flex-col gap-2">
+        <div className="enter flex flex-col gap-2">
           {MODES.map((m) => (
             <ModeButton key={m.value} mode={m} overview={fresh} onStart={start} />
           ))}
@@ -112,11 +112,16 @@ export function KanjiHomeScreen({
       <div className="flex flex-col gap-7">
         {subjects}
 
-        <LevelBlock level={scope.level} progress={fresh?.progress} />
+        {/* Da qui in giu' cambia tutto passando all'altra materia, e la pastiglia
+            sopra no: l'animazione parte da sotto di lei, cosi' il tocco che l'ha
+            appena premuta resta immediato invece di sbiadire insieme al resto. */}
+        <div className="enter flex flex-col gap-7">
+          <LevelBlock level={scope.level} progress={fresh?.progress} />
 
-        <Button variant="quiet" onClick={() => goTo('levels')}>
-          Explore the kanji
-        </Button>
+          <Button variant="quiet" onClick={() => goTo('levels')}>
+            Explore the kanji
+          </Button>
+        </div>
       </div>
     </Screen>
   )

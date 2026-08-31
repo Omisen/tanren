@@ -195,4 +195,30 @@
       repeating-linear-gradient(to right, var(--color-grid) 0 1px, transparent 1px 34px),
       repeating-linear-gradient(to bottom, var(--color-grid) 0 1px, transparent 1px 34px);
   }
+
+  /* Il contenuto che entra al posto di quello di prima.
+     Serve dove due schermate diverse si danno il cambio nello stesso posto, cioe' al
+     cambio di materia: le due home hanno contenuti e altezze molto diverse, e senza
+     niente in mezzo si sostituiscono in un fotogramma, che si legge come uno scatto.
+     Non e' una dissolvenza incrociata: esce di scena solo chi entra, perche' tenere
+     montate tutte e due le schermate per incrociarle costerebbe molto piu' di quanto
+     renda. Sedici centesimi di secondo bastano a far leggere il cambio come un
+     movimento, e non tardano niente: il contenuto e' gia' li' dal primo fotogramma. */
+  .enter {
+    animation: enter 160ms ease-out both;
+  }
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  /* Chi ha chiesto meno movimento al sistema non lo riceve. */
+  @media (prefers-reduced-motion: reduce) {
+    .enter {
+      animation: none;
+    }
+  }
 }

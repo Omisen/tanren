@@ -112,69 +112,75 @@ export function KanaHomeScreen({
       mark={<LogoMark />}
       trailing={about}
       action={
-        <Button disabled={chosen.length === 0} onClick={() => goTo('session')}>
-          {total > 0 ? `Start with ${total} characters` : 'Start'}
-        </Button>
+        <div className="enter">
+          <Button disabled={chosen.length === 0} onClick={() => goTo('session')}>
+            {total > 0 ? `Start with ${total} characters` : 'Start'}
+          </Button>
+        </div>
       }
     >
       <div className="flex flex-col gap-7">
         {subjects}
 
-        <Field label="Syllabary">
-          <div className="grid grid-cols-2 gap-2">
-            {SYLLABARIES.map((s) => (
-              <Card
-                key={s.value}
-                pressed={scope.syllabary === s.value}
-                onClick={() => setSyllabary(s.value)}
-              >
-                <span className="font-jp text-2xl" lang="ja">
-                  {s.label}
-                </span>
-                <span className="text-muted text-xs">{s.caption}</span>
-              </Card>
-            ))}
-          </div>
-        </Field>
-
-        <Field label="Families">
-          {failed && <Note>The catalogue is not reachable.</Note>}
-          {!failed && !sets && <Note>Loading…</Note>}
-          {sets && (
-            <div className="flex flex-wrap gap-2">
-              {sets.map((s) => (
-                <Chip
-                  key={s.group}
-                  pressed={scope.groups.includes(s.group)}
-                  onClick={() => toggleGroup(s.group)}
+        {/* Da qui in giu' cambia tutto passando all'altra materia, e la pastiglia
+            sopra no: vedi la nota gemella nella home dei kanji. */}
+        <div className="enter flex flex-col gap-7">
+          <Field label="Syllabary">
+            <div className="grid grid-cols-2 gap-2">
+              {SYLLABARIES.map((s) => (
+                <Card
+                  key={s.value}
+                  pressed={scope.syllabary === s.value}
+                  onClick={() => setSyllabary(s.value)}
                 >
-                  <span
-                    className={GROUP_LABELS[s.group].japanese ? 'font-jp' : undefined}
-                    lang={GROUP_LABELS[s.group].japanese ? 'ja' : undefined}
-                  >
-                    {GROUP_LABELS[s.group].text}
+                  <span className="font-jp text-2xl" lang="ja">
+                    {s.label}
                   </span>
-                  <span className="text-muted ml-2 text-xs">{s.size}</span>
-                </Chip>
+                  <span className="text-muted text-xs">{s.caption}</span>
+                </Card>
               ))}
             </div>
-          )}
-        </Field>
+          </Field>
 
-        <Field label="Exercise">
-          <div className="grid grid-cols-2 gap-2">
-            {MODES.map((m) => (
-              <Card
-                key={m.value}
-                pressed={scope.mode === m.value}
-                onClick={() => setKanaMode(m.value)}
-              >
-                <span className="text-base">{m.label}</span>
-                <span className="text-muted text-xs">{m.caption}</span>
-              </Card>
-            ))}
-          </div>
-        </Field>
+          <Field label="Families">
+            {failed && <Note>The catalogue is not reachable.</Note>}
+            {!failed && !sets && <Note>Loading…</Note>}
+            {sets && (
+              <div className="flex flex-wrap gap-2">
+                {sets.map((s) => (
+                  <Chip
+                    key={s.group}
+                    pressed={scope.groups.includes(s.group)}
+                    onClick={() => toggleGroup(s.group)}
+                  >
+                    <span
+                      className={GROUP_LABELS[s.group].japanese ? 'font-jp' : undefined}
+                      lang={GROUP_LABELS[s.group].japanese ? 'ja' : undefined}
+                    >
+                      {GROUP_LABELS[s.group].text}
+                    </span>
+                    <span className="text-muted ml-2 text-xs">{s.size}</span>
+                  </Chip>
+                ))}
+              </div>
+            )}
+          </Field>
+
+          <Field label="Exercise">
+            <div className="grid grid-cols-2 gap-2">
+              {MODES.map((m) => (
+                <Card
+                  key={m.value}
+                  pressed={scope.mode === m.value}
+                  onClick={() => setKanaMode(m.value)}
+                >
+                  <span className="text-base">{m.label}</span>
+                  <span className="text-muted text-xs">{m.caption}</span>
+                </Card>
+              ))}
+            </div>
+          </Field>
+        </div>
       </div>
     </Screen>
   )
