@@ -159,16 +159,6 @@ export function kanjiOverview(scope: StudyScope): Promise<Overview> {
   return invoke('kanji_overview', { scope })
 }
 
-/**
- * Quanti livelli conta il percorso.
- *
- * Arriva dal core e non e' scritto qui: il numero cambia quando si rigenera il
- * contenuto, e due copie dello stesso numero divergerebbero in silenzio.
- */
-export function kanjiLevelCount(): Promise<number> {
-  return invoke('kanji_level_count')
-}
-
 /** Fin dove si e' arrivati: il primo livello non ancora consolidato. */
 export function kanjiCurrentLevel(): Promise<Level> {
   return invoke('kanji_current_level')

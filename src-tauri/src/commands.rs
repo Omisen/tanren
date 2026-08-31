@@ -175,16 +175,6 @@ pub fn app_version() -> String {
     env!("CARGO_PKG_VERSION").to_owned()
 }
 
-/// Quanti livelli conta il percorso.
-///
-/// L'interfaccia ne ha bisogno per non offrire livelli che non esistono. Arriva dal
-/// core e non e' scritto di la': il numero cambia quando si rigenera il contenuto, e
-/// due copie dello stesso numero divergerebbero senza che nessuno se ne accorga.
-#[tauri::command]
-pub fn kanji_level_count() -> u8 {
-    tanren_core::features::kanji::levels::LEVELS
-}
-
 /// Le preferenze dell'utente, coi limiti entro cui puo' muoverle.
 ///
 /// I limiti arrivano dal core insieme al valore invece di essere scritti nella

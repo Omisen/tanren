@@ -55,7 +55,6 @@ pub fn run() {
             commands::kanji_dashboard,
             commands::kanji_details,
             commands::kanji_current_level,
-            commands::kanji_level_count,
             commands::start_kanji_study,
             commands::next_kanji_study_step,
             commands::submit_kanji_study_answer,

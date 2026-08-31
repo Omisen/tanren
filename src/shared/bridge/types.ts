@@ -33,7 +33,7 @@ export interface KanaSet {
 
 /* --- Il percorso sui kanji: livelli, faccette, tre modalita' --------------- */
 
-/** Un livello del percorso. Quanti siano lo dice `kanjiLevelCount`. */
+/** Un livello del percorso. Quanti siano lo dice la dashboard, una riga per livello. */
 export type Level = number
 
 /**
