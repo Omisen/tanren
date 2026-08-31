@@ -18,6 +18,17 @@ pub struct AppState {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Serve ad aprire i link **fuori** dall'app.
+        //
+        // Senza, un link della schermata Fonti non apriva niente di nuovo: wry non
+        // abilita le finestre multiple sulla WebView Android, quindi `target="_blank"`
+        // non puo' aprire una seconda pagina, e Tauri senza un `on_navigation` nostro
+        // autorizza la navigazione. Risultato verificato sul dispositivo: la WebView
+        // andava **sul posto** al sito, cioe' l'app diventava un browser.
+        //
+        // Non e' un fastidio estetico: quei link sono attribuzione obbligatoria, e una
+        // licenza che si raggiunge solo rompendo l'app non e' raggiungibile.
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

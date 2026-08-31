@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { appVersion, credits, type Credit } from '@/shared/bridge'
 import { Note } from '@/shared/ui/Card'
+import { ExternalLink } from '@/shared/ui/ExternalLink'
 import { Screen } from '@/shared/ui/Screen'
 import { Sheet } from '@/shared/ui/Sheet'
 import { useUi } from '@/shared/store/ui'
@@ -108,23 +109,19 @@ function Entry({ credit, onRead }: { credit: Credit; onRead: () => void }) {
               Read the licence
             </button>
           )}
-          <a
+          <ExternalLink
             href={credit.licenceUrl}
-            target="_blank"
-            rel="noreferrer"
             className="text-muted flex min-h-11 items-center underline underline-offset-4"
           >
             {credit.licenceUrl}
-          </a>
+          </ExternalLink>
           {credit.sourceUrl && (
-            <a
+            <ExternalLink
               href={credit.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
               className="text-muted flex min-h-11 items-center underline underline-offset-4"
             >
               {credit.sourceUrl}
-            </a>
+            </ExternalLink>
           )}
         </div>
       </div>
@@ -160,14 +157,12 @@ function LicenceSheet({ credit, onClose }: { credit: Credit; onClose: () => void
       {testo === 'failed' && (
         <div className="flex flex-col gap-2">
           <Note>The bundled copy could not be opened. It is online here:</Note>
-          <a
+          <ExternalLink
             href={credit.licenceUrl}
-            target="_blank"
-            rel="noreferrer"
             className="text-type-kanji text-sm underline underline-offset-4"
           >
             {credit.licenceUrl}
-          </a>
+          </ExternalLink>
         </div>
       )}
       {typeof testo === 'string' && testo !== 'failed' && (

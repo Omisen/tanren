@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { setKanjiDailyNew, settings as loadSettings, type Settings } from '@/shared/bridge'
 import { Drawer } from '@/shared/ui/Drawer'
+import { ExternalLink } from '@/shared/ui/ExternalLink'
 
 /** Dove vive il progetto, per chi vuole leggerlo o segnalare qualcosa. */
 const REPO = 'https://github.com/Omisen/tanren'
@@ -145,12 +146,12 @@ function Row({
 
   if (href) {
     return (
-      <a href={href} target="_blank" rel="noreferrer" className={stile}>
+      <ExternalLink href={href} className={stile}>
         {children}
         <span className="text-muted" aria-hidden="true">
           ↗
         </span>
-      </a>
+      </ExternalLink>
     )
   }
 

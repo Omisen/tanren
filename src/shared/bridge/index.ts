@@ -10,6 +10,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core'
+import { openUrl } from '@tauri-apps/plugin-opener'
 
 import type {
   Credit,
@@ -52,6 +53,17 @@ export function normalizeInput(input: string): Promise<string> {
  */
 export function credits(): Promise<Credit[]> {
   return invoke('credits')
+}
+
+/**
+ * Apre un indirizzo **fuori** dall'app, nel browser del sistema.
+ *
+ * Sta qui come tutto il resto che attraversa il confine: passa dal plugin `opener`, che
+ * e' il modo previsto da Tauri, e non da un'ancora lasciata alla WebView, che invece
+ * navigherebbe sul posto e si mangerebbe l'app.
+ */
+export function openExternal(url: string): Promise<void> {
+  return openUrl(url)
 }
 
 /** La versione dell'app, come la dichiara il pacchetto. */
