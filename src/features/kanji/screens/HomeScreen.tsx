@@ -113,7 +113,7 @@ export function KanjiHomeScreen({
         <LevelBlock level={scope.level} progress={fresh?.progress} />
 
         <Button variant="quiet" onClick={() => goTo('levels')}>
-          Browse the levels
+          Explore the kanji
         </Button>
       </div>
     </Screen>
