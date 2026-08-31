@@ -142,7 +142,12 @@ function ModeButton({
         {mode.label}
         {count(mode.value, overview)}
       </Button>
-      {reason && <p className="text-muted px-2 text-center text-xs">{reason}</p>}
+      {/* La riga c'e' sempre, anche vuota, e tiene l'altezza di una riga.
+          Tornando da una sessione i dati non ci sono ancora, quindi qui compare
+          «Loading…» e un istante dopo sparisce: comparendo e sparendo spostava i tre
+          bottoni, e sono bottoni che si stanno per toccare, quindi non e' una questione
+          estetica ma il rischio di premere Drill al posto di Learn. */}
+      <p className="text-muted min-h-4 px-2 text-center text-xs">{reason}</p>
     </div>
   )
 }
