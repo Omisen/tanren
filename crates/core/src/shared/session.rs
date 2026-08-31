@@ -296,6 +296,7 @@ mod tests {
                 prompt: Prompt::Latin(request.item.to_string()),
                 format: AnswerFormat::Input,
                 asks: None,
+                focus: None,
             })
         }
 

@@ -155,6 +155,7 @@ impl ExerciseType for KanaRecognition {
             // Visto un kana c'e' una cosa sola da chiedere, quindi non c'e' niente da
             // precisare. Un kanji invece ha piu' famiglie di letture e deve dirlo.
             asks: None,
+            focus: None,
         })
     }
 
@@ -199,6 +200,7 @@ impl ExerciseType for KanaInput {
             prompt: Prompt::Latin(romaji.to_string()),
             format: AnswerFormat::Input,
             asks: None,
+            focus: None,
         })
     }
 

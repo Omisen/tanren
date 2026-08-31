@@ -320,6 +320,7 @@ impl ExerciseType for MeaningFacet {
             item: request.item.clone(),
             prompt: Prompt::Japanese(item.kanji.character.clone()),
             asks: Some("meaning".to_owned()),
+            focus: None,
             format: AnswerFormat::Choice { options },
         })
     }
@@ -358,6 +359,7 @@ impl ExerciseType for OnFacet {
             item: request.item.clone(),
             prompt: Prompt::Japanese(item.kanji.character.clone()),
             asks: Some("on".to_owned()),
+            focus: None,
             format: AnswerFormat::Input,
         })
     }
@@ -387,6 +389,7 @@ impl ExerciseType for KunFacet {
             item: request.item.clone(),
             prompt: Prompt::Japanese(item.kanji.character.clone()),
             asks: Some("kun".to_owned()),
+            focus: None,
             format: AnswerFormat::Input,
         })
     }
@@ -421,9 +424,14 @@ impl ExerciseType for OkuriganaFacet {
             exercise_type: Self::ID,
             item: request.item.clone(),
             prompt: Prompt::Japanese(item.form.clone()),
-            // L'okurigana dice gia' da se' cosa si vuole: 生きる non ha bisogno di
-            // un'etichetta, 生 si'.
-            asks: None,
+            // **Correzione da una prova d'uso.** Qui c'era scritto che l'okurigana
+            // dice gia' da se' cosa si vuole, e non e' vero: visto 大いに nudo, senza
+            // una riga che lo dica, non si capisce che si chiede la lettura di 大 e
+            // non quella della parola. Era l'unica faccetta senza etichetta.
+            asks: Some("okurigana".to_owned()),
+            // La parte scritta col kanji, cioe' quella che si legge. Il resto e'
+            // contesto e chi mostra la domanda lo attenua invece di stamparlo uguale.
+            focus: Some(item.kanji.character.clone()),
             format: AnswerFormat::Input,
         })
     }
@@ -663,7 +671,7 @@ mod tests {
     }
 
     #[test]
-    fn l_okurigana_e_la_domanda_e_non_ha_bisogno_di_etichette() {
+    fn l_okurigana_dice_su_quale_porzione_verte() {
         let pool = vec![];
         let item = id("生きる");
         let q = OkuriganaFacet
@@ -678,7 +686,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(q.prompt, Prompt::Japanese("生きる".into()));
-        assert_eq!(q.asks, None, "生きる dice gia' da se' cosa si vuole");
+        assert_eq!(q.asks.as_deref(), Some("okurigana"));
+        assert_eq!(
+            q.focus.as_deref(),
+            Some("生"),
+            "si legge la parte col kanji, il きる e' li' solo a dire quale lettura vale"
+        );
         assert_eq!(q.format, AnswerFormat::Input);
         assert!(
             OkuriganaFacet.grade(&item, &Answer::new("い")).unwrap().is_correct(),

@@ -101,11 +101,20 @@ pub struct LevelProgress {
 #[serde(tag = "reason", rename_all = "snake_case")]
 pub enum Blocked {
     /// Quello che c'e' gia' non regge abbastanza. E' il freno che conta.
+    ///
+    /// Non porta un istante ed e' la ragione per cui resta un caso a se': qui non c'e'
+    /// un'ora da aspettare, c'e' una soglia da raggiungere, e dirlo come conto alla
+    /// rovescia sarebbe promettere che il tempo da solo la risolva.
     Consolidate { current: f32, needed: f32 },
-    /// Si e' introdotto troppo di recente.
-    TooSoon { until: DateTime<Utc> },
-    /// La quota di oggi e' finita.
-    DailyCap { done: usize, cap: usize },
+    /// Bisogna aspettare, e questo e' l'istante in cui si riapre.
+    ///
+    /// **Un motivo solo per due freni**, il floor e la quota, perche' danno lo stesso
+    /// consiglio: torna fra tanto. Tenerli distinti serviva quando il secondo si
+    /// raccontava come «la quota di oggi», che pero' e' una mezza bugia, dato che il
+    /// giorno finisce a mezzanotte UTC e non quando lo direbbe l'orologio di chi
+    /// studia. `until` e' il piu' lontano dei due che mordono, non il primo: se il
+    /// floor scade alle 3 e la quota a mezzanotte, si riapre a mezzanotte.
+    Wait { until: DateTime<Utc> },
     /// Non c'e' piu' niente di nuovo in questo livello.
     NothingNew,
 }
@@ -434,12 +443,16 @@ pub async fn learning_gate(
     // Una carta nasce quando il kanji viene introdotto, e ogni kanji ne ha una sola di
     // significato: contare quelle e' contare i kanji, non le faccette.
     let meaning = Facet::Meaning.exercise_id();
+
+    // I due freni a tempo si guardano **tutti e due** e vince il piu' lontano. Uscire
+    // al primo che morde direbbe un'ora in cui la porta e' ancora chiusa dall'altro,
+    // che e' il modo peggiore di rispondere «torna fra tanto».
+    let mut until: Option<DateTime<Utc>> = None;
+
     if let Some(last) = db.last_card_created(meaning.as_str()).await?
         && now < last + pacing.floor
     {
-        return Ok(Gate::Closed(Blocked::TooSoon {
-            until: last + pacing.floor,
-        }));
+        until = Some(last + pacing.floor);
     }
 
     let oggi = db
@@ -447,10 +460,12 @@ pub async fn learning_gate(
         .await?
         .max(0) as usize;
     if oggi >= pacing.daily_new {
-        return Ok(Gate::Closed(Blocked::DailyCap {
-            done: oggi,
-            cap: pacing.daily_new,
-        }));
+        let domani = start_of_day(now) + TimeDelta::days(1);
+        until = Some(until.map_or(domani, |t| t.max(domani)));
+    }
+
+    if let Some(until) = until {
+        return Ok(Gate::Closed(Blocked::Wait { until }));
     }
 
     Ok(Gate::Open {
@@ -740,9 +755,12 @@ mod tests {
         let gate = learning_gate(&db, primo(), &pacing, now + TimeDelta::hours(1))
             .await
             .unwrap();
-        assert!(
-            matches!(gate, Gate::Closed(Blocked::TooSoon { .. })),
-            "{gate:?}"
+        assert_eq!(
+            gate,
+            Gate::Closed(Blocked::Wait {
+                until: now + pacing.floor
+            }),
+            "con una carta sola morde il solo floor"
         );
 
         let gate = learning_gate(&db, primo(), &pacing, now + pacing.floor)
@@ -767,12 +785,38 @@ mod tests {
         let gate = learning_gate(&db, primo(), &pacing, now + pacing.floor)
             .await
             .unwrap();
+        // La quota non si riapre fra ventiquattr'ore ma alla mezzanotte UTC dopo:
+        // e' quello che conta il codice, ed e' la ragione per cui il messaggio non
+        // puo' dire «oggi».
         assert_eq!(
             gate,
-            Gate::Closed(Blocked::DailyCap {
-                done: pacing.daily_new,
-                cap: pacing.daily_new,
+            Gate::Closed(Blocked::Wait {
+                until: "2026-03-16T00:00:00Z".parse().unwrap(),
             })
+        );
+    }
+
+    #[tokio::test]
+    async fn fra_i_due_freni_a_tempo_vince_il_piu_lontano() {
+        let db = db().await;
+        let pacing = Pacing::default();
+        // Di sera, cosi' il floor scavalca la mezzanotte e i due freni non scadono
+        // insieme: la quota si riaprirebbe a mezzanotte, il floor solo alle 2.
+        let sera: DateTime<Utc> = "2026-03-15T22:00:00Z".parse().unwrap();
+
+        for k in table(primo()).all().iter().take(pacing.daily_new) {
+            impara(&db, primo(), &k.character, 40.0, sera).await;
+        }
+
+        let gate = learning_gate(&db, primo(), &pacing, sera + TimeDelta::hours(1))
+            .await
+            .unwrap();
+        assert_eq!(
+            gate,
+            Gate::Closed(Blocked::Wait {
+                until: "2026-03-16T02:00:00Z".parse().unwrap(),
+            }),
+            "dire mezzanotte manderebbe l'utente a sbattere contro il floor"
         );
     }
 

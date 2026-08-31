@@ -124,6 +124,18 @@ pub struct Question {
     /// dei kana, che attraversano il confine come `dakuten` e diventano «Voiced» di la'.
     /// Cosi' il core non si porta dentro la lingua dell'interfaccia.
     pub asks: Option<String>,
+    /// La porzione dello **stimolo** su cui verte la domanda, quando non e' tutto.
+    ///
+    /// Serve alla faccetta okurigana, dove lo stimolo e' `大きい` ma quello che si
+    /// chiede e' come si legge `大`: il `きい` e' stampato li' per dire **quale**
+    /// lettura di 大 vale, non per essere letto ad alta voce. Senza questo campo
+    /// l'interfaccia dovrebbe ricavare da sola dove finisce il kanji e comincia
+    /// l'okurigana, che e' sapere di dominio e non le appartiene.
+    ///
+    /// E' un **prefisso** di [`Prompt`], non un testo a se': chi lo mostra lo usa per
+    /// dividere in due lo stimolo, non per stamparlo un'altra volta. A `None` la
+    /// domanda verte su tutto quello che si vede, ed e' il caso di tutte le altre.
+    pub focus: Option<String>,
 }
 
 /// Cio' che l'utente ha prodotto: il testo digitato, o il valore dell'opzione scelta.

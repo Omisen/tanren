@@ -60,9 +60,13 @@ export type Blocked =
   /** Quello che c'e' gia' non regge abbastanza. E' il freno che conta. */
   | { reason: 'consolidate'; current: number; needed: number }
   /** Si e' introdotto troppo di recente. */
-  | { reason: 'too_soon'; until: string }
-  /** La quota di oggi e' finita. */
-  | { reason: 'daily_cap'; done: number; cap: number }
+  /**
+   * Bisogna aspettare, e `until` e' l'istante in cui si riapre.
+   *
+   * Un motivo solo per i due freni a tempo, il floor e la quota: danno lo stesso
+   * consiglio, e `until` e' il piu' lontano dei due che mordono.
+   */
+  | { reason: 'wait'; until: string }
   /** Non c'e' piu' niente di nuovo in questo livello. */
   | { reason: 'nothing_new' }
 
@@ -233,6 +237,15 @@ export interface Question {
    * succede per i gruppi dei kana.
    */
   asks: string | null
+  /**
+   * La porzione dello stimolo su cui verte la domanda, quando non e' tutto.
+   *
+   * E' un **prefisso** di `prompt.text`: su 大きい vale 大, perche' quello che si
+   * chiede e' come si legge il kanji e il きい e' li' a dire quale lettura vale. Si usa
+   * per dividere in due lo stimolo, non per stamparlo un'altra volta. A `null` la
+   * domanda verte su tutto quello che si vede.
+   */
+  focus: string | null
 }
 
 /** Una domanda aperta e la coda che resta. `question` a `null` vuol dire giro finito. */

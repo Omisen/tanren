@@ -50,6 +50,19 @@ export interface StudyProps {
   unit: string
   session: Session
   onHome: () => void
+  /**
+   * Se un giro finito si possa rifare da li'.
+   *
+   * Sui kana **si'**, ed e' il modello: un giro e' un allenamento a volonta' e
+   * ricominciare subito e' il punto. Sui kanji **no**, perche' ci sono gia' tre
+   * bottoni ortogonali fuori (Learning introduce, Review consolida via FSRS, Drill e'
+   * pratica libera) e rifare da dentro sarebbe un quarto canale che ne duplica uno.
+   * Chi vuole ripassare subito ha gia' il Drill, che per costruzione non tocca la
+   * stability.
+   */
+  repeatable?: boolean
+  /** Come si chiama l'uscita di fine giro, che cambia da materia a materia. */
+  exitLabel?: string
   /** La riga sopra lo stimolo, quando la domanda da sola non basta. */
   hint?: (question: Question) => string | null
   /** Come si presenta la risposta giusta dopo un errore. */
@@ -74,6 +87,8 @@ export function SessionScreen({
   unit,
   session,
   onHome,
+  repeatable = true,
+  exitLabel = 'Change scope',
   hint,
   reveal,
   remark,
@@ -111,6 +126,8 @@ export function SessionScreen({
             onNext={next}
             onRestart={restart}
             onHome={onHome}
+            repeatable={repeatable}
+            exitLabel={exitLabel}
           />
         }
       >
@@ -140,7 +157,11 @@ export function SessionScreen({
                     {hint(state.question)}
                   </p>
                 )}
-                <Stage prompt={state.question.prompt} accent={accent} />
+                <Stage
+                  prompt={state.question.prompt}
+                  focus={state.question.focus}
+                  accent={accent}
+                />
               </div>
 
               {/* Lo spazio dell'esito e' sempre occupato, anche quando non c'e'
@@ -187,6 +208,8 @@ function Actions({
   onNext,
   onRestart,
   onHome,
+  repeatable,
+  exitLabel,
 }: {
   state: SessionState
   tally: Tally
@@ -198,19 +221,28 @@ function Actions({
   onNext: () => void
   onRestart: () => void
   onHome: () => void
+  repeatable: boolean
+  exitLabel: string
 }) {
   if (state.phase === 'failed') {
     return <Button onClick={onRestart}>Try again</Button>
   }
 
   if (state.phase === 'done') {
+    // Dove il giro non si rifa' resta una sola uscita, ed e' quella che deve stare
+    // sotto il pollice: il riepilogo sopra si legge lo stesso, perche' e' quello che
+    // si toglie e' l'**azione** di ripetere, non il resoconto.
+    if (!repeatable) {
+      return <Button onClick={onHome}>{exitLabel}</Button>
+    }
+
     return (
       <div className="flex flex-col gap-2">
         <Button onClick={onRestart}>
           {tally.total > 0 ? `Redo the ${tally.total} ${unit}` : 'Redo the round'}
         </Button>
         <Button variant="quiet" onClick={onHome}>
-          Change scope
+          {exitLabel}
         </Button>
       </div>
     )
@@ -224,7 +256,7 @@ function Actions({
   if (format.mode === 'input') {
     // Una domanda a risposta libera senza il modo di normalizzarla non e' uno stato in
     // cui l'utente puo' finire: e' una schermata montata male.
-    if (!input) return <Button onClick={onHome}>Change scope</Button>
+    if (!input) return <Button onClick={onHome}>{exitLabel}</Button>
 
     return (
       <div className="flex flex-col gap-2">
@@ -497,8 +529,21 @@ const LATO = 'clamp(5.5rem,24vh,17rem)'
  */
 const LARGHEZZA_UTILE = 'calc(100vw - 4rem)'
 
-function Stage({ prompt, accent }: { prompt: Prompt; accent: string }) {
+function Stage({
+  prompt,
+  focus,
+  accent,
+}: {
+  prompt: Prompt
+  focus?: string | null
+  accent: string
+}) {
   const japanese = prompt.script === 'japanese'
+  // Il core manda un prefisso, e qui ci si fida fino a un punto: se non lo e' (dato
+  // cambiato sotto, materia che non usa il campo) si mostra lo stimolo tutto pieno,
+  // che e' il comportamento di sempre.
+  const letto = focus && prompt.text.startsWith(focus) ? focus : null
+  const contesto = letto ? prompt.text.slice(letto.length) : ''
   // Si contano i **glifi**, non le unita' di codice: `[...]` non spezza una coppia
   // surrogata a meta'.
   const glifi = [...prompt.text].length
@@ -518,7 +563,14 @@ function Stage({ prompt, accent }: { prompt: Prompt; accent: string }) {
         style={{ fontSize: corpo }}
         lang={japanese ? 'ja' : undefined}
       >
-        {prompt.text}
+        {letto ? (
+          <>
+            {letto}
+            <span className="text-stage-context">{contesto}</span>
+          </>
+        ) : (
+          prompt.text
+        )}
       </p>
     </div>
   )

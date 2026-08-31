@@ -50,6 +50,16 @@
   --color-paper: #f2f2f2; /* primario: lo si legge */
   --color-muted: #9e9c99; /* secondario: etichette, testo di servizio */
   --color-inactive: rgb(158 156 153 / 0.4); /* non attivo: scartato, segnaposto */
+  /* Sul blocco a tinta piena: la parte dello stimolo che e' **contesto** e non cio'
+     che si sta chiedendo. Su 大きい il きい serve a dire quale lettura di 大 vale, ma
+     non va letto ad alta voce, e l'attenuazione lo dice senza scriverlo.
+     E' l'unico posto dove l'opacita' fa gerarchia fra testi vivi invece che dire
+     «inattivo», e la ragione e' che li' non c'e' alternativa: sul blocco il testo e'
+     `paper`, e `muted` e' un grigio neutro che su una tinta piena stonerebbe.
+     Il valore e' **misurato sul blocco piu' debole**, quello dei kana: a 0,75 il
+     contrasto e' 3,15x contro i 3,00x richiesti al testo grande, e a 0,70 scende a
+     2,94x e non passa piu'. Sui kanji lo stesso valore fa 3,92x. */
+  --color-stage-context: rgb(242 242 242 / 0.75);
 
   /* --- Bordi ---
      Tenuti fuori dalla rampa del testo anche se derivano dallo stesso colore:

@@ -374,18 +374,25 @@ function blocked(gate: Gate): string | null {
       return `Consolidate what you have first: recall is at ${Math.round(
         gate.current * 100,
       )}%, and ${Math.round(gate.needed * 100)}% is the mark.`
-    case 'too_soon':
-      return `You just met new kanji. Come back ${when(gate.until)}.`
-    case 'daily_cap':
-      return `That is ${gate.done} new kanji today, which is the daily limit.`
+    case 'wait':
+      return `Next learning ${when(gate.until)}.`
     case 'nothing_new':
       return 'You have met every kanji in this level.'
   }
 }
 
-/** Fra quanto, detto in ore o minuti invece che con una data. */
+/**
+ * Fra quanto si riapre, in ore e **arrotondate per eccesso**.
+ *
+ * Per eccesso perche' i due errori non costano uguale: chi torna sull'ora annunciata e
+ * trova il bottone ancora spento ha ricevuto una promessa non mantenuta, mentre chi lo
+ * trova gia' acceso ha avuto una sorpresa buona. Quindi 3h50 si dice «~4h», mai «3h».
+ *
+ * E' un valore **statico**, calcolato quando la schermata si disegna: la granularita'
+ * e' l'ora, quindi un timer che scorre al secondo non direbbe niente di piu'.
+ */
 function when(iso: string): string {
-  const minutes = Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 60_000))
-  if (minutes < 60) return `in ${minutes} min`
-  return `in about ${Math.round(minutes / 60)} h`
+  const minutes = Math.max(0, (new Date(iso).getTime() - Date.now()) / 60_000)
+  const hours = Math.max(1, Math.ceil(minutes / 60))
+  return `in ~${hours}h`
 }

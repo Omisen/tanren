@@ -39,6 +39,21 @@ const ASKS_LABELS: Record<string, string> = {
   kun: 'kun reading',
 }
 
+/**
+ * La riga sopra lo stimolo.
+ *
+ * L'okurigana e' l'unica che nomina il kanji invece di dire una categoria, e serve:
+ * vista 大いに da sola non si capisce che si vuole la lettura di 大 e non quella della
+ * parola. Dirlo per esteso («scrivi la lettura del kanji escludendo i kana che
+ * seguono») spiegherebbe la meccanica invece del concetto, e la meccanica la mostra
+ * gia' l'attenuazione sul blocco.
+ */
+function hint(q: Question): string | null {
+  if (!q.asks) return null
+  if (q.asks === 'okurigana') return q.focus ? `reading of ${q.focus}` : 'reading'
+  return ASKS_LABELS[q.asks] ?? q.asks
+}
+
 export function KanjiStudyScreen() {
   const { kanji: scope, goTo } = useUi()
   const [introducing, setIntroducing] = useState<string[] | null>(null)
@@ -64,7 +79,11 @@ export function KanjiStudyScreen() {
       unit="questions"
       session={session}
       onHome={() => goTo('home')}
-      hint={(q) => (q.asks ? (ASKS_LABELS[q.asks] ?? q.asks) : null)}
+      // Finito il giro si torna al percorso e basta: rifarlo da qui duplicherebbe il
+      // Drill, che e' gia' li' fuori e per costruzione non tocca le scadenze.
+      repeatable={false}
+      exitLabel="Back to the path"
+      hint={hint}
       reveal={reveal}
       remark={remark}
       input={{ placeholder: 'Type the reading', normalize: normalizeReading }}

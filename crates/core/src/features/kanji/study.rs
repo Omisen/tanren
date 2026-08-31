@@ -419,7 +419,7 @@ mod tests {
         let dopo = now + pacing.floor;
         assert!(matches!(
             learning_gate(&db, primo(), &pacing, dopo).await.unwrap(),
-            Gate::Closed(Blocked::DailyCap { .. })
+            Gate::Closed(Blocked::Wait { .. })
         ));
         let plan = plan(&db, &scope(Mode::Learning), &pacing, dopo).await.unwrap();
         assert!(plan.tasks.is_empty());

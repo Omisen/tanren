@@ -32,6 +32,7 @@ fn una_domanda_a_scelta_multipla() {
             options: vec!["ka".into(), "ki".into()],
         },
         asks: None,
+        focus: None,
     };
 
     assert_eq!(
@@ -41,7 +42,8 @@ fn una_domanda_a_scelta_multipla() {
             "item": "kana:hiragana:か",
             "prompt": { "script": "japanese", "text": "か" },
             "format": { "mode": "choice", "options": ["ka", "ki"] },
-            "asks": null
+            "asks": null,
+            "focus": null
         })
     );
 }
@@ -54,6 +56,7 @@ fn una_domanda_a_input_libero() {
         prompt: Prompt::Latin("ka".into()),
         format: AnswerFormat::Input,
         asks: None,
+        focus: None,
     };
 
     assert_eq!(
@@ -63,7 +66,8 @@ fn una_domanda_a_input_libero() {
             "item": "kana:katakana:カ",
             "prompt": { "script": "latin", "text": "ka" },
             "format": { "mode": "input" },
-            "asks": null
+            "asks": null,
+            "focus": null
         })
     );
 }
@@ -82,6 +86,7 @@ fn una_domanda_che_precisa_cosa_chiede() {
             options: vec!["セイ".into(), "ジン".into()],
         },
         asks: Some("on".into()),
+        focus: None,
     };
 
     assert_eq!(
@@ -91,7 +96,37 @@ fn una_domanda_che_precisa_cosa_chiede() {
             "item": "kanji:first:on:生",
             "prompt": { "script": "japanese", "text": "生" },
             "format": { "mode": "choice", "options": ["セイ", "ジン"] },
-            "asks": "on"
+            "asks": "on",
+            "focus": null
+        })
+    );
+}
+
+/// La porzione su cui verte la domanda attraversa il confine come dato.
+///
+/// Lo stimolo e' la parola intera, ma quello che si chiede e' il pezzo scritto col
+/// kanji: senza `focus` l'interfaccia dovrebbe ricavare da sola dove finisce il kanji
+/// e comincia l'okurigana, cioe' portarsi dentro sapere di dominio.
+#[test]
+fn una_domanda_che_verte_su_una_porzione() {
+    let q = Question {
+        exercise_type: ExerciseTypeId::new("kanji.okurigana"),
+        item: ItemId::new("kanji:大きい"),
+        prompt: Prompt::Japanese("大きい".into()),
+        format: AnswerFormat::Input,
+        asks: Some("okurigana".into()),
+        focus: Some("大".into()),
+    };
+
+    assert_eq!(
+        serde_json::to_value(&q).unwrap(),
+        json!({
+            "exerciseType": "kanji.okurigana",
+            "item": "kanji:大きい",
+            "prompt": { "script": "japanese", "text": "大きい" },
+            "format": { "mode": "input" },
+            "asks": "okurigana",
+            "focus": "大"
         })
     );
 }
@@ -140,6 +175,7 @@ fn un_passo_della_sessione() {
                 options: vec!["ka".into()],
             },
             asks: None,
+            focus: None,
         }),
         queue: vec![
             Task::new(ItemId::new("kana:hiragana:か"), ExerciseTypeId::new("kana.recognition")),
@@ -216,9 +252,14 @@ fn la_porta_dice_perche_e_chiusa() {
         json!({ "state": "closed", "reason": "consolidate", "current": 0.5, "needed": 0.75 })
     );
 
+    // Un istante solo per tutti e due i freni a tempo: la schermata ne fa un conto
+    // alla rovescia e non ha bisogno di sapere quale dei due ha morso.
     assert_eq!(
-        serde_json::to_value(Gate::Closed(Blocked::DailyCap { done: 5, cap: 5 })).unwrap(),
-        json!({ "state": "closed", "reason": "daily_cap", "done": 5, "cap": 5 })
+        serde_json::to_value(Gate::Closed(Blocked::Wait {
+            until: "2026-03-16T02:00:00Z".parse().unwrap(),
+        }))
+        .unwrap(),
+        json!({ "state": "closed", "reason": "wait", "until": "2026-03-16T02:00:00Z" })
     );
 
     assert_eq!(
