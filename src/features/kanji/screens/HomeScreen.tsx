@@ -142,12 +142,22 @@ function ModeButton({
         {mode.label}
         {count(mode.value, overview)}
       </Button>
-      {/* La riga c'e' sempre, anche vuota, e tiene l'altezza di una riga.
-          Tornando da una sessione i dati non ci sono ancora, quindi qui compare
-          «Loading…» e un istante dopo sparisce: comparendo e sparendo spostava i tre
-          bottoni, e sono bottoni che si stanno per toccare, quindi non e' una questione
-          estetica ma il rischio di premere Drill al posto di Learn. */}
-      <p className="text-muted min-h-4 px-2 text-center text-xs">{reason}</p>
+      {/* Lo spazio del motivo e' sempre occupato, e la misura non e' un numero di
+          righe scelto a mano: e' il **messaggio piu' lungo che questo bottone possa
+          dire**, disegnato invisibile nella stessa cella. Cosi' l'altezza la decide
+          come quel testo va a capo alla larghezza vera dello schermo, quindi resta
+          giusta su un telefono stretto come su uno largo, e resta giusta anche se un
+          domani si riscrive una frase.
+          Serve perche' tornando da una sessione i dati non ci sono ancora: qui compare
+          «Loading…» e un istante dopo lascia il posto al motivo definitivo. Comparendo
+          e cambiando spostava i tre bottoni proprio mentre li si sta per toccare, e
+          premere Drill al posto di Learn non e' un difetto estetico. */}
+      <div className="grid px-2 text-center text-xs">
+        <p className="invisible col-start-1 row-start-1" aria-hidden="true">
+          {longest(mode.value)}
+        </p>
+        <p className="text-muted col-start-1 row-start-1">{reason}</p>
+      </div>
     </div>
   )
 }
@@ -167,14 +177,58 @@ function count(mode: StudyMode, overview?: Overview | null): string {
  * «Torna domani» non insegna niente. «Consolida quello che hai» e «torna fra tre ore»
  * sono due consigli diversi, e chi studia ha diritto di sapere quale dei due vale.
  */
+/**
+ * Tutto quello che un bottone spento puo' dire, scritto in un posto solo.
+ *
+ * Sta qui e non sparso fra le funzioni perche' serve due volte: per **mostrare** il
+ * motivo, e per **riservargli lo spazio** prima di conoscerlo. Due elenchi separati si
+ * sganciarebbero al primo ritocco a una frase, e lo spazio riservato smetterebbe di
+ * bastare senza che nessuno se ne accorga.
+ */
+const MESSAGES = {
+  loading: 'Loading…',
+  nothingDue: 'Nothing is due right now.',
+  nothingLearned: 'Nothing learned to practise yet.',
+  levelDone: 'You have met every kanji in this level.',
+  consolidate: (current: number, needed: number) =>
+    `Consolidate what you have first: recall is at ${current}%, and ${needed}% is the mark.`,
+  wait: (hours: number) => `Next learning in ~${hours}h.`,
+}
+
+/**
+ * Il messaggio piu' lungo che **questo** bottone possa mostrare.
+ *
+ * Per bottone e non uno per tutti: il motivo lungo, quello del consolidamento, puo'
+ * comparire solo sotto Learn, quindi riservare a tutti e tre lo spazio del piu' lungo
+ * lascerebbe due righe di vuoto sotto Review e Drill per sempre.
+ *
+ * Gli argomenti sono i casi peggiori: cento per cento occupa piu' di sessantadue, e
+ * ventiquattro ore piu' di quattro.
+ */
+function longest(mode: StudyMode): string {
+  const possibili =
+    mode === 'review'
+      ? [MESSAGES.loading, MESSAGES.nothingDue]
+      : mode === 'drill'
+        ? [MESSAGES.loading, MESSAGES.nothingLearned]
+        : [
+            MESSAGES.loading,
+            MESSAGES.levelDone,
+            MESSAGES.consolidate(100, 100),
+            MESSAGES.wait(24),
+          ]
+
+  return possibili.reduce((a, b) => (b.length > a.length ? b : a))
+}
+
 function why(mode: StudyMode, overview?: Overview | null): string | null {
-  if (!overview) return 'Loading…'
+  if (!overview) return MESSAGES.loading
 
   if (mode === 'review') {
-    return overview.available.due > 0 ? null : 'Nothing is due right now.'
+    return overview.available.due > 0 ? null : MESSAGES.nothingDue
   }
   if (mode === 'drill') {
-    return overview.available.practiced > 0 ? null : 'Nothing learned to practise yet.'
+    return overview.available.practiced > 0 ? null : MESSAGES.nothingLearned
   }
   return blocked(overview.available.learning)
 }
@@ -183,13 +237,14 @@ function blocked(gate: Gate): string | null {
   if (gate.state === 'open') return null
   switch (gate.reason) {
     case 'consolidate':
-      return `Consolidate what you have first: recall is at ${Math.round(
-        gate.current * 100,
-      )}%, and ${Math.round(gate.needed * 100)}% is the mark.`
+      return MESSAGES.consolidate(
+        Math.round(gate.current * 100),
+        Math.round(gate.needed * 100),
+      )
     case 'wait':
-      return `Next learning ${when(gate.until)}.`
+      return MESSAGES.wait(hoursUntil(gate.until))
     case 'nothing_new':
-      return 'You have met every kanji in this level.'
+      return MESSAGES.levelDone
   }
 }
 
@@ -203,8 +258,7 @@ function blocked(gate: Gate): string | null {
  * E' un valore **statico**, calcolato quando la schermata si disegna: la granularita'
  * e' l'ora, quindi un timer che scorre al secondo non direbbe niente di piu'.
  */
-function when(iso: string): string {
+function hoursUntil(iso: string): number {
   const minutes = Math.max(0, (new Date(iso).getTime() - Date.now()) / 60_000)
-  const hours = Math.max(1, Math.ceil(minutes / 60))
-  return `in ~${hours}h`
+  return Math.max(1, Math.ceil(minutes / 60))
 }
