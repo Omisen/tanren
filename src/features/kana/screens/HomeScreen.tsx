@@ -59,33 +59,43 @@ export function KanaHomeScreen({
   about: ReactNode
 }) {
   const { kana: scope, setSyllabary, setKanaMode, toggleGroup, goTo } = useUi()
-  // Il catalogo si porta dietro il sillabario a cui appartiene. Cosi' cambiando
-  // scelta il risultato vecchio smette di valere da solo, senza doverlo azzerare a
-  // mano dentro l'effetto e far ripartire un altro render.
-  const [loaded, setLoaded] = useState<{
-    syllabary: Syllabary
-    /** `null` se la richiesta e' fallita. */
-    sets: KanaSet[] | null
-  } | null>(null)
+  /**
+   * I due cataloghi, tenuti tutti e due.
+   *
+   * `undefined` vuol dire non ancora arrivato, `null` che la richiesta e' fallita: sono
+   * due cose diverse e la schermata le dice diversamente.
+   */
+  const [catalogues, setCatalogues] = useState<
+    Partial<Record<Syllabary, KanaSet[] | null>>
+  >({})
 
+  // **Si chiedono tutti e due all'apertura, una volta sola.**
+  //
+  // Prima si chiedeva quello del sillabario scelto a ogni cambio, e passare da
+  // hiragana a katakana lasciava un buco: le pastiglie sparivano, al loro posto
+  // restava un «Loading…» alto una riga, e la schermata si accartocciava e si riapriva.
+  // Il difetto era lo stesso della griglia dei kanji, ma qui c'e' un rimedio migliore
+  // del tenere il posto: i cataloghi sono **due**, sono tabelle statiche dentro il
+  // binario e non cambiano mai finche' l'app e' viva, quindi la cosa giusta non e'
+  // riempire meglio l'attesa, e' non avere nessuna attesa da riempire. Dopo l'apertura
+  // scambiare sillabario non chiede piu' niente a nessuno.
   useEffect(() => {
     let current = true
-    const syllabary = scope.syllabary
 
-    kanaCatalogue(syllabary)
-      .then((sets) => current && setLoaded({ syllabary, sets }))
-      .catch(() => current && setLoaded({ syllabary, sets: null }))
+    for (const { value } of SYLLABARIES) {
+      kanaCatalogue(value)
+        .then((sets) => current && setCatalogues((c) => ({ ...c, [value]: sets })))
+        .catch(() => current && setCatalogues((c) => ({ ...c, [value]: null })))
+    }
 
-    // Cambiando sillabario mentre la richiesta e' in volo, la risposta vecchia non
-    // deve sovrascrivere quella nuova.
     return () => {
       current = false
     }
-  }, [scope.syllabary])
+  }, [])
 
-  const fresh = loaded?.syllabary === scope.syllabary ? loaded : undefined
-  const sets = fresh?.sets ?? null
-  const failed = fresh?.sets === null
+  const entry = catalogues[scope.syllabary]
+  const sets = entry ?? null
+  const failed = entry === null
 
   // Si guarda cosa il **catalogo** offre e non cosa e' rimasto selezionato: i 外来音
   // esistono solo in katakana, quindi tornando all'hiragana quella scelta non ha piu'
