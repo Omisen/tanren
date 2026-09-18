@@ -1,5 +1,3 @@
-import { useState } from 'react'
-
 import { FlashcardsHomeScreen } from '@/features/flashcards/screens/HomeScreen'
 import { KanaHomeScreen } from '@/features/kana/screens/HomeScreen'
 import { KanaSessionScreen } from '@/features/kana/screens/SessionScreen'
@@ -9,90 +7,57 @@ import { KanjiStudyScreen } from '@/features/kanji/screens/SessionScreen'
 import { useUi } from '@/shared/store/ui'
 
 import { AboutScreen } from './AboutScreen'
-import { SettingsDrawer } from './SettingsDrawer'
+import { SettingsScreen } from './SettingsScreen'
 import { SubjectPicker } from './SubjectPicker'
 
 /**
  * La radice dell'app: sceglie quale schermata mostrare.
  *
  * Non c'e' un router. Le schermate sono poche, l'app non ha indirizzi da condividere
- * ne' cronologia del browser da rispettare, e la schermata corrente e' gia' stato
- * effimero dell'interfaccia: tenerla nello store basta e non aggiunge dipendenze.
+ * ne' cronologia del browser da rispettare, e dove ci si trova e' gia' stato effimero
+ * dell'interfaccia: tenerlo in Zustand basta e non aggiunge dipendenze.
  *
- * # Perche' la scelta della materia sta qui
+ * # Sezioni, non piu' un interruttore
  *
- * Perche' questo e' l'unico posto che le conosce tutte. Una feature non puo' nominarne
- * un'altra, quindi la schermata dei kana non potrebbe offrire di passare ai kanji: la
- * pastiglia la compone la radice e la passa giu' come nodo, e ogni materia la mette in
- * cima al proprio modulo di scelta.
+ * Kana, kanji e flashcard erano una scelta **dentro** la schermata iniziale, e le
+ * impostazioni erano un'icona nell'intestazione. Adesso sono quattro **sezioni**, cioe'
+ * quattro posti in cui si va: la radice guarda in quale si e' e monta quella.
+ *
+ * Dentro una sezione ci si muove con `screen`, e i valori non si sovrappongono perche'
+ * una sola sezione e' montata per volta: `session` e `levels` sono dei kana e dei
+ * kanji, `about` e' delle impostazioni.
+ *
+ * # Perche' la navigazione la compone la radice
+ *
+ * Perche' e' l'unico posto che conosce tutte le sezioni, e la regola di dipendenza
+ * vieta a una feature di nominarne un'altra: la schermata dei kana non potrebbe
+ * offrire di passare ai kanji. La radice la costruisce e la passa giu' **come nodo**,
+ * e ogni sezione la mette dove le serve.
  */
 export default function App() {
   const screen = useUi((s) => s.screen)
-  const subject = useUi((s) => s.subject)
-  const goTo = useUi((s) => s.goTo)
-  // Aperto o chiuso e' stato effimero come la schermata, ma non serve allo store:
-  // nessun altro deve saperlo, e chiudendo l'app va perso come si deve.
-  const [settings, setSettings] = useState(false)
+  const section = useUi((s) => s.section)
 
-  // Una materia alla volta, e per nome: le flashcard non hanno ancora un giro di
-  // studio, e un ternario le avrebbe mandate dentro quello dei kana.
-  if (screen === 'session' && subject === 'kana') return <KanaSessionScreen />
-  if (screen === 'session' && subject === 'kanji') return <KanjiStudyScreen />
+  // Finche' non c'e' la barra in fondo, questa e' la via per cambiare sezione, ed e'
+  // per questo che la ricevono tutte e quattro invece delle sole materie.
+  const sections = <SubjectPicker />
+
+  // I kana e i kanji hanno un giro di studio, che e' una schermata a se': ci si entra
+  // dalla loro home e se ne esce solo da li'.
+  if (screen === 'session' && section === 'kana') return <KanaSessionScreen />
+  if (screen === 'session' && section === 'kanji') return <KanjiStudyScreen />
 
   // I livelli sono solo dei kanji: e' il loro percorso, e i kana un percorso non ce
   // l'hanno.
-  if (screen === 'levels') return <KanjiLevelsScreen />
+  if (screen === 'levels' && section === 'kanji') return <KanjiLevelsScreen />
 
-  // Le fonti sono una cosa dell'app, non di una materia: la licenza dei dati obbliga
-  // ad attribuire dentro il mezzo in cui l'app viaggia, e qui e' l'unico posto che le
-  // conosce tutte.
-  if (screen === 'about') return <AboutScreen />
+  // Le fonti sono una cosa dell'app e non di una materia, perche' la licenza dei dati
+  // obbliga l'app: si raggiungono dalle impostazioni, che sono l'altra cosa che vale
+  // per tutte le sezioni.
+  if (screen === 'about' && section === 'settings') return <AboutScreen />
 
-  const subjects = <SubjectPicker />
-  const about = <SettingsButton onOpen={() => setSettings(true)} />
-  return (
-    <>
-      {subject === 'kana' && <KanaHomeScreen subjects={subjects} about={about} />}
-      {subject === 'kanji' && <KanjiHomeScreen subjects={subjects} about={about} />}
-      {subject === 'flashcards' && (
-        <FlashcardsHomeScreen subjects={subjects} about={about} />
-      )}
-
-      {settings && (
-        <SettingsDrawer
-          onClose={() => setSettings(false)}
-          onSources={() => {
-            setSettings(false)
-            goTo('about')
-          }}
-        />
-      )}
-    </>
-  )
-}
-
-/**
- * La via per le impostazioni, e da li' per le fonti.
- *
- * In cima e non nella fascia in fondo: quella e' della cosa che si fa decine di volte,
- * e questa si tocca di rado. Ma dev'esserci **in tutte e due le schermate iniziali**,
- * perche' l'obbligo di attribuzione non dipende da quale materia si sta guardando, e
- * ora anche perche' le impostazioni non sono di una materia sola.
- *
- * **Un bottone solo e non due.** Le fonti erano qui e adesso sono una riga dentro il
- * menu: mettere due icone in un'intestazione bassa, su un telefono, per una via che si
- * percorre una volta l'anno, costerebbe piu' spazio di quanto renda. La ⓘ diventa
- * quindi la rotella, e le fonti restano a un tocco di distanza in piu'.
- */
-function SettingsButton({ onOpen }: { onOpen: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label="Settings"
-      className="text-muted flex size-11 items-center justify-center text-lg active:opacity-60"
-    >
-      ⚙
-    </button>
-  )
+  if (section === 'kana') return <KanaHomeScreen sections={sections} />
+  if (section === 'kanji') return <KanjiHomeScreen sections={sections} />
+  if (section === 'flashcards') return <FlashcardsHomeScreen sections={sections} />
+  return <SettingsScreen sections={sections} />
 }

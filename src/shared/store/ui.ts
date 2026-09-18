@@ -32,22 +32,36 @@ import type {
 export type ScreenName = 'home' | 'session' | 'levels' | 'about'
 
 /**
- * Quale materia si sta guardando.
+ * In quale sezione dell'app si e'.
  *
- * Le flashcard sono la terza, e l'unica il cui contenuto lo scrive l'utente. Quale
- * mazzo si sta guardando **non** sta qui: e' uno sguardo dentro la materia, non una
- * scelta di materia, e vive nella schermata come il livello che si consulta.
+ * Sono le quattro destinazioni di primo livello. Le tre materie erano un interruttore
+ * **dentro** la schermata iniziale, e non lo sono piu': una sezione e' un posto in cui
+ * si va, non un'opzione che si sceglie da qualche altra parte. Le impostazioni stanno
+ * nell'elenco per la stessa ragione, e non perche' siano una materia: erano dietro
+ * un'icona in un'intestazione, cioe' in un posto che cambiava da schermata a schermata.
+ *
+ * Quale mazzo o quale livello si sta guardando **non** sta qui: sono sguardi dentro una
+ * sezione, e vivono nelle loro schermate.
  */
-export type Subject = 'kana' | 'kanji' | 'flashcards'
+export type Section = 'kana' | 'kanji' | 'flashcards' | 'settings'
 
 interface UiState {
   screen: ScreenName
-  subject: Subject
+  section: Section
   kana: KanaScope
   kanji: StudyScope
 
   goTo: (screen: ScreenName) => void
-  setSubject: (subject: Subject) => void
+  /**
+   * Cambia sezione, e riporta quella che si apre alla sua porta d'ingresso.
+   *
+   * **Cosa si conserva e cosa no**, ed e' una regola sola: si conserva quello che si e'
+   * **scelto**, cioe' il sillabario, le famiglie, la modalita' e il livello, che stanno
+   * qui accanto; non si conserva dove si era **guardato**, cioe' la griglia dei livelli
+   * o un mazzo aperto. E' la stessa distinzione che il progetto fa gia' per la vista
+   * dei livelli: una scelta e' una decisione, uno sguardo no.
+   */
+  goToSection: (section: Section) => void
 
   setSyllabary: (syllabary: Syllabary) => void
   setKanaMode: (mode: KanaMode) => void
@@ -77,12 +91,12 @@ function toggle<T>(list: T[], value: T): T[] {
 
 export const useUi = create<UiState>((set) => ({
   screen: 'home',
-  subject: 'kana',
+  section: 'kana',
   kana: initialKana,
   kanji: initialKanji,
 
   goTo: (screen) => set({ screen }),
-  setSubject: (subject) => set({ subject }),
+  goToSection: (section) => set({ section, screen: 'home' }),
 
   setSyllabary: (syllabary) => set((s) => ({ kana: { ...s.kana, syllabary } })),
   setKanaMode: (mode) => set((s) => ({ kana: { ...s.kana, mode } })),

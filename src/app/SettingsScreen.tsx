@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 import {
   setFlashcardAgain,
@@ -7,8 +7,9 @@ import {
   settings as loadSettings,
   type Settings,
 } from '@/shared/bridge'
-import { Drawer } from '@/shared/ui/Drawer'
 import { ExternalLink } from '@/shared/ui/ExternalLink'
+import { Screen } from '@/shared/ui/Screen'
+import { useUi } from '@/shared/store/ui'
 
 /** Dove vive il progetto, per chi vuole leggerlo o segnalare qualcosa. */
 const REPO = 'https://github.com/Omisen/tanren'
@@ -16,12 +17,24 @@ const REPO = 'https://github.com/Omisen/tanren'
 /**
  * Le impostazioni, e le vie secondarie dell'app.
  *
- * Sta nella radice e non in una feature per la stessa ragione della scelta della
- * materia: qui dentro convivono le preferenze di due materie diverse, le fonti (che sono di
- * tutta l'app, perche' la licenza obbliga l'app e non una materia) e il rimando
- * alla repository. Nessuna feature potrebbe tenerle insieme senza nominarne un'altra.
+ * Sta nella radice e non in una feature perche' qui dentro convivono le preferenze di
+ * due materie diverse, le fonti (che sono di tutta l'app, perche' la licenza obbliga
+ * l'app e non una materia) e il rimando alla repository. Nessuna feature potrebbe
+ * tenerle insieme senza nominarne un'altra.
+ *
+ * # Perche' e' una schermata e non piu' una tendina
+ *
+ * Perche' e' diventata una **destinazione**. La tendina entrava da destra, e quel
+ * movimento diceva una cosa vera finche' le impostazioni erano un altro posto in cui si
+ * andava **da dentro** una schermata, richiamate da un'icona nell'intestazione: un
+ * pannello che si apre sopra quello che stavi facendo, e da cui si torna indietro.
+ *
+ * Adesso non si torna indietro da nessuna parte: si passa a un'altra sezione, come si
+ * passa dai kana ai kanji. Un pannello che copre la sezione di prima, mentre la barra
+ * in fondo dice che sei in questa, racconterebbe due cose diverse nello stesso momento.
  */
-export function SettingsDrawer({ onClose, onSources }: { onClose: () => void; onSources: () => void }) {
+export function SettingsScreen({ sections }: { sections: ReactNode }) {
+  const goTo = useUi((s) => s.goTo)
   const [current, setCurrent] = useState<Settings | null>(null)
   const [failed, setFailed] = useState(false)
 
@@ -63,8 +76,10 @@ export function SettingsDrawer({ onClose, onSources }: { onClose: () => void; on
   }
 
   return (
-    <Drawer title="Settings" onClose={onClose}>
-      <div className="flex flex-col gap-7">
+    <Screen title="Settings">
+      <div className="flex flex-col gap-7 pt-2">
+        {sections}
+
         <section className="flex flex-col gap-2">
           <h3 className="text-muted text-xs font-medium tracking-[0.2em] uppercase">Kanji</h3>
 
@@ -137,11 +152,11 @@ export function SettingsDrawer({ onClose, onSources }: { onClose: () => void; on
         <section className="flex flex-col gap-2">
           <h3 className="text-muted text-xs font-medium tracking-[0.2em] uppercase">About</h3>
 
-          <Row onClick={onSources}>Sources and licences</Row>
+          <Row onClick={() => goTo('about')}>Sources and licences</Row>
           <Row href={REPO}>Source code on GitHub</Row>
         </section>
       </div>
-    </Drawer>
+    </Screen>
   )
 }
 

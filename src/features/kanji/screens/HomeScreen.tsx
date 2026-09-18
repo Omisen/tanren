@@ -51,12 +51,9 @@ const MODES: { value: StudyMode; label: string; caption: string }[] = [
 ]
 
 export function KanjiHomeScreen({
-  subjects,
-  about,
+  sections,
 }: {
-  subjects: ReactNode
-  /** La via per le fonti, messa dalla radice: e' cosa dell'app, non della materia. */
-  about: ReactNode
+  sections: ReactNode
 }) {
   const { kanji: scope, setLevel, study, goTo } = useUi()
   const [overview, setOverview] = useState<{ level: Level; data: Overview | null } | null>(null)
@@ -100,7 +97,6 @@ export function KanjiHomeScreen({
       textured
       title="Tanren"
       mark={<LogoMark />}
-      trailing={about}
       action={
         <div className="enter flex flex-col gap-2">
           {MODES.map((m) => (
@@ -110,7 +106,7 @@ export function KanjiHomeScreen({
       }
     >
       <div className="flex flex-col gap-7">
-        {subjects}
+        {sections}
 
         {/* Da qui in giu' cambia tutto passando all'altra materia, e la pastiglia
             sopra no: l'animazione parte da sotto di lei, cosi' il tocco che l'ha

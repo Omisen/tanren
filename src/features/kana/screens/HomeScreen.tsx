@@ -52,12 +52,9 @@ const GROUP_LABELS: Record<KanaGroup, { text: string; japanese?: boolean }> = {
  * con la regola di non incrocio fra feature non potrebbe nemmeno nominare i kanji.
  */
 export function KanaHomeScreen({
-  subjects,
-  about,
+  sections,
 }: {
-  subjects: ReactNode
-  /** La via per le fonti, messa dalla radice: e' cosa dell'app, non della materia. */
-  about: ReactNode
+  sections: ReactNode
 }) {
   const { kana: scope, setSyllabary, setKanaMode, toggleGroup, goTo } = useUi()
   /**
@@ -110,7 +107,6 @@ export function KanaHomeScreen({
       textured
       title="Tanren"
       mark={<LogoMark />}
-      trailing={about}
       action={
         <div className="enter">
           <Button disabled={chosen.length === 0} onClick={() => goTo('session')}>
@@ -120,7 +116,7 @@ export function KanaHomeScreen({
       }
     >
       <div className="flex flex-col gap-7">
-        {subjects}
+        {sections}
 
         {/* Da qui in giu' cambia tutto passando all'altra materia, e la pastiglia
             sopra no: vedi la nota gemella nella home dei kanji. */}
