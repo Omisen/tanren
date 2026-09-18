@@ -121,7 +121,7 @@ pub fn question(card: &Flashcard, direction: Direction) -> Question {
 pub fn grade(card: &Flashcard, direction: Direction, answer: &Answer) -> Verdict {
     let expected = direction.expected(card);
 
-    if text::normalize_input(answer.as_str()) == text::normalize_input(expected) {
+    if comparable(answer.as_str()) == comparable(expected) {
         Verdict::correct()
     } else {
         // Una sola risposta accettata: a differenza di un kanji, che ha piu' letture
@@ -130,6 +130,21 @@ pub fn grade(card: &Flashcard, direction: Direction, answer: &Answer) -> Verdict
             accepted: vec![expected.to_owned()],
         }
     }
+}
+
+/// La forma su cui si confronta.
+///
+/// NFKC, niente spazi, e **niente maiuscole**. Le maiuscole non sono una conoscenza da
+/// verificare: chi risponde «Cat» a una carta che dice «cat» ha ricordato il
+/// significato, e contarlo errore direbbe a FSRS che il ricordo e' debole quando il
+/// problema non c'era. E' lo stesso ragionamento per cui i kanji non fanno digitare il
+/// significato, cioe' che si vuole il senso e non l'ortografia.
+///
+/// Sul lato giapponese non cambia niente, perche' i kana e i kanji le maiuscole non le
+/// hanno: vale su tutti e due i lati perche' una regola sola e' piu' facile da
+/// spiegare di due, non perche' li' serva.
+fn comparable(text: &str) -> String {
+    text::normalize_input(text).to_lowercase()
 }
 
 #[cfg(test)]
@@ -214,6 +229,13 @@ mod tests {
             .is_correct()
         );
         assert!(grade(&c, Direction::JpToMeaning, &Answer::new("Irun every day")).is_correct());
+    }
+
+    #[test]
+    fn le_maiuscole_non_contano() {
+        let c = carta();
+        assert!(grade(&c, Direction::JpToMeaning, &Answer::new("Cat")).is_correct());
+        assert!(grade(&c, Direction::JpToMeaning, &Answer::new("CAT")).is_correct());
     }
 
     #[test]

@@ -17,7 +17,11 @@ import type {
   Deck,
   DeckSummary,
   Flashcard,
+  FlashcardAvailability,
+  FlashcardMode,
   FlashcardScope,
+  FlashcardSession,
+  Grade,
   Kanji,
   KanjiCell,
   LevelSummary,
@@ -259,27 +263,72 @@ export function deleteFlashcard(card: string): Promise<void> {
   return invoke('delete_flashcard', { card })
 }
 
-/** Comincia un giro su un mazzo: la coda mescolata e la prima domanda. */
-export function startFlashcardSession(scope: FlashcardScope): Promise<Step> {
+/** Cosa si troverebbe partendo adesso su questo mazzo, in questo verso. */
+export function flashcardAvailability(
+  scope: FlashcardScope,
+): Promise<FlashcardAvailability> {
+  return invoke('flashcard_availability', { scope })
+}
+
+/** Comincia un giro su un mazzo: la modalita', la coda mescolata e la prima domanda. */
+export function startFlashcardSession(scope: FlashcardScope): Promise<FlashcardSession> {
   return invoke('start_flashcard_session', { scope })
 }
 
-/**
- * Come continua il giro dopo una risposta.
- *
- * Non manda se la risposta era giusta, perche' qui un giro passa una volta sola su
- * ogni carta: far tornare quella sbagliata e' mestiere dei voti e delle scadenze.
- */
-export function nextFlashcardStep(scope: FlashcardScope, queue: Queue): Promise<Step> {
-  return invoke('next_flashcard_step', { scope, queue })
+/** Come continua il giro. Una carta sbagliata torna in coda poco piu' avanti. */
+export function nextFlashcardStep(
+  scope: FlashcardScope,
+  queue: Queue,
+  correct: boolean,
+): Promise<Step> {
+  return invoke('next_flashcard_step', { scope, queue, correct })
 }
 
-/** Corregge una risposta e la registra nello storico. */
-export function submitFlashcardAnswer(
+/**
+ * Corregge una risposta **senza registrare niente**.
+ *
+ * Il voto arriva dopo: prima si sa se si ha indovinato, e solo allora si puo' dire
+ * quanto e' costato. La conseguenza da sapere e' che una risposta lasciata a meta' non
+ * viene registrata.
+ */
+export function checkFlashcardAnswer(
   scope: FlashcardScope,
   item: string,
   answer: string,
+): Promise<Verdict> {
+  return invoke('check_flashcard_answer', { scope, item, answer })
+}
+
+/**
+ * Registra la risposta e, in Review, sposta la scadenza.
+ *
+ * `grade` e' quello che ha scelto chi ha indovinato. Su una risposta sbagliata vale
+ * `again` e lo decide il core: quello che si manda da qui viene ignorato.
+ */
+export function submitFlashcardAnswer(
+  scope: FlashcardScope,
+  mode: FlashcardMode,
+  item: string,
+  answer: string,
+  grade: Grade | null,
   responseTimeMs: number | null,
 ): Promise<Verdict> {
-  return invoke('submit_flashcard_answer', { scope, item, answer, responseTimeMs })
+  return invoke('submit_flashcard_answer', {
+    scope,
+    mode,
+    item,
+    answer,
+    grade,
+    responseTimeMs,
+  })
+}
+
+/** Cambia dopo quanti minuti torna una flashcard sbagliata. */
+export function setFlashcardAgain(value: number): Promise<void> {
+  return invoke('set_flashcard_again', { value })
+}
+
+/** Cambia dopo quanti minuti torna una flashcard nuova appena indovinata. */
+export function setFlashcardGood(value: number): Promise<void> {
+  return invoke('set_flashcard_good', { value })
 }

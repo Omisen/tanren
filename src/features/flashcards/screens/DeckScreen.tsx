@@ -4,11 +4,13 @@ import {
   createFlashcard,
   deleteFlashcard,
   deleteFlashcardDeck,
+  flashcardAvailability,
   flashcardCards,
   renameFlashcardDeck,
   updateFlashcard,
   type Deck,
   type Flashcard,
+  type FlashcardAvailability,
   type FlashcardDirection,
 } from '@/shared/bridge'
 import { Button } from '@/shared/ui/Button'
@@ -57,6 +59,9 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
   const [name, setName] = useState(deck.name)
   // `null` vuol dire «non ancora arrivate», che non e' la stessa cosa di «nessuna».
   const [cards, setCards] = useState<Flashcard[] | null>(null)
+  // Cosa si troverebbe partendo adesso. Cambia col verso, perche' le due direzioni
+  // sono due carte di studio con due scadenze.
+  const [available, setAvailable] = useState<FlashcardAvailability | null>(null)
   const [failed, setFailed] = useState(false)
 
   // Un pannello alla volta: sono modali, e due aperti insieme non avrebbero senso.
@@ -74,9 +79,16 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
     flashcardCards(deck.id)
       .then(setCards)
       .catch(() => setFailed(true))
-  }, [deck.id])
+    flashcardAvailability({ deck: deck.id, direction })
+      .then(setAvailable)
+      .catch(() => setFailed(true))
+  }, [deck.id, direction])
 
-  useEffect(load, [load])
+  // Si ricarica anche tornando da un giro, perche' li' dentro le scadenze si sono
+  // mosse e quello che si e' letto entrando non vale piu'.
+  useEffect(() => {
+    if (!studying) load()
+  }, [load, studying])
 
   const save = async (japanese: string, meaning: string) => {
     if (editing === 'new') await createFlashcard(deck.id, japanese, meaning)
@@ -106,8 +118,6 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
     )
   }
 
-  const total = cards?.length ?? 0
-
   return (
     <>
       <Screen
@@ -136,8 +146,11 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
                 </Chip>
               ))}
             </div>
-            <Button onClick={() => setStudying(true)} disabled={total === 0}>
-              {total === 0 ? 'Start' : `Start with ${total} ${total === 1 ? 'card' : 'cards'}`}
+            <Button
+              onClick={() => setStudying(true)}
+              disabled={!available || available.total === 0}
+            >
+              {start(available)}
             </Button>
           </div>
         }
@@ -238,6 +251,21 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
       )}
     </>
   )
+}
+
+/**
+ * Cosa dice il tasto di avvio.
+ *
+ * **Ripassare tre carte e rifare tutto il mazzo sono due cose diverse**, e chi studia
+ * ha diritto di saperlo prima di premere, non dopo. Quale delle due sia lo decide il
+ * core guardando cosa e' dovuto: qui si legge e basta.
+ */
+function start(available: FlashcardAvailability | null): string {
+  if (!available || available.total === 0) return 'Start'
+
+  const quante = available.due > 0 ? available.due : available.total
+  const carte = quante === 1 ? 'card' : 'cards'
+  return available.due > 0 ? `Review ${quante} ${carte}` : `Practice ${quante} ${carte}`
 }
 
 /** Il pannello con cui si cambia nome a un mazzo. */

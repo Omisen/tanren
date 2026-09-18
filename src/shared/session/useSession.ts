@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { Queue, Question, Step, Verdict } from '@/shared/bridge'
+import type { Grade, Queue, Question, Step, Verdict } from '@/shared/bridge'
 
 /**
  * Il giro di una sessione, visto dall'interfaccia.
@@ -34,7 +34,13 @@ import type { Queue, Question, Step, Verdict } from '@/shared/bridge'
  */
 export interface SessionApi<S> {
   start: (scope: S) => Promise<Step>
-  next: (scope: S, queue: Queue, correct: boolean) => Promise<Step>
+  /**
+   * Come continua il giro.
+   *
+   * `grade` c'e' solo dove l'esito non basta e il voto lo da' chi studia, cioe' sulle
+   * flashcard: le altre materie lo ignorano, e per loro questa firma non e' cambiata.
+   */
+  next: (scope: S, queue: Queue, correct: boolean, grade?: Grade) => Promise<Step>
   /**
    * Manda la risposta.
    *
@@ -94,8 +100,12 @@ export interface Session {
   dirty: boolean
   /** Manda la risposta scelta. Ignorata se non c'e' una domanda aperta. */
   answer: (value: string) => void
-  /** Passa alla domanda successiva. Ignorata se non si e' appena risposto. */
-  next: () => void
+  /**
+   * Passa alla domanda successiva. Ignorata se non si e' appena risposto.
+   *
+   * Il voto si passa dove lo sceglie chi studia; dove non si sceglie resta vuoto.
+   */
+  next: (grade?: Grade) => void
   /** Ricomincia: un piano nuovo sullo stesso ambito, conteggio azzerato. */
   restart: () => void
 }
@@ -225,26 +235,29 @@ export function useSession<S>(scope: S, api: SessionApi<S>): Session {
     [scope, api, mark, setState],
   )
 
-  const next = useCallback(() => {
-    const now = current.current
-    if (now.phase !== 'answered' || pending.current) return
+  const next = useCallback(
+    (grade?: Grade) => {
+      const now = current.current
+      if (now.phase !== 'answered' || pending.current) return
 
-    const token = run.current
-    const correct = now.verdict.outcome === 'correct'
-    mark(true)
+      const token = run.current
+      const correct = now.verdict.outcome === 'correct'
+      mark(true)
 
-    api.next(scope, queue.current, correct)
-      .then((step) => {
-        if (run.current !== token) return
-        install(step)
-      })
-      .catch(() => {
-        if (run.current === token) setState({ phase: 'failed' })
-      })
-      .finally(() => {
-        if (run.current === token) mark(false)
-      })
-  }, [scope, api, install, mark, setState])
+      api.next(scope, queue.current, correct, grade)
+        .then((step) => {
+          if (run.current !== token) return
+          install(step)
+        })
+        .catch(() => {
+          if (run.current === token) setState({ phase: 'failed' })
+        })
+        .finally(() => {
+          if (run.current === token) mark(false)
+        })
+    },
+    [scope, api, install, mark, setState],
+  )
 
   const restart = useCallback(() => {
     setState({ phase: 'loading' })

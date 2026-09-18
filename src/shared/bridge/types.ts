@@ -328,6 +328,14 @@ export interface Settings {
   dailyNew: number
   dailyNewMin: number
   dailyNewMax: number
+  /** Dopo quanti minuti torna una flashcard sbagliata. */
+  flashcardAgain: number
+  flashcardAgainMin: number
+  flashcardAgainMax: number
+  /** Dopo quanti minuti torna una flashcard nuova appena indovinata. */
+  flashcardGood: number
+  flashcardGoodMin: number
+  flashcardGoodMax: number
 }
 
 /* --- Le flashcard: i mazzi e le carte che l'utente si scrive --------------- */
@@ -378,4 +386,39 @@ export type FlashcardDirection =
 export interface FlashcardScope {
   deck: string
   direction: FlashcardDirection
+}
+
+/**
+ * Com'e' andata una risposta, nella scala a quattro gradini di FSRS.
+ *
+ * `again` non si sceglie: e' quello che vale su una risposta sbagliata, e lo decide il
+ * core. Gli altri tre sono i bottoni fra cui sceglie chi ha indovinato, perche' il
+ * sistema non puo' sapere se e' costato fatica o niente.
+ */
+export type Grade = 'again' | 'hard' | 'good' | 'easy'
+
+/**
+ * In che modo si sta studiando un mazzo.
+ *
+ * Non si sceglie: lo decide il core guardando cosa e' dovuto. Sono la risposta a due
+ * domande diverse, e una sola delle due ha senso in un dato momento.
+ */
+export type FlashcardMode =
+  /** C'e' qualcosa di dovuto: si ripassa quello, e i voti spostano le scadenze. */
+  | 'review'
+  /** Non e' dovuto niente: si ripassa tutto il mazzo, e l'algoritmo non se ne accorge. */
+  | 'practice'
+
+/** Cosa si troverebbe partendo adesso. */
+export interface FlashcardAvailability {
+  /** Quante carte sono dovute adesso, mai viste comprese. */
+  due: number
+  /** Quante carte ha il mazzo in tutto. */
+  total: number
+}
+
+/** Un giro appena cominciato. La modalita' vale per tutto il giro. */
+export interface FlashcardSession {
+  mode: FlashcardMode
+  step: Step
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import type { Note, Prompt, Question, Verdict } from '@/shared/bridge'
+import type { Grade, Note, Prompt, Question, Verdict } from '@/shared/bridge'
 import { AnswerField } from '@/shared/ui/AnswerField'
 import { Button } from '@/shared/ui/Button'
 import { Confirm } from '@/shared/ui/Confirm'
@@ -74,6 +74,18 @@ export interface StudyProps {
    * la materia, che e' l'unica a sapere di cosa si sta parlando.
    */
   remark?: (note: Note) => string
+  /**
+   * I voti fra cui scegliere dopo una risposta **giusta**.
+   *
+   * Assente, una risposta giusta si guarda un istante e si prosegue da soli: e' il
+   * caso di kana e kanji, dove il voto lo deduce il core. Presente, il giro si ferma e
+   * aspetta, perche' **solo chi ha risposto sa se gli e' costato fatica**, e dedurlo
+   * dal tempo immetterebbe rumore nell'unico dato da cui l'algoritmo impara.
+   *
+   * Non c'e' niente da scegliere su una risposta sbagliata: li' il voto e' uno solo, e
+   * chiederlo sarebbe un tocco per una cosa gia' decisa.
+   */
+  grades?: { value: Grade; label: string }[]
   /** Serve solo alle modalita' in cui si scrive. */
   input?: {
     placeholder: string
@@ -96,6 +108,7 @@ export function SessionScreen({
   hint,
   reveal,
   remark,
+  grades,
   input,
 }: StudyProps) {
   const { state, tally, busy, dirty, answer, next, restart } = session
@@ -106,12 +119,14 @@ export function SessionScreen({
   // perche' la lettura corretta va letta.
   // Con la conferma di uscita aperta il giro sta fermo: il conteggio di cui parla la
   // domanda non deve cambiare mentre la si legge.
+  // Dove c'e' un voto da dare non si prosegue da soli: si sta aspettando un tocco che
+  // porta informazione, non il tempo di leggere.
   const correct = state.phase === 'answered' && state.verdict.outcome === 'correct'
   useEffect(() => {
-    if (!correct || leaving) return
-    const timer = setTimeout(next, ADVANCE_MS)
+    if (!correct || leaving || grades) return
+    const timer = setTimeout(() => next(), ADVANCE_MS)
     return () => clearTimeout(timer)
-  }, [correct, leaving, next])
+  }, [correct, leaving, grades, next])
 
   return (
     <>
@@ -125,6 +140,7 @@ export function SessionScreen({
             busy={busy}
             unit={unit}
             reveal={reveal}
+            grades={grades}
             input={input}
             onAnswer={answer}
             onNext={next}
@@ -207,6 +223,7 @@ function Actions({
   busy,
   unit,
   reveal,
+  grades,
   input,
   onAnswer,
   onNext,
@@ -220,9 +237,10 @@ function Actions({
   busy: boolean
   unit: string
   reveal: (question: Question) => Reveal
+  grades?: StudyProps['grades']
   input?: StudyProps['input']
   onAnswer: (value: string) => void
-  onNext: () => void
+  onNext: (grade?: Grade) => void
   onRestart: () => void
   onHome: () => void
   repeatable: boolean
@@ -279,13 +297,7 @@ function Actions({
           onSubmit={onAnswer}
         />
 
-        <div className="min-h-12">
-          {answered && (
-            <Button variant="quiet" disabled={busy} onClick={onNext}>
-              Next
-            </Button>
-          )}
-        </div>
+        <AfterAnswer answered={answered} busy={busy} grades={grades} onNext={onNext} />
       </div>
     )
   }
@@ -307,13 +319,51 @@ function Actions({
 
       {/* Il posto del bottone e' riservato anche mentre si sceglie, cosi' le opzioni
           non si spostano sotto il pollice nel momento in cui si risponde. */}
-      <div className="min-h-12">
-        {answered && (
-          <Button variant="quiet" disabled={busy} onClick={onNext}>
-            Next
-          </Button>
-        )}
-      </div>
+      <AfterAnswer answered={answered} busy={busy} grades={grades} onNext={onNext} />
+    </div>
+  )
+}
+
+/**
+ * Cosa si tocca dopo aver risposto.
+ *
+ * Il posto e' riservato anche prima di rispondere: quello che si sta toccando non deve
+ * spostarsi sotto il pollice nel momento in cui si risponde.
+ *
+ * Indovinando, dove c'e' un voto da dare compaiono i tre bottoni e il giro aspetta;
+ * altrove, e su una risposta sbagliata, c'e' «Next» e basta, perche' li' non c'e'
+ * niente da scegliere.
+ */
+function AfterAnswer({
+  answered,
+  busy,
+  grades,
+  onNext,
+}: {
+  answered: { verdict: Verdict } | null
+  busy: boolean
+  grades?: StudyProps['grades']
+  onNext: (grade?: Grade) => void
+}) {
+  const grading = answered && grades && answered.verdict.outcome === 'correct'
+
+  return (
+    <div className="min-h-12">
+      {grading && (
+        <div className="flex gap-2">
+          {grades.map((g) => (
+            <Button key={g.value} variant="quiet" disabled={busy} onClick={() => onNext(g.value)}>
+              {g.label}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {answered && !grading && (
+        <Button variant="quiet" disabled={busy} onClick={() => onNext()}>
+          Next
+        </Button>
+      )}
     </div>
   )
 }

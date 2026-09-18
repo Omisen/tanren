@@ -6,7 +6,8 @@
 
 use chrono::Utc;
 use tanren_core::features::flashcards::deck::{self as flashcards, Deck, DeckSummary, Flashcard};
-use tanren_core::features::flashcards::session as flashcard_session;
+use tanren_core::features::flashcards::session::{self as flashcard_session, Answered};
+use tanren_core::features::flashcards::steps as flashcard_steps;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, table};
 use tanren_core::features::kana::session as kana;
 use tanren_core::features::kanji::levels::{Kanji, Level, table as levels_table};
@@ -15,6 +16,7 @@ use tanren_core::features::kanji::study;
 use tanren_core::shared::credits::Credit;
 use tanren_core::shared::error::CoreError;
 use tanren_core::shared::session::{Step, Task};
+use tanren_core::shared::srs::Grade;
 use tanren_core::shared::exercise::{Answer, ItemId, Verdict};
 use tanren_core::shared::text;
 use tauri::State;
@@ -188,16 +190,31 @@ pub struct Settings {
     pub daily_new: usize,
     pub daily_new_min: usize,
     pub daily_new_max: usize,
+    /// Dopo quanti minuti torna una flashcard sbagliata.
+    pub flashcard_again: i64,
+    pub flashcard_again_min: i64,
+    pub flashcard_again_max: i64,
+    /// Dopo quanti minuti torna una flashcard nuova appena indovinata.
+    pub flashcard_good: i64,
+    pub flashcard_good_min: i64,
+    pub flashcard_good_max: i64,
 }
 
 /// Quante cose l'utente ha deciso, e fra quali limiti poteva.
 #[tauri::command]
 pub async fn settings(state: State<'_, AppState>) -> Result<Settings, CoreError> {
     let pacing = progress::pacing(&state.db).await?;
+    let steps = flashcard_steps::steps(&state.db).await?;
     Ok(Settings {
         daily_new: pacing.daily_new,
         daily_new_min: *progress::DAILY_NEW_RANGE.start(),
         daily_new_max: *progress::DAILY_NEW_RANGE.end(),
+        flashcard_again: steps.again,
+        flashcard_again_min: *flashcard_steps::AGAIN_RANGE.start(),
+        flashcard_again_max: *flashcard_steps::AGAIN_RANGE.end(),
+        flashcard_good: steps.good,
+        flashcard_good_min: *flashcard_steps::GOOD_RANGE.start(),
+        flashcard_good_max: *flashcard_steps::GOOD_RANGE.end(),
     })
 }
 
@@ -417,7 +434,28 @@ pub async fn delete_flashcard(
     flashcards::delete_card(&state.db, &card, Utc::now()).await
 }
 
-/// Comincia un giro su un mazzo: la coda mescolata e la prima domanda.
+/// Un giro appena cominciato.
+///
+/// La modalita' viene decisa dal core guardando cosa e' dovuto, e torna insieme al
+/// primo passo perche' **vale per tutto il giro**: chi studia se la conserva e la
+/// rimanda indietro a ogni risposta, come gia' fa con la coda.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlashcardSession {
+    mode: flashcard_session::Mode,
+    step: Step,
+}
+
+/// Cosa si troverebbe partendo adesso su questo mazzo, in questo verso.
+#[tauri::command]
+pub async fn flashcard_availability(
+    state: State<'_, AppState>,
+    scope: flashcard_session::Scope,
+) -> Result<flashcard_session::Available, CoreError> {
+    flashcard_session::available(&state.db, &scope, Utc::now()).await
+}
+
+/// Comincia un giro su un mazzo: la modalita', la coda mescolata e la prima domanda.
 ///
 /// Tre passi e non uno perche' due toccano il database e quello in mezzo no: leggere
 /// il mazzo e leggere la carta da chiedere sono attese, mescolare vuole il generatore
@@ -427,45 +465,102 @@ pub async fn delete_flashcard(
 pub async fn start_flashcard_session(
     state: State<'_, AppState>,
     scope: flashcard_session::Scope,
-) -> Result<Step, CoreError> {
-    let tasks = flashcard_session::plan(&state.db, &scope).await?;
+) -> Result<FlashcardSession, CoreError> {
+    let plan = flashcard_session::plan(&state.db, &scope, Utc::now()).await?;
     let queue = {
         let mut rng = rand::rng();
-        flashcard_session::shuffle(tasks, &mut rng)
+        flashcard_session::shuffle(plan.tasks, &mut rng)
     };
-    flashcard_session::open(&state.db, &scope, queue).await
+
+    Ok(FlashcardSession {
+        mode: plan.mode,
+        step: flashcard_session::open(&state.db, &scope, queue).await?,
+    })
 }
 
 /// Come continua il giro dopo una risposta.
 ///
-/// Non riceve se la risposta era giusta, e non e' una dimenticanza: qui un giro passa
-/// una volta sola su ogni carta, e far tornare quella sbagliata e' mestiere dei voti e
-/// delle scadenze, che ancora non ci sono.
+/// Una carta sbagliata torna in coda poco piu' avanti, che e' la regola condivisa con
+/// le altre materie.
 #[tauri::command]
 pub async fn next_flashcard_step(
     state: State<'_, AppState>,
     scope: flashcard_session::Scope,
     queue: Vec<Task>,
+    correct: bool,
 ) -> Result<Step, CoreError> {
-    flashcard_session::advance(&state.db, &scope, &queue).await
+    let queue = {
+        let mut rng = rand::rng();
+        flashcard_session::requeue(&queue, correct, &mut rng)
+    };
+    flashcard_session::open(&state.db, &scope, queue).await
 }
 
-/// Corregge una risposta e la registra nello storico.
+/// Corregge una risposta **senza registrare niente**.
+///
+/// Serve perche' il voto arriva dopo: prima si sa se si ha indovinato, e solo allora
+/// si puo' dire quanto e' costato.
 #[tauri::command]
-pub async fn submit_flashcard_answer(
+pub async fn check_flashcard_answer(
     state: State<'_, AppState>,
     scope: flashcard_session::Scope,
     item: String,
     answer: String,
-    response_time_ms: Option<i64>,
 ) -> Result<Verdict, CoreError> {
-    flashcard_session::submit(
+    flashcard_session::check(
         &state.db,
         &scope,
         &ItemId::new(item),
         &Answer::new(answer),
-        response_time_ms,
+    )
+    .await
+}
+
+/// Registra la risposta e, in Review, sposta la scadenza.
+///
+/// Il voto e' quello che ha scelto l'utente su una risposta giusta. Su una sbagliata
+/// non lo sceglie nessuno e quello che arriva viene ignorato: la regola sta nel core.
+#[tauri::command]
+pub async fn submit_flashcard_answer(
+    state: State<'_, AppState>,
+    scope: flashcard_session::Scope,
+    mode: flashcard_session::Mode,
+    item: String,
+    answer: String,
+    grade: Option<Grade>,
+    response_time_ms: Option<i64>,
+) -> Result<Verdict, CoreError> {
+    let steps = flashcard_steps::steps(&state.db).await?;
+    flashcard_session::submit(
+        &state.db,
+        &scope,
+        mode,
+        Answered {
+            item: &ItemId::new(item),
+            answer: &Answer::new(answer),
+            grade,
+            response_time_ms,
+        },
+        &steps,
         Utc::now(),
     )
     .await
+}
+
+/// Cambia dopo quanti minuti torna una flashcard sbagliata.
+#[tauri::command]
+pub async fn set_flashcard_again(
+    state: State<'_, AppState>,
+    value: i64,
+) -> Result<(), CoreError> {
+    flashcard_steps::set_again(&state.db, value, Utc::now()).await
+}
+
+/// Cambia dopo quanti minuti torna una flashcard nuova appena indovinata.
+#[tauri::command]
+pub async fn set_flashcard_good(
+    state: State<'_, AppState>,
+    value: i64,
+) -> Result<(), CoreError> {
+    flashcard_steps::set_good(&state.db, value, Utc::now()).await
 }

@@ -186,7 +186,13 @@ fn open(pool: &[Task], lookup: Lookup, queue: Vec<Task>, rng: &mut dyn Rng) -> R
 }
 
 /// Toglie dalla coda l'item appena chiesto, e lo rimette dentro se e' andato male.
-fn requeue(queue: &[Task], correct: bool, retry: Retry, rng: &mut dyn Rng) -> Vec<Task> {
+///
+/// E' pubblica perche' la regola del ritentativo serve anche a chi il giro se lo fa da
+/// se': le flashcard non passano da [`advance`], perche' il loro contenuto sta nel
+/// database e formulare la domanda vuole un'attesa, ma **il ritorno di una carta
+/// sbagliata e' la stessa cosa** e non va riscritta una seconda volta. Se ci fossero
+/// due copie di `RETRY_GAP` divergerebbero al primo ritocco.
+pub fn requeue(queue: &[Task], correct: bool, retry: Retry, rng: &mut dyn Rng) -> Vec<Task> {
     let mut rest = queue.to_vec();
     if rest.is_empty() {
         return rest;

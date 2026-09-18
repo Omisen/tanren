@@ -1,6 +1,7 @@
 import {
   normalizeInput,
   type FlashcardScope,
+  type Grade,
   type Question,
 } from '@/shared/bridge'
 import { SessionScreen, type Reveal } from '@/shared/session/SessionScreen'
@@ -22,6 +23,18 @@ const ASKS_LABELS: Record<string, string> = {
   japanese: 'Japanese',
 }
 
+/**
+ * I tre voti fra cui sceglie chi ha indovinato, dal piu' faticoso al piu' facile.
+ *
+ * `again` non c'e', ed e' la decisione: su una risposta sbagliata il voto e' uno solo,
+ * e chiederlo sarebbe un tocco per una cosa gia' decisa. Lo mette il core.
+ */
+const GRADES: { value: Grade; label: string }[] = [
+  { value: 'hard', label: 'Hard' },
+  { value: 'good', label: 'Good' },
+  { value: 'easy', label: 'Easy' },
+]
+
 export function FlashcardSessionScreen({
   deck,
   scope,
@@ -32,7 +45,7 @@ export function FlashcardSessionScreen({
   scope: FlashcardScope
   onBack: () => void
 }) {
-  const session = useFlashcardSession(scope)
+  const { session, mode } = useFlashcardSession(scope)
   const japanese = scope.direction === 'meaning_to_jp'
 
   return (
@@ -49,6 +62,9 @@ export function FlashcardSessionScreen({
       exitLabel="Back to the deck"
       hint={(q) => (q.asks ? ASKS_LABELS[q.asks] : null)}
       reveal={reveal}
+      // Si vota solo dove il voto conta. In un ripasso libero i tre bottoni non
+      // sposterebbero niente, e mostrarli sarebbe chiedere una cosa per buttarla via.
+      grades={mode === 'review' ? GRADES : undefined}
       input={{
         placeholder: japanese ? 'Type in Japanese' : 'Type the meaning',
         // L'anteprima sotto il campo esiste per un problema solo: un IME puo'
