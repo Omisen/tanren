@@ -19,37 +19,57 @@ export function TextInput({
   placeholder,
   japanese = false,
   autoFocus = false,
+  onRemove,
 }: {
-  label: string
+  /** Assente dove la casella e' una di un elenco, che l'etichetta ce l'ha gia' sopra. */
+  label?: string
   value: string
   onChange: (value: string) => void
   placeholder: string
   /** Se ci si scrive giapponese. */
   japanese?: boolean
   autoFocus?: boolean
+  /** Come si butta via questa casella. Assente dove non e' una di un elenco. */
+  onRemove?: () => void
 }) {
   const id = useId()
 
   return (
     <div className="flex flex-col gap-2">
-      <label
-        htmlFor={id}
-        className="text-muted text-xs font-medium tracking-[0.2em] uppercase"
-      >
-        {label}
-      </label>
-      <input
-        id={id}
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        lang={japanese ? 'ja' : undefined}
-        className={`border-hairline bg-ink text-paper placeholder:text-inactive focus:border-focus min-h-12 w-full rounded-xl border px-4 outline-none ${
-          japanese ? 'font-jp text-xl' : 'text-base'
-        }`}
-      />
+      {label && (
+        <label
+          htmlFor={id}
+          className="text-muted text-xs font-medium tracking-[0.2em] uppercase"
+        >
+          {label}
+        </label>
+      )}
+
+      <div className="flex items-center gap-2">
+        <input
+          id={id}
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoFocus={autoFocus}
+          lang={japanese ? 'ja' : undefined}
+          className={`border-hairline bg-ink text-paper placeholder:text-inactive focus:border-focus min-h-12 w-full rounded-xl border px-4 outline-none ${
+            japanese ? 'font-jp text-xl' : 'text-base'
+          }`}
+        />
+
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Remove this answer"
+            className="text-muted flex size-11 shrink-0 items-center justify-center text-lg active:opacity-60"
+          >
+            ✕
+          </button>
+        )}
+      </div>
     </div>
   )
 }

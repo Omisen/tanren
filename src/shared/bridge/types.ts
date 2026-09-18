@@ -311,6 +311,8 @@ export type CoreError =
   | { kind: 'scheduling'; message: string }
   /** Un campo che vuole del testo e' arrivato vuoto. `field` dice quale. */
   | { kind: 'empty_field'; field: string }
+  /** Sono arrivati piu' valori di quanti se ne accettino. */
+  | { kind: 'too_many_values'; field: string; max: number }
 
 /** Riconosce un errore del core tra quelli che possono arrivare da `invoke`. */
 export function isCoreError(error: unknown): error is CoreError {
@@ -336,6 +338,13 @@ export interface Settings {
   flashcardGood: number
   flashcardGoodMin: number
   flashcardGoodMax: number
+  /**
+   * Quanti significati si accettano oltre a quello principale.
+   *
+   * Non e' una preferenza: e' un limite di dominio, e viaggia insieme agli altri
+   * perche' il modulo di scrittura deve sapere quando smettere di offrire caselle.
+   */
+  flashcardMaxAlternatives: number
 }
 
 /* --- Le flashcard: i mazzi e le carte che l'utente si scrive --------------- */
@@ -361,12 +370,28 @@ export interface DeckSummary extends Deck {
  *
  * Il testo e' quello che l'utente ha scritto, non normalizzato: la normalizzazione
  * serve al confronto e si fa al momento del confronto.
+ *
+ * # Le risposte in piu' sono due campi, e servono a due domande diverse
+ *
+ * `alternatives` vale dove si risponde **col significato**: sono traduzioni.
+ * `furigana` vale dove si risponde **in giapponese**: e' la stessa parola scritta in
+ * kana. Non sono intercambiabili, e il core non li mescola.
  */
 export interface Flashcard {
   id: string
   deckId: string
   japanese: string
+  /** Il significato principale, quello che si mostra. */
   meaning: string
+  /** Gli altri significati accettati, nell'ordine in cui sono stati scritti. */
+  alternatives: string[]
+  /**
+   * La lettura dell'intera parola o frase, quando contiene kanji.
+   *
+   * La scrive chi crea la carta: la lettura di un kanji dipende dal contesto, e nessun
+   * derivatore automatico e' affidabile.
+   */
+  furigana: string | null
 }
 
 /**
@@ -421,4 +446,18 @@ export interface FlashcardAvailability {
 export interface FlashcardSession {
   mode: FlashcardMode
   step: Step
+}
+
+/** Com'e' andata una correzione, cioe' se c'e' qualcosa da chiedere. */
+export interface Edited {
+  /**
+   * Se il testo e' davvero cambiato, **dopo** la pulizia.
+   *
+   * Lo dice il core e non la schermata, perche' il confronto va fatto su quello che e'
+   * stato scritto davvero: una casella vuota, uno spazio ai bordi o un doppione non
+   * sono una modifica, e quella regola vive di la'.
+   */
+  changed: boolean
+  /** Se la carta ha dei progressi, cioe' se c'e' qualcosa da azzerare. */
+  studied: boolean
 }

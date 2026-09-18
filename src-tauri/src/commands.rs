@@ -5,7 +5,9 @@
 //! qualcosa, quella decisione e' finita nel posto sbagliato.
 
 use chrono::Utc;
-use tanren_core::features::flashcards::deck::{self as flashcards, Deck, DeckSummary, Flashcard};
+use tanren_core::features::flashcards::deck::{
+    self as flashcards, Content, Deck, DeckSummary, Flashcard,
+};
 use tanren_core::features::flashcards::session::{self as flashcard_session, Answered};
 use tanren_core::features::flashcards::steps as flashcard_steps;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, table};
@@ -198,6 +200,13 @@ pub struct Settings {
     pub flashcard_good: i64,
     pub flashcard_good_min: i64,
     pub flashcard_good_max: i64,
+    /// Quanti significati si accettano oltre a quello principale.
+    ///
+    /// Non e' una preferenza e non si muove: e' un **limite di dominio** che il modulo
+    /// di scrittura deve conoscere per sapere quando smettere di offrire caselle.
+    /// Viaggia di qua perche' questo e' gia' il comando che porta i limiti, e tenerne
+    /// una copia scritta nella schermata vorrebbe dire due verita' che si sganciano.
+    pub flashcard_max_alternatives: usize,
 }
 
 /// Quante cose l'utente ha deciso, e fra quali limiti poteva.
@@ -215,6 +224,7 @@ pub async fn settings(state: State<'_, AppState>) -> Result<Settings, CoreError>
         flashcard_good: steps.good,
         flashcard_good_min: *flashcard_steps::GOOD_RANGE.start(),
         flashcard_good_max: *flashcard_steps::GOOD_RANGE.end(),
+        flashcard_max_alternatives: flashcards::MAX_ALTERNATIVES,
     })
 }
 
@@ -404,34 +414,77 @@ pub async fn flashcard_cards(
 }
 
 /// Aggiunge una carta a un mazzo.
+///
+/// `alternatives` sono gli altri significati accettati e `furigana` la lettura: le
+/// caselle lasciate vuote non sono risposte e il core le scarta, quindi l'interfaccia
+/// puo' mandare quello che ha senza ripulirlo.
 #[tauri::command]
 pub async fn create_flashcard(
     state: State<'_, AppState>,
     deck: String,
     japanese: String,
     meaning: String,
+    alternatives: Vec<String>,
+    furigana: String,
 ) -> Result<Flashcard, CoreError> {
-    flashcards::create_card(&state.db, &deck, &japanese, &meaning, Utc::now()).await
+    flashcards::create_card(
+        &state.db,
+        &deck,
+        Content {
+            japanese: &japanese,
+            meaning: &meaning,
+            alternatives: &alternatives,
+            furigana: &furigana,
+        },
+        Utc::now(),
+    )
+    .await
+}
+
+/// Com'e' andata una correzione, cioe' se c'e' qualcosa da chiedere.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Edited {
+    /// Se il testo e' davvero cambiato, **dopo** la pulizia: una casella vuota, uno
+    /// spazio ai bordi o un doppione non sono una modifica.
+    changed: bool,
+    /// Se la carta ha dei progressi, cioe' se c'e' qualcosa da azzerare.
+    studied: bool,
 }
 
 /// Corregge una carta gia' scritta. **Non tocca lo stato di studio.**
 ///
-/// Torna `true` se quella carta ha dei progressi, cioe' se c'e' qualcosa da decidere:
-/// se la correzione ha invalidato quello che si era imparato lo sa **solo chi ha
-/// corretto**, e la domanda gliela fa l'interfaccia. Su una carta mai studiata non c'e'
-/// niente da azzerare e non c'e' niente da chiedere.
-///
-/// La risposta arriva insieme alla scrittura invece che con una domanda a parte perche'
-/// e' la scrittura stessa a sapere su cosa e' passata.
+/// Torna le due cose che decidono se chiedere cosa farne dei progressi: se la
+/// correzione ha invalidato quello che si era imparato lo sa **solo chi ha corretto**,
+/// e la domanda gliela fa l'interfaccia, ma solo dove c'e' davvero qualcosa da
+/// decidere. Le risposte arrivano insieme alla scrittura perche' e' la scrittura stessa
+/// a sapere su cosa e' passata.
 #[tauri::command]
 pub async fn update_flashcard(
     state: State<'_, AppState>,
     card: String,
     japanese: String,
     meaning: String,
-) -> Result<bool, CoreError> {
-    flashcards::update_card(&state.db, &card, &japanese, &meaning, Utc::now()).await?;
-    flashcards::studied(&state.db, &card).await
+    alternatives: Vec<String>,
+    furigana: String,
+) -> Result<Edited, CoreError> {
+    let changed = flashcards::update_card(
+        &state.db,
+        &card,
+        Content {
+            japanese: &japanese,
+            meaning: &meaning,
+            alternatives: &alternatives,
+            furigana: &furigana,
+        },
+        Utc::now(),
+    )
+    .await?;
+
+    Ok(Edited {
+        changed,
+        studied: flashcards::studied(&state.db, &card).await?,
+    })
 }
 
 /// Riporta i progressi di una carta a zero, in tutti e due i versi.

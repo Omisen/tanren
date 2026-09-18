@@ -381,6 +381,8 @@ fn un_mazzo_e_le_sue_carte() {
         deck_id: deck.id,
         japanese: "ねこ".into(),
         meaning: "cat".into(),
+        alternatives: vec!["kitten".into()],
+        furigana: None,
     };
     assert_eq!(
         serde_json::to_value(&card).unwrap(),
@@ -388,7 +390,9 @@ fn un_mazzo_e_le_sue_carte() {
             "id": "0195e0c2-0000-7000-8000-000000000000",
             "deckId": "0195e0c1-0000-7000-8000-000000000000",
             "japanese": "ねこ",
-            "meaning": "cat"
+            "meaning": "cat",
+            "alternatives": ["kitten"],
+            "furigana": null
         })
     );
 }

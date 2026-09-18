@@ -386,8 +386,12 @@ mod tests {
             deck::create_card(
                 db,
                 &deck.id,
-                &format!("かーど{i}"),
-                &format!("card {i}"),
+                deck::Content {
+                    japanese: &format!("かーど{i}"),
+                    meaning: &format!("card {i}"),
+                    alternatives: &[],
+                    furigana: "",
+                },
                 adesso(),
             )
             .await

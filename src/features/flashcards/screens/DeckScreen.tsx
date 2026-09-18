@@ -8,6 +8,7 @@ import {
   flashcardCards,
   renameFlashcardDeck,
   resetFlashcard,
+  settings as loadSettings,
   updateFlashcard,
   type Deck,
   type Flashcard,
@@ -72,6 +73,10 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
   const [removing, setRemoving] = useState<Flashcard | 'deck' | null>(null)
   // La carta appena corretta, se c'e' da decidere cosa farne dei progressi.
   const [resetting, setResetting] = useState<Flashcard | null>(null)
+  // Quante risposte in piu' si accettano. Lo dice il core, e finche' non l'ha detto il
+  // modulo non offre la casella in piu': meglio non offrirla che offrirne una che al
+  // salvataggio verrebbe rifiutata.
+  const [max, setMax] = useState(0)
 
   // Il verso e la sessione vivono qui, come il mazzo aperto: sono scelte che muoiono
   // uscendo, e nessun'altra schermata deve conoscerle.
@@ -85,6 +90,9 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
     flashcardAvailability({ deck: deck.id, direction })
       .then(setAvailable)
       .catch(() => setFailed(true))
+    loadSettings()
+      .then((s) => setMax(s.flashcardMaxAlternatives))
+      .catch(() => setFailed(true))
   }, [deck.id, direction])
 
   // Si ricarica anche tornando da un giro, perche' li' dentro le scadenze si sono
@@ -93,21 +101,23 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
     if (!studying) load()
   }, [load, studying])
 
-  const save = async (japanese: string, meaning: string) => {
+  const save = async (
+    japanese: string,
+    meaning: string,
+    alternatives: string[],
+    furigana: string,
+  ) => {
     if (editing === 'new') {
-      await createFlashcard(deck.id, japanese, meaning)
+      await createFlashcard(deck.id, japanese, meaning, alternatives, furigana)
     } else if (editing) {
       const card = editing
-      const studiata = await updateFlashcard(card.id, japanese, meaning)
+      const esito = await updateFlashcard(card.id, japanese, meaning, alternatives, furigana)
 
-      // Si chiede **solo dove c'e' davvero qualcosa da decidere**. Se il testo non e'
-      // cambiato non c'e' niente da invalidare: aprire la finestra vorrebbe dire far
-      // rispondere a una domanda che non esiste, ed e' cosi' che si impara a premere
-      // senza leggere. Il confronto e' sul testo ripulito, perche' e' quello che il
-      // core ha scritto.
-      const cambiata =
-        japanese.trim() !== card.japanese || meaning.trim() !== card.meaning
-      if (studiata && cambiata) setResetting(card)
+      // Si chiede **solo dove c'e' davvero qualcosa da decidere**: se il testo non e'
+      // cambiato non c'e' niente da invalidare, e su una carta mai studiata non c'e'
+      // niente da azzerare. Tutte e due le risposte le da' il core, perche' il
+      // confronto va fatto sul testo **ripulito** e quella pulizia vive di la'.
+      if (esito.changed && esito.studied) setResetting(card)
     }
 
     setEditing(null)
@@ -202,6 +212,7 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
       {editing && (
         <CardForm
           card={editing === 'new' ? null : editing}
+          max={max}
           onSave={save}
           onDelete={
             editing === 'new'

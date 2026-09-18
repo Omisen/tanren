@@ -16,6 +16,7 @@ import type {
   Credit,
   Deck,
   DeckSummary,
+  Edited,
   Flashcard,
   FlashcardAvailability,
   FlashcardMode,
@@ -235,13 +236,20 @@ export function flashcardCards(deck: string): Promise<Flashcard[]> {
   return invoke('flashcard_cards', { deck })
 }
 
-/** Aggiunge una carta a un mazzo. */
+/**
+ * Aggiunge una carta a un mazzo.
+ *
+ * Le caselle lasciate vuote non sono risposte e le scarta il core, quindi si manda
+ * quello che si ha senza ripulirlo prima.
+ */
 export function createFlashcard(
   deck: string,
   japanese: string,
   meaning: string,
+  alternatives: string[],
+  furigana: string,
 ): Promise<Flashcard> {
-  return invoke('create_flashcard', { deck, japanese, meaning })
+  return invoke('create_flashcard', { deck, japanese, meaning, alternatives, furigana })
 }
 
 /**
@@ -250,16 +258,19 @@ export function createFlashcard(
  * **Non tocca lo stato di studio**: se la correzione abbia invalidato quello che si e'
  * imparato lo sa solo chi ha corretto, quindi lo decide lui.
  *
- * Torna **vero se quella carta ha dei progressi**, cioe' se c'e' davvero qualcosa da
- * decidere. Su una carta mai studiata non c'e' niente da azzerare, e chiedere sarebbe
- * una domanda con una risposta sola.
+ * Torna le due cose che dicono se c'e' qualcosa da chiedere: se il testo e' davvero
+ * cambiato e se la carta ha dei progressi. Servono tutte e due, perche' su una carta
+ * mai studiata non c'e' niente da azzerare e su un salvataggio che non cambia niente
+ * non c'e' niente da invalidare.
  */
 export function updateFlashcard(
   card: string,
   japanese: string,
   meaning: string,
-): Promise<boolean> {
-  return invoke('update_flashcard', { card, japanese, meaning })
+  alternatives: string[],
+  furigana: string,
+): Promise<Edited> {
+  return invoke('update_flashcard', { card, japanese, meaning, alternatives, furigana })
 }
 
 /**

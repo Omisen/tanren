@@ -85,11 +85,25 @@ impl Direction {
         }
     }
 
-    /// La risposta attesa.
-    fn expected(self, card: &Flashcard) -> &str {
+    /// Tutte le risposte che questo verso accetta, la principale per prima.
+    ///
+    /// # Perche' ogni campo serve alla sua direzione, e a una sola
+    ///
+    /// Gli altri **significati** valgono dove si risponde col significato: sono
+    /// traduzioni, e una traduzione non e' una risposta a «scrivi questa parola in
+    /// giapponese». Il **furigana** vale dove si risponde in giapponese: e' la stessa
+    /// parola scritta in kana, e non e' una traduzione.
+    ///
+    /// Mescolarli farebbe passare «hello» a una domanda che chiede こんにちは, e non
+    /// sarebbe indulgenza: sarebbe non aver chiesto niente.
+    fn accepted(self, card: &Flashcard) -> Vec<&str> {
         match self {
-            Self::JpToMeaning => &card.meaning,
-            Self::MeaningToJp => &card.japanese,
+            Self::JpToMeaning => std::iter::once(card.meaning.as_str())
+                .chain(card.alternatives.iter().map(String::as_str))
+                .collect(),
+            Self::MeaningToJp => std::iter::once(card.japanese.as_str())
+                .chain(card.furigana.as_deref())
+                .collect(),
         }
     }
 }
@@ -118,16 +132,19 @@ pub fn question(card: &Flashcard, direction: Direction) -> Question {
 ///
 /// Gli spazi cadono su tutti e due i lati, quindi una frase scritta attaccata o
 /// separata per parole vale uguale.
+///
+/// Le risposte accettate possono essere piu' d'una, e quali siano lo decide il **verso**
+/// della domanda: vedi [`Direction::accepted`]. Sbagliando si mostrano tutte, perche'
+/// sapere che ce n'era anche un'altra fa parte della correzione.
 pub fn grade(card: &Flashcard, direction: Direction, answer: &Answer) -> Verdict {
-    let expected = direction.expected(card);
+    let accepted = direction.accepted(card);
+    let given = comparable(answer.as_str());
 
-    if comparable(answer.as_str()) == comparable(expected) {
+    if accepted.iter().any(|a| comparable(a) == given) {
         Verdict::correct()
     } else {
-        // Una sola risposta accettata: a differenza di un kanji, che ha piu' letture
-        // buone, una carta ha il testo che ci ha scritto chi l'ha fatta.
         Verdict::Incorrect {
-            accepted: vec![expected.to_owned()],
+            accepted: accepted.into_iter().map(str::to_owned).collect(),
         }
     }
 }
@@ -157,6 +174,21 @@ mod tests {
             deck_id: "deck".into(),
             japanese: "ねこ".into(),
             meaning: "cat".into(),
+            alternatives: Vec::new(),
+            furigana: None,
+        }
+    }
+
+    /// La carta dell'esempio: una parola in kanji, con la sua lettura e un secondo
+    /// significato.
+    fn nihongo() -> Flashcard {
+        Flashcard {
+            id: "abc".into(),
+            deck_id: "deck".into(),
+            japanese: "日本語".into(),
+            meaning: "japanese".into(),
+            alternatives: vec!["the japanese language".into()],
+            furigana: Some("にほんご".into()),
         }
     }
 
@@ -244,6 +276,74 @@ mod tests {
         // scelta una: non tocca all'app decidere che sono la stessa cosa.
         let c = carta();
         assert!(!grade(&c, Direction::MeaningToJp, &Answer::new("ネコ")).is_correct());
+    }
+
+    #[test]
+    fn scrivendo_il_giapponese_vale_anche_il_furigana() {
+        let c = nihongo();
+        for risposta in ["日本語", "にほんご", "日本 語", " にほんご "] {
+            assert!(
+                grade(&c, Direction::MeaningToJp, &Answer::new(risposta)).is_correct(),
+                "{risposta} doveva passare"
+            );
+        }
+
+        // Il furigana e' quello scritto sulla carta, non una lettura qualunque: la
+        // regola che il sillabario conta vale anche qui.
+        assert!(!grade(&c, Direction::MeaningToJp, &Answer::new("ニホンゴ")).is_correct());
+    }
+
+    #[test]
+    fn rispondendo_col_significato_valgono_tutti_i_significati() {
+        let c = nihongo();
+        for risposta in ["japanese", "Japanese", "the japanese language"] {
+            assert!(
+                grade(&c, Direction::JpToMeaning, &Answer::new(risposta)).is_correct(),
+                "{risposta} doveva passare"
+            );
+        }
+    }
+
+    #[test]
+    fn ogni_campo_serve_alla_sua_direzione_e_a_una_sola() {
+        let c = nihongo();
+
+        // Il furigana e' una parola giapponese, non una traduzione.
+        assert!(!grade(&c, Direction::JpToMeaning, &Answer::new("にほんご")).is_correct());
+
+        // Un significato non e' una risposta a «scrivi questa parola in giapponese».
+        assert!(
+            !grade(&c, Direction::MeaningToJp, &Answer::new("the japanese language"))
+                .is_correct()
+        );
+        assert!(!grade(&c, Direction::MeaningToJp, &Answer::new("japanese")).is_correct());
+    }
+
+    #[test]
+    fn senza_furigana_vale_solo_la_forma_scritta() {
+        let c = Flashcard {
+            furigana: None,
+            ..nihongo()
+        };
+        assert!(grade(&c, Direction::MeaningToJp, &Answer::new("日本語")).is_correct());
+        assert!(!grade(&c, Direction::MeaningToJp, &Answer::new("にほんご")).is_correct());
+    }
+
+    #[test]
+    fn sbagliando_si_vedono_tutte_quelle_che_andavano_bene() {
+        let c = nihongo();
+        assert_eq!(
+            grade(&c, Direction::MeaningToJp, &Answer::new("ちがう")),
+            Verdict::Incorrect {
+                accepted: vec!["日本語".into(), "にほんご".into()]
+            }
+        );
+        assert_eq!(
+            grade(&c, Direction::JpToMeaning, &Answer::new("wrong")),
+            Verdict::Incorrect {
+                accepted: vec!["japanese".into(), "the japanese language".into()]
+            }
+        );
     }
 
     #[test]

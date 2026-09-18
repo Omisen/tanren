@@ -42,6 +42,14 @@ pub enum CoreError {
     #[error("{field} non puo' essere vuoto")]
     EmptyField { field: String },
 
+    /// Sono arrivati piu' valori di quanti se ne accettino.
+    ///
+    /// Come [`CoreError::EmptyField`], e' una cosa che riguarda il contenuto scritto
+    /// dall'utente: l'interfaccia il tetto lo rispetta gia', e questo e' il posto in
+    /// cui il dominio lo fa valere comunque.
+    #[error("{field}: al massimo {max} valori")]
+    TooManyValues { field: String, max: usize },
+
     /// Una preferenza e' stata scritta con un valore che non sta nei limiti.
     ///
     /// Chi passa di qui e' un comando, non una persona: l'interfaccia offre solo i
