@@ -148,6 +148,22 @@
      separazione che conta di piu'. */
   --color-type-kanji: #4a52c8;
 
+  /* --- I tre gradini del voto ---
+     Non sono decorazione: su una riga che si tocca decine di volte di fila il colore
+     dice **quale dei tre** senza rileggere l'etichetta, ed e' la scala che chi ha
+     studiato con altre app riconosce gia'. Regola 1 della sezione 4.
+
+     Sono tutti e tre chiari, quindi il testo sopra e' `ink` come sul bottone primario:
+     misurato, da' 5,82x su Hard, 10,48x su Good e 7,33x su Easy, mentre `paper` si
+     fermerebbe a 2,85x, 1,58x e 2,26x, cioe' sotto la soglia su tutti e tre.
+
+     Hard sta a 0,085 dall'accento e Good a 0,134 da `ok`, che sono distanze strette;
+     non si scambiano perche' **non compaiono mai insieme**: i tre bottoni si vedono
+     solo dopo una risposta giusta, e l'accento parla solo di quelle sbagliate. */
+  --color-grade-hard: #ff5252;
+  --color-grade-good: #26de81;
+  --color-grade-easy: #45aaf2;
+
   /* Le flashcard scritte dall'utente. Misurato con lo stesso criterio degli altri
      due, e quello che decide e' sempre la **distanza minima**, cioe' da quale colore
      gia' in uso rischia di essere scambiato: `paper` sopra 6,33x (piu' dei 4,37x dei

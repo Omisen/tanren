@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react'
 
-type Variant = 'primary' | 'quiet' | 'danger'
+type Variant = 'primary' | 'quiet' | 'danger' | 'hard' | 'good' | 'easy'
 
 const base =
   'flex min-h-12 w-full items-center justify-center rounded-full px-5 text-base font-medium transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-40'
@@ -15,6 +15,11 @@ const variants: Record<Variant, string> = {
   // «attenzione», la stessa cosa che dice sull'opzione sbagliata. Nella versione
   // scurita, perche' sotto testo bianco quello pieno non passava il contrasto.
   danger: 'bg-accent-strong text-on-accent',
+  // I tre gradini del voto. Il testo e' `ink` come sul primario, perche' sono tutti e
+  // tre chiari: misurato, `paper` starebbe sotto la soglia su tutti e tre.
+  hard: 'bg-grade-hard text-ink',
+  good: 'bg-grade-good text-ink',
+  easy: 'bg-grade-easy text-ink',
 }
 
 /**

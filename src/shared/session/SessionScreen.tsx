@@ -26,6 +26,23 @@ import type { Session, SessionState, Tally } from './useSession'
  * non deve sapere cosa sia un kana o un kanji.
  */
 
+/**
+ * Di che colore e' ognuno dei tre gradini del voto.
+ *
+ * Sta qui e non nella materia perche' **la scala e' del dominio**, non di chi la usa:
+ * `Grade` vive in `shared/srs.rs`, e un domani anche i kanji potrebbero mostrarla. La
+ * mappa e' esplicita, e non i nomi usati direttamente come varianti, perche' sono due
+ * vocabolari diversi che oggi coincidono: i gradini di FSRS e gli stili di un bottone.
+ *
+ * `again` non c'e' perche' non e' mai un bottone: su una risposta sbagliata il voto e'
+ * uno solo e lo mette il core.
+ */
+const GRADE_VARIANTS: Partial<Record<Grade, 'hard' | 'good' | 'easy'>> = {
+  hard: 'hard',
+  good: 'good',
+  easy: 'easy',
+}
+
 /** Quanto resta visibile l'esito di una risposta giusta, prima di andare avanti. */
 const ADVANCE_MS = 700
 
@@ -352,7 +369,12 @@ function AfterAnswer({
       {grading && (
         <div className="flex gap-2">
           {grades.map((g) => (
-            <Button key={g.value} variant="quiet" disabled={busy} onClick={() => onNext(g.value)}>
+            <Button
+              key={g.value}
+              variant={GRADE_VARIANTS[g.value] ?? 'quiet'}
+              disabled={busy}
+              onClick={() => onNext(g.value)}
+            >
               {g.label}
             </Button>
           ))}
