@@ -52,9 +52,10 @@ const GROUP_LABELS: Record<KanaGroup, { text: string; japanese?: boolean }> = {
  * con la regola di non incrocio fra feature non potrebbe nemmeno nominare i kanji.
  */
 export function KanaHomeScreen({
-  sections,
+  tabs,
 }: {
-  sections: ReactNode
+  /** La barra delle sezioni, composta dalla radice. */
+  tabs: ReactNode
 }) {
   const { kana: scope, setSyllabary, setKanaMode, toggleGroup, goTo } = useUi()
   /**
@@ -107,6 +108,7 @@ export function KanaHomeScreen({
       textured
       title="Tanren"
       mark={<LogoMark />}
+      tabs={tabs}
       action={
         <div className="enter">
           <Button disabled={chosen.length === 0} onClick={() => goTo('session')}>
@@ -115,68 +117,65 @@ export function KanaHomeScreen({
         </div>
       }
     >
-      <div className="flex flex-col gap-7">
-        {sections}
+      {/* Cambiando sezione cambia tutto quello che sta qui dentro, e la barra in
+          fondo no: l'animazione parte da sopra di lei, cosi' il tocco che l'ha appena
+          premuta resta immediato invece di sbiadire insieme al resto. */}
+      <div className="enter flex flex-col gap-7">
+        <Field label="Syllabary">
+          <div className="grid grid-cols-2 gap-2">
+            {SYLLABARIES.map((s) => (
+              <Card
+                key={s.value}
+                pressed={scope.syllabary === s.value}
+                onClick={() => setSyllabary(s.value)}
+              >
+                <span className="font-jp text-2xl" lang="ja">
+                  {s.label}
+                </span>
+                <span className="text-muted text-xs">{s.caption}</span>
+              </Card>
+            ))}
+          </div>
+        </Field>
 
-        {/* Da qui in giu' cambia tutto passando all'altra materia, e la pastiglia
-            sopra no: vedi la nota gemella nella home dei kanji. */}
-        <div className="enter flex flex-col gap-7">
-          <Field label="Syllabary">
-            <div className="grid grid-cols-2 gap-2">
-              {SYLLABARIES.map((s) => (
-                <Card
-                  key={s.value}
-                  pressed={scope.syllabary === s.value}
-                  onClick={() => setSyllabary(s.value)}
+        <Field label="Families">
+          {failed && <Note>The catalogue is not reachable.</Note>}
+          {!failed && !sets && <Note>Loading…</Note>}
+          {sets && (
+            <div className="flex flex-wrap gap-2">
+              {sets.map((s) => (
+                <Chip
+                  key={s.group}
+                  pressed={scope.groups.includes(s.group)}
+                  onClick={() => toggleGroup(s.group)}
                 >
-                  <span className="font-jp text-2xl" lang="ja">
-                    {s.label}
-                  </span>
-                  <span className="text-muted text-xs">{s.caption}</span>
-                </Card>
-              ))}
-            </div>
-          </Field>
-
-          <Field label="Families">
-            {failed && <Note>The catalogue is not reachable.</Note>}
-            {!failed && !sets && <Note>Loading…</Note>}
-            {sets && (
-              <div className="flex flex-wrap gap-2">
-                {sets.map((s) => (
-                  <Chip
-                    key={s.group}
-                    pressed={scope.groups.includes(s.group)}
-                    onClick={() => toggleGroup(s.group)}
+                  <span
+                    className={GROUP_LABELS[s.group].japanese ? 'font-jp' : undefined}
+                    lang={GROUP_LABELS[s.group].japanese ? 'ja' : undefined}
                   >
-                    <span
-                      className={GROUP_LABELS[s.group].japanese ? 'font-jp' : undefined}
-                      lang={GROUP_LABELS[s.group].japanese ? 'ja' : undefined}
-                    >
-                      {GROUP_LABELS[s.group].text}
-                    </span>
-                    <span className="text-muted ml-2 text-xs">{s.size}</span>
-                  </Chip>
-                ))}
-              </div>
-            )}
-          </Field>
-
-          <Field label="Exercise">
-            <div className="grid grid-cols-2 gap-2">
-              {MODES.map((m) => (
-                <Card
-                  key={m.value}
-                  pressed={scope.mode === m.value}
-                  onClick={() => setKanaMode(m.value)}
-                >
-                  <span className="text-base">{m.label}</span>
-                  <span className="text-muted text-xs">{m.caption}</span>
-                </Card>
+                    {GROUP_LABELS[s.group].text}
+                  </span>
+                  <span className="text-muted ml-2 text-xs">{s.size}</span>
+                </Chip>
               ))}
             </div>
-          </Field>
-        </div>
+          )}
+        </Field>
+
+        <Field label="Exercise">
+          <div className="grid grid-cols-2 gap-2">
+            {MODES.map((m) => (
+              <Card
+                key={m.value}
+                pressed={scope.mode === m.value}
+                onClick={() => setKanaMode(m.value)}
+              >
+                <span className="text-base">{m.label}</span>
+                <span className="text-muted text-xs">{m.caption}</span>
+              </Card>
+            ))}
+          </div>
+        </Field>
       </div>
     </Screen>
   )

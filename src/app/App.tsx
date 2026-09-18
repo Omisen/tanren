@@ -8,7 +8,7 @@ import { useUi } from '@/shared/store/ui'
 
 import { AboutScreen } from './AboutScreen'
 import { SettingsScreen } from './SettingsScreen'
-import { SubjectPicker } from './SubjectPicker'
+import { TabBar } from './TabBar'
 
 /**
  * La radice dell'app: sceglie quale schermata mostrare.
@@ -38,9 +38,10 @@ export default function App() {
   const screen = useUi((s) => s.screen)
   const section = useUi((s) => s.section)
 
-  // Finche' non c'e' la barra in fondo, questa e' la via per cambiare sezione, ed e'
-  // per questo che la ricevono tutte e quattro invece delle sole materie.
-  const sections = <SubjectPicker />
+  // La barra la compone la radice e scende come nodo: e' l'unico posto che conosce
+  // tutte le sezioni, e la regola di dipendenza vieta a una feature di nominarne
+  // un'altra. Ogni sezione la riceve gia' fatta e la passa a `Screen`.
+  const tabs = <TabBar />
 
   // I kana e i kanji hanno un giro di studio, che e' una schermata a se': ci si entra
   // dalla loro home e se ne esce solo da li'.
@@ -56,8 +57,8 @@ export default function App() {
   // per tutte le sezioni.
   if (screen === 'about' && section === 'settings') return <AboutScreen />
 
-  if (section === 'kana') return <KanaHomeScreen sections={sections} />
-  if (section === 'kanji') return <KanjiHomeScreen sections={sections} />
-  if (section === 'flashcards') return <FlashcardsHomeScreen sections={sections} />
-  return <SettingsScreen sections={sections} />
+  if (section === 'kana') return <KanaHomeScreen tabs={tabs} />
+  if (section === 'kanji') return <KanjiHomeScreen tabs={tabs} />
+  if (section === 'flashcards') return <FlashcardsHomeScreen tabs={tabs} />
+  return <SettingsScreen tabs={tabs} />
 }

@@ -33,7 +33,7 @@ const REPO = 'https://github.com/Omisen/tanren'
  * passa dai kana ai kanji. Un pannello che copre la sezione di prima, mentre la barra
  * in fondo dice che sei in questa, racconterebbe due cose diverse nello stesso momento.
  */
-export function SettingsScreen({ sections }: { sections: ReactNode }) {
+export function SettingsScreen({ tabs }: { tabs: ReactNode }) {
   const goTo = useUi((s) => s.goTo)
   const [current, setCurrent] = useState<Settings | null>(null)
   const [failed, setFailed] = useState(false)
@@ -76,9 +76,8 @@ export function SettingsScreen({ sections }: { sections: ReactNode }) {
   }
 
   return (
-    <Screen title="Settings">
-      <div className="flex flex-col gap-7 pt-2">
-        {sections}
+    <Screen title="Settings" tabs={tabs}>
+      <div className="enter flex flex-col gap-7 pt-2">
 
         <section className="flex flex-col gap-2">
           <h3 className="text-muted text-xs font-medium tracking-[0.2em] uppercase">Kanji</h3>

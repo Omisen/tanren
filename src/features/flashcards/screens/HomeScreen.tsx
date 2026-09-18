@@ -34,9 +34,10 @@ import { DeckScreen } from './DeckScreen'
  * stesso numero.
  */
 export function FlashcardsHomeScreen({
-  sections,
+  tabs,
 }: {
-  sections: ReactNode
+  /** La barra delle sezioni, composta dalla radice. */
+  tabs: ReactNode
 }) {
   const [open, setOpen] = useState<Deck | null>(null)
   // `null` vuol dire «non ancora arrivati», che non e' la stessa cosa di «nessuno».
@@ -63,12 +64,11 @@ export function FlashcardsHomeScreen({
       <Screen
         title="Tanren"
         mark={<LogoMark />}
+        tabs={tabs}
         textured
         action={<Button onClick={() => setCreating(true)}>New deck</Button>}
       >
-        <div className="flex flex-col gap-6 pt-2">
-          {sections}
-
+        <div className="enter flex flex-col gap-6 pt-2">
           <Field label="Decks">
             <div className="flex flex-col gap-2">
               {failed && <Note>Could not read your decks.</Note>}

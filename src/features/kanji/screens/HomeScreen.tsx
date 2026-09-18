@@ -51,9 +51,10 @@ const MODES: { value: StudyMode; label: string; caption: string }[] = [
 ]
 
 export function KanjiHomeScreen({
-  sections,
+  tabs,
 }: {
-  sections: ReactNode
+  /** La barra delle sezioni, composta dalla radice. */
+  tabs: ReactNode
 }) {
   const { kanji: scope, setLevel, study, goTo } = useUi()
   const [overview, setOverview] = useState<{ level: Level; data: Overview | null } | null>(null)
@@ -97,6 +98,7 @@ export function KanjiHomeScreen({
       textured
       title="Tanren"
       mark={<LogoMark />}
+      tabs={tabs}
       action={
         <div className="enter flex flex-col gap-2">
           {MODES.map((m) => (
@@ -105,19 +107,15 @@ export function KanjiHomeScreen({
         </div>
       }
     >
-      <div className="flex flex-col gap-7">
-        {sections}
+      {/* Cambiando sezione cambia tutto quello che sta qui dentro, e la barra in
+          fondo no: l'animazione parte da sopra di lei, cosi' il tocco che l'ha appena
+          premuta resta immediato invece di sbiadire insieme al resto. */}
+      <div className="enter flex flex-col gap-7">
+        <LevelBlock level={scope.level} progress={fresh?.progress} />
 
-        {/* Da qui in giu' cambia tutto passando all'altra materia, e la pastiglia
-            sopra no: l'animazione parte da sotto di lei, cosi' il tocco che l'ha
-            appena premuta resta immediato invece di sbiadire insieme al resto. */}
-        <div className="enter flex flex-col gap-7">
-          <LevelBlock level={scope.level} progress={fresh?.progress} />
-
-          <Button variant="quiet" onClick={() => goTo('levels')}>
-            Explore the kanji
-          </Button>
-        </div>
+        <Button variant="quiet" onClick={() => goTo('levels')}>
+          Explore the kanji
+        </Button>
       </div>
     </Screen>
   )

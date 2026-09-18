@@ -15,6 +15,7 @@ export function Screen({
   trailing,
   mark,
   textured = false,
+  tabs,
   children,
 }: {
   title: string
@@ -40,6 +41,16 @@ export function Screen({
   mark?: ReactNode
   /** Il reticolo di sfondo. Solo dove non c'e' uno stimolo da proteggere. */
   textured?: boolean
+  /**
+   * La barra delle sezioni, sotto tutto il resto.
+   *
+   * Arriva come nodo e non come booleano per la stessa ragione del marchio: `Screen`
+   * non deve sapere che esistono delle sezioni. La mettono le **quattro schermate di
+   * sezione**, e nessun'altra: dove ci si e' arrivati con la freccia indietro la via
+   * d'uscita e' quella, e dentro un giro di studio la fascia in fondo serve gia' alle
+   * risposte, dove un tocco sbagliato butterebbe via il giro.
+   */
+  tabs?: ReactNode
   children: ReactNode
 }) {
   return (
@@ -67,6 +78,8 @@ export function Screen({
       <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{children}</main>
 
       {action && <footer className="px-4 pt-2 pb-4">{action}</footer>}
+
+      {tabs}
     </div>
   )
 }
