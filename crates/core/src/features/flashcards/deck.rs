@@ -21,7 +21,7 @@ use uuid::Uuid;
 
 use crate::shared::error::{CoreError, Result};
 use crate::shared::exercise::ItemId;
-use crate::shared::storage::Database;
+use crate::shared::storage::{CardFilter, Database};
 
 /// Un mazzo, come lo vede chi lo ha creato.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, FromRow)]
@@ -277,6 +277,43 @@ pub async fn update_card(
     found(esito.rows_affected(), card)
 }
 
+/// Se una carta ha dei progressi, cioe' se e' gia' stata studiata almeno una volta.
+///
+/// Serve a sapere se c'e' qualcosa da decidere dopo una correzione: su una carta mai
+/// studiata non c'e' nessuna memoria tarata su niente, quindi non c'e' niente da
+/// azzerare e chiedere sarebbe una domanda senza risposte diverse.
+pub async fn studied(db: &Database, card: &str) -> Result<bool> {
+    let carte = db
+        .cards(CardFilter {
+            items: Some(&[item_id(card).as_str().to_owned()]),
+            exercise_type: None,
+        })
+        .await?;
+
+    Ok(!carte.is_empty())
+}
+
+/// Riporta i progressi di una carta a zero, in **tutti e due i versi**.
+///
+/// Tutti e due perche' il contenuto e' uno solo: il lato giapponese e' lo stimolo in un
+/// verso e la risposta nell'altro, quindi correggerlo invalida entrambi. Nessun filtro
+/// sul tipo di esercizio, che e' anche il motivo per cui l'archivio offre il reset per
+/// elemento e non per carta.
+///
+/// **Non e' mai automatico.** Chi lo chiama lo fa perche' qualcuno ha scelto: solo chi
+/// ha corretto sa se la correzione ha invalidato la propria associazione mnemonica.
+pub async fn reset_card(db: &Database, card: &str, now: DateTime<Utc>) -> Result<()> {
+    if !exists(db, card).await? {
+        return Err(CoreError::UnknownItem {
+            id: card.to_owned(),
+        });
+    }
+
+    db.reset_cards(&[item_id(card).as_str().to_owned()], now)
+        .await?;
+    Ok(())
+}
+
 /// Elimina una carta, e con lei la sua pianificazione.
 ///
 /// Vedi [`delete_deck`] per cosa vuol dire eliminare, che qui vale identico su una
@@ -297,6 +334,11 @@ pub async fn delete_card(db: &Database, card: &str, now: DateTime<Utc>) -> Resul
     db.retire_cards(&[item_id(card).as_str().to_owned()], now)
         .await?;
     Ok(())
+}
+
+/// Se una carta esiste ancora.
+async fn exists(db: &Database, card: &str) -> Result<bool> {
+    Ok(self::card(db, card).await?.is_some())
 }
 
 /// Se un mazzo esiste ancora.
@@ -583,6 +625,112 @@ mod tests {
                 .await
                 .unwrap(),
             None
+        );
+    }
+
+    /// Studia una carta, cosi' che abbia dei progressi da azzerare.
+    async fn studia(db: &Database, card: &str, esercizio: &str) {
+        use crate::shared::srs::{Grade, MemoryState, Scheduled};
+        use crate::shared::storage::{NewAnswer, Scheduling};
+
+        db.record_answer(NewAnswer {
+            item_id: item_id(card).as_str(),
+            exercise_type: esercizio,
+            correct: true,
+            answer: "x",
+            answered_at: adesso(),
+            response_time_ms: None,
+            scheduling: Some(Scheduling {
+                grade: Grade::Good,
+                next: Scheduled {
+                    memory: MemoryState {
+                        stability: 12.0,
+                        difficulty: 5.0,
+                    },
+                    due_at: adesso() + chrono::TimeDelta::days(12),
+                    interval_days: 12.0,
+                },
+            }),
+        })
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn una_carta_mai_studiata_non_ha_niente_da_azzerare() {
+        let db = db().await;
+        let deck = mazzo(&db).await;
+        let card = create_card(&db, &deck.id, "ねこ", "cat", adesso())
+            .await
+            .unwrap();
+
+        assert!(!studied(&db, &card.id).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn azzerare_riporta_la_carta_a_mai_studiata() {
+        let db = db().await;
+        let deck = mazzo(&db).await;
+        let card = create_card(&db, &deck.id, "ねこ", "cat", adesso())
+            .await
+            .unwrap();
+        studia(&db, &card.id, "flashcard.jp_to_meaning").await;
+        assert!(studied(&db, &card.id).await.unwrap());
+
+        reset_card(&db, &card.id, adesso()).await.unwrap();
+
+        let carta = db
+            .card(item_id(&card.id).as_str(), "flashcard.jp_to_meaning")
+            .await
+            .unwrap()
+            .expect("la riga resta, azzerata");
+        assert_eq!(carta.due_at, None, "dovuta subito, come una mai vista");
+        assert_eq!(carta.last_reviewed_at, None);
+        assert_eq!(carta.reps, 0);
+        assert_eq!(carta.lapses, 0);
+        assert_eq!(carta.memory(), None, "FSRS riparte da zero");
+
+        // Lo storico invece resta: quelle risposte sono state date davvero.
+        let storico = db
+            .answers(item_id(&card.id).as_str(), "flashcard.jp_to_meaning")
+            .await
+            .unwrap();
+        assert_eq!(storico.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn azzerare_vale_per_tutti_e_due_i_versi() {
+        let db = db().await;
+        let deck = mazzo(&db).await;
+        let card = create_card(&db, &deck.id, "ねこ", "cat", adesso())
+            .await
+            .unwrap();
+        for verso in ["flashcard.jp_to_meaning", "flashcard.meaning_to_jp"] {
+            studia(&db, &card.id, verso).await;
+        }
+
+        reset_card(&db, &card.id, adesso()).await.unwrap();
+
+        // Il contenuto e' uno solo: il giapponese e' lo stimolo in un verso e la
+        // risposta nell'altro, quindi correggerlo invalida entrambi.
+        for verso in ["flashcard.jp_to_meaning", "flashcard.meaning_to_jp"] {
+            let carta = db
+                .card(item_id(&card.id).as_str(), verso)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(carta.memory(), None, "{verso} non e' stato azzerato");
+        }
+    }
+
+    #[tokio::test]
+    async fn azzerare_una_carta_che_non_esiste_non_passa_in_silenzio() {
+        let db = db().await;
+        assert_eq!(
+            reset_card(&db, "non-esiste", adesso()).await,
+            Err(CoreError::UnknownItem {
+                id: "non-esiste".into()
+            })
         );
     }
 

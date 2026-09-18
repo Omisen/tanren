@@ -77,6 +77,7 @@ pub fn run() {
             commands::create_flashcard,
             commands::update_flashcard,
             commands::delete_flashcard,
+            commands::reset_flashcard,
             commands::flashcard_availability,
             commands::start_flashcard_session,
             commands::next_flashcard_step,

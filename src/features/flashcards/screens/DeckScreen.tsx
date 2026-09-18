@@ -7,6 +7,7 @@ import {
   flashcardAvailability,
   flashcardCards,
   renameFlashcardDeck,
+  resetFlashcard,
   updateFlashcard,
   type Deck,
   type Flashcard,
@@ -69,6 +70,8 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
   const [options, setOptions] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [removing, setRemoving] = useState<Flashcard | 'deck' | null>(null)
+  // La carta appena corretta, se c'e' da decidere cosa farne dei progressi.
+  const [resetting, setResetting] = useState<Flashcard | null>(null)
 
   // Il verso e la sessione vivono qui, come il mazzo aperto: sono scelte che muoiono
   // uscendo, e nessun'altra schermata deve conoscerle.
@@ -91,8 +94,22 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
   }, [load, studying])
 
   const save = async (japanese: string, meaning: string) => {
-    if (editing === 'new') await createFlashcard(deck.id, japanese, meaning)
-    else if (editing) await updateFlashcard(editing.id, japanese, meaning)
+    if (editing === 'new') {
+      await createFlashcard(deck.id, japanese, meaning)
+    } else if (editing) {
+      const card = editing
+      const studiata = await updateFlashcard(card.id, japanese, meaning)
+
+      // Si chiede **solo dove c'e' davvero qualcosa da decidere**. Se il testo non e'
+      // cambiato non c'e' niente da invalidare: aprire la finestra vorrebbe dire far
+      // rispondere a una domanda che non esiste, ed e' cosi' che si impara a premere
+      // senza leggere. Il confronto e' sul testo ripulito, perche' e' quello che il
+      // core ha scritto.
+      const cambiata =
+        japanese.trim() !== card.japanese || meaning.trim() !== card.meaning
+      if (studiata && cambiata) setResetting(card)
+    }
+
     setEditing(null)
     load()
   }
@@ -234,6 +251,30 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
           }}
           onClose={() => setRenaming(false)}
         />
+      )}
+
+      {resetting && (
+        <Confirm
+          kind="choice"
+          title="You had already studied this card"
+          confirmLabel="Reset"
+          cancelLabel="Continue"
+          onConfirm={() => {
+            const card = resetting
+            setResetting(null)
+            resetFlashcard(card.id)
+              .then(load)
+              .catch(() => setFailed(true))
+          }}
+          // Chiudere senza scegliere tiene quello che c'e', perche' tenere e' l'assenza
+          // di un'azione: **il reset non e' mai automatico**, e non deve poterlo
+          // diventare per una finestra chiusa di fretta.
+          onCancel={() => setResetting(null)}
+        >
+          Reset if what you were learning was wrong: what you remember is built on the
+          mistake, and it has to be learned again. Continue if you only fixed a detail
+          and what you learned still holds. Only you can tell.
+        </Confirm>
       )}
 
       {removing && (

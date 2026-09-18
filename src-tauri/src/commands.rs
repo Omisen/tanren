@@ -415,14 +415,35 @@ pub async fn create_flashcard(
 }
 
 /// Corregge una carta gia' scritta. **Non tocca lo stato di studio.**
+///
+/// Torna `true` se quella carta ha dei progressi, cioe' se c'e' qualcosa da decidere:
+/// se la correzione ha invalidato quello che si era imparato lo sa **solo chi ha
+/// corretto**, e la domanda gliela fa l'interfaccia. Su una carta mai studiata non c'e'
+/// niente da azzerare e non c'e' niente da chiedere.
+///
+/// La risposta arriva insieme alla scrittura invece che con una domanda a parte perche'
+/// e' la scrittura stessa a sapere su cosa e' passata.
 #[tauri::command]
 pub async fn update_flashcard(
     state: State<'_, AppState>,
     card: String,
     japanese: String,
     meaning: String,
+) -> Result<bool, CoreError> {
+    flashcards::update_card(&state.db, &card, &japanese, &meaning, Utc::now()).await?;
+    flashcards::studied(&state.db, &card).await
+}
+
+/// Riporta i progressi di una carta a zero, in tutti e due i versi.
+///
+/// **Non succede mai da solo**: ci si arriva solo perche' qualcuno ha scelto di
+/// ricominciare da capo su quella carta.
+#[tauri::command]
+pub async fn reset_flashcard(
+    state: State<'_, AppState>,
+    card: String,
 ) -> Result<(), CoreError> {
-    flashcards::update_card(&state.db, &card, &japanese, &meaning, Utc::now()).await
+    flashcards::reset_card(&state.db, &card, Utc::now()).await
 }
 
 /// Elimina una carta, e con lei la sua pianificazione.

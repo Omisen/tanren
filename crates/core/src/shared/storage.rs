@@ -320,6 +320,40 @@ impl Database {
         Ok(query.build().execute(&self.pool).await?.rows_affected())
     }
 
+    /// Riporta le carte di studio indicate a **mai studiate**.
+    ///
+    /// Serve a chi cambia il contenuto di un elemento: se la risposta che si stava
+    /// imparando era sbagliata, quello che si ricorda e' tarato sull'errore, e i due
+    /// numeri di FSRS raccontano una storia che non vale piu'. Azzerarli e' l'unico
+    /// modo di ricominciare davvero, perche' `stability` e `difficulty` sono cio' da
+    /// cui il motore parte ogni volta.
+    ///
+    /// **Lo storico non si tocca.** `answers` e' in sola aggiunta e quelle risposte
+    /// sono state date davvero: quello che smette di valere e' la pianificazione, non
+    /// il fatto che si sia risposto.
+    ///
+    /// **`created_at` resta**, perche' dice quando l'elemento e' stato introdotto la
+    /// prima volta, che e' un'altra domanda rispetto a quanto lo si sa adesso.
+    pub async fn reset_cards(&self, item_ids: &[String], now: DateTime<Utc>) -> Result<u64> {
+        if item_ids.is_empty() {
+            return Ok(0);
+        }
+
+        let mut query = QueryBuilder::new(
+            "UPDATE cards SET due_at = NULL, last_reviewed_at = NULL, reps = 0, lapses = 0,
+                              stability = NULL, difficulty = NULL, updated_at = ",
+        );
+        query.push_bind(now);
+        query.push(", rev = rev + 1 WHERE deleted_at IS NULL AND item_id IN (");
+        let mut elenco = query.separated(", ");
+        for item in item_ids {
+            elenco.push_bind(item.as_str());
+        }
+        query.push(")");
+
+        Ok(query.build().execute(&self.pool).await?.rows_affected())
+    }
+
     /// Tutte le carte che rientrano nel filtro, studiate o no.
     ///
     /// Serve a misurare a che punto e' un insieme di item: quante sono gia' nate,

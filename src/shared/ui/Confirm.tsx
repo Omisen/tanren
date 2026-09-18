@@ -19,6 +19,7 @@ export function Confirm({
   cancelLabel,
   onConfirm,
   onCancel,
+  kind = 'warning',
 }: {
   title: string
   /** Cosa succede se si conferma. */
@@ -27,6 +28,8 @@ export function Confirm({
   cancelLabel: string
   onConfirm: () => void
   onCancel: () => void
+  /** Se si sta avvisando di qualcosa, o si stanno offrendo due strade pari. */
+  kind?: 'warning' | 'choice'
 }) {
   const titleId = useId()
 
@@ -51,14 +54,31 @@ export function Confirm({
         </h2>
         <p className="text-muted text-sm">{children}</p>
 
-        <div className="mt-4 flex flex-col gap-2">
-          <Button variant="danger" onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-          <Button variant="quiet" autoFocus onClick={onCancel}>
-            {cancelLabel}
-          </Button>
-        </div>
+        {kind === 'choice' ? (
+          /* Il bordo c'e' solo qui, e serve. Il bottone neutro ha il colore della
+             superficie sollevata, che e' anche quella del pannello: nell'avviso non e'
+             un problema, perche' l'accento sopra dice gia' che quelle due cose sono
+             bottoni, ma due neutri affiancati e basta si leggerebbero come due scritte.
+             Dare l'accento a una delle due direbbe che una avvisa di qualcosa, che e'
+             proprio cio' che qui non vale. */
+          <div className="mt-4 flex gap-2">
+            <Button variant="quiet" className="border-hairline border" onClick={onConfirm}>
+              {confirmLabel}
+            </Button>
+            <Button variant="quiet" className="border-hairline border" onClick={onCancel}>
+              {cancelLabel}
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-col gap-2">
+            <Button variant="danger" onClick={onConfirm}>
+              {confirmLabel}
+            </Button>
+            <Button variant="quiet" autoFocus onClick={onCancel}>
+              {cancelLabel}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )
