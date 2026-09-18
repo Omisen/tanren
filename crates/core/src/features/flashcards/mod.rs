@@ -6,5 +6,9 @@
 //!
 //! La conseguenza pratica e' che questa materia non ha un modulo `data`: ha [`deck`],
 //! che e' la raccolta di quello che l'utente ha scritto e cosa se ne puo' fare.
+//! [`exercise`] sa in che verso si puo' chiedere una carta, [`session`] fa girare un
+//! giro di studio su un mazzo.
 
 pub mod deck;
+pub mod exercise;
+pub mod session;

@@ -186,6 +186,24 @@ pub async fn cards(db: &Database, deck: &str) -> Result<Vec<Flashcard>> {
     Ok(cards)
 }
 
+/// Una carta sola, se esiste ancora.
+///
+/// Serve al giro di studio, che si porta dietro i soli identificatori e va a prendere
+/// il testo di quella che sta per chiedere. `None` non e' un errore: una carta puo'
+/// essere stata cancellata mentre la coda era gia' in mano all'interfaccia.
+pub async fn card(db: &Database, id: &str) -> Result<Option<Flashcard>> {
+    let card = sqlx::query_as::<_, Flashcard>(
+        "SELECT id, deck_id, japanese, meaning
+         FROM flashcards
+         WHERE id = ? AND deleted_at IS NULL",
+    )
+    .bind(id)
+    .fetch_optional(db.pool())
+    .await?;
+
+    Ok(card)
+}
+
 /// Aggiunge una carta a un mazzo.
 ///
 /// Il mazzo si controlla prima invece di lasciar fallire la chiave esterna: un mazzo

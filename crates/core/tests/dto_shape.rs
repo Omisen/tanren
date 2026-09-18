@@ -12,6 +12,8 @@
 
 use serde_json::json;
 use tanren_core::features::flashcards::deck::{Deck, DeckSummary, Flashcard};
+use tanren_core::features::flashcards::exercise::Direction;
+use tanren_core::features::flashcards::session::Scope as FlashcardScope;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary};
 use tanren_core::features::kana::session::{Mode, Scope, Step};
 use tanren_core::features::kanji::levels::Level;
@@ -401,5 +403,30 @@ fn un_campo_vuoto_si_riconosce_da_quale_campo_era() {
         })
         .unwrap(),
         json!({ "kind": "empty_field", "field": "japanese" })
+    );
+}
+
+#[test]
+fn l_ambito_di_un_giro_di_flashcard_attraversa_il_confine_nei_due_versi() {
+    let scope = FlashcardScope {
+        deck: "0195e0c1-0000-7000-8000-000000000000".into(),
+        direction: Direction::MeaningToJp,
+    };
+    assert_eq!(
+        serde_json::to_value(&scope).unwrap(),
+        json!({
+            "deck": "0195e0c1-0000-7000-8000-000000000000",
+            "direction": "meaning_to_jp"
+        })
+    );
+
+    let riletto: FlashcardScope =
+        serde_json::from_value(json!({ "deck": "x", "direction": "jp_to_meaning" })).unwrap();
+    assert_eq!(riletto.direction, Direction::JpToMeaning);
+
+    // Un verso che non esiste non entra.
+    assert!(
+        serde_json::from_value::<FlashcardScope>(json!({ "deck": "x", "direction": "both" }))
+            .is_err()
     );
 }

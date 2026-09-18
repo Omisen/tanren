@@ -36,6 +36,8 @@ export function AnswerField({
   placeholder,
   normalize,
   onSubmit,
+  script = 'japanese',
+  phrase = false,
 }: {
   disabled: boolean
   /** La risposta gia' data, se si sta guardando l'esito. */
@@ -44,6 +46,24 @@ export function AnswerField({
   /** Come il core ridurra' la risposta prima di giudicarla. */
   normalize: (input: string) => Promise<string>
   onSubmit: (value: string) => void
+  /**
+   * In che alfabeto si risponde.
+   *
+   * Decide `lang` e il font. Su `latin` il campo **non** dichiara `ja` e non usa il
+   * font giapponese: sarebbe una bugia sul contenuto, e chi usa la lettura assistita
+   * si sentirebbe leggere l'inglese con la voce sbagliata.
+   */
+  script?: 'japanese' | 'latin'
+  /**
+   * Se la risposta e' una **frase** e non un segno.
+   *
+   * Il corpo grande e centrato nasce per i kana e i kanji, dove si risponde con uno o
+   * due segni e la leggibilita' dei tratti e' tutto. Su una frase e' il contrario:
+   * misurato su una finestra piu' larga di un telefono, «the library is closed today»
+   * si taglia a «toda», e non poter rileggere quello che si e' scritto e' un difetto,
+   * non una scelta estetica.
+   */
+  phrase?: boolean
 }) {
   const [value, setValue] = useState('')
   // L'anteprima si porta dietro il testo da cui e' stata ricavata. Cosi' quando il
@@ -86,7 +106,7 @@ export function AnswerField({
     <div className="flex flex-col gap-2">
       <input
         type="text"
-        lang="ja"
+        lang={script === 'japanese' ? 'ja' : undefined}
         value={shown}
         disabled={disabled}
         autoFocus
@@ -110,12 +130,14 @@ export function AnswerField({
           e.preventDefault()
           submit()
         }}
-        className="font-jp border-hairline bg-ink-soft text-paper placeholder:text-inactive disabled:text-muted min-h-14 w-full rounded-xl border px-4 text-center text-3xl outline-none focus:border-focus"
+        className={`border-hairline bg-ink-soft text-paper placeholder:text-inactive disabled:text-muted focus:border-focus min-h-14 w-full rounded-xl border px-4 outline-none ${
+          script === 'japanese' ? 'font-jp' : ''
+        } ${phrase ? 'text-left text-base' : 'text-center text-3xl'}`}
       />
 
       {/* Lo spazio dell'anteprima e' sempre occupato, cosi' il campo non si sposta
           quando l'IME produce qualcosa da ripulire. */}
-      <p className="text-muted min-h-5 text-center text-xs">
+      <p className={`text-muted min-h-5 text-xs ${phrase ? 'text-left' : 'text-center'}`}>
         {normalized && normalized !== shown && (
           <>
             counts as{' '}

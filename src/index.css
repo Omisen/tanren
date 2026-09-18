@@ -148,6 +148,17 @@
      separazione che conta di piu'. */
   --color-type-kanji: #4a52c8;
 
+  /* Le flashcard scritte dall'utente. Misurato con lo stesso criterio degli altri
+     due, e quello che decide e' sempre la **distanza minima**, cioe' da quale colore
+     gia' in uso rischia di essere scambiato: `paper` sopra 6,33x (piu' dei 4,37x dei
+     kana e dei 5,63x dei kanji), e in OKLab 0,206 dall'accento, 0,210 dai kanji,
+     0,306 dai kana, 0,386 da `ok`. La piu' piccola, 0,206, e' piu' larga dei 0,153
+     fra kana e `ok` che il progetto ha gia' accettato.
+     E' il magenta di cui questa nota diceva «si avvicina all'accento»: quello era
+     `#a83274`, a 0,147 dal rosso. Questo e' piu' scuro e piu' viola, e la distanza
+     dall'accento diventa la seconda piu' grande invece della piu' piccola. */
+  --color-type-flashcard: #a50089;
+
   /* Ancora da definire: `--color-type-radical`, `--color-type-vocab` e la scala
      `--color-srs-*`. Si scelgono quando quei tipi e quegli stati esisteranno
      davvero, perche' inventarli adesso vuol dire indovinare.

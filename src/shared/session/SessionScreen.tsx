@@ -78,6 +78,10 @@ export interface StudyProps {
   input?: {
     placeholder: string
     normalize: (value: string) => Promise<string>
+    /** In che alfabeto si risponde. Di norma il giapponese. */
+    script?: 'japanese' | 'latin'
+    /** Se la risposta e' una frase e non un segno. */
+    phrase?: boolean
   }
 }
 
@@ -270,6 +274,8 @@ function Actions({
           given={answered?.answer ?? null}
           placeholder={input.placeholder}
           normalize={input.normalize}
+          script={input.script}
+          phrase={input.phrase}
           onSubmit={onAnswer}
         />
 

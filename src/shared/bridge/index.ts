@@ -17,6 +17,7 @@ import type {
   Deck,
   DeckSummary,
   Flashcard,
+  FlashcardScope,
   Kanji,
   KanjiCell,
   LevelSummary,
@@ -256,4 +257,29 @@ export function updateFlashcard(
 /** Elimina una carta, e con lei la sua pianificazione. */
 export function deleteFlashcard(card: string): Promise<void> {
   return invoke('delete_flashcard', { card })
+}
+
+/** Comincia un giro su un mazzo: la coda mescolata e la prima domanda. */
+export function startFlashcardSession(scope: FlashcardScope): Promise<Step> {
+  return invoke('start_flashcard_session', { scope })
+}
+
+/**
+ * Come continua il giro dopo una risposta.
+ *
+ * Non manda se la risposta era giusta, perche' qui un giro passa una volta sola su
+ * ogni carta: far tornare quella sbagliata e' mestiere dei voti e delle scadenze.
+ */
+export function nextFlashcardStep(scope: FlashcardScope, queue: Queue): Promise<Step> {
+  return invoke('next_flashcard_step', { scope, queue })
+}
+
+/** Corregge una risposta e la registra nello storico. */
+export function submitFlashcardAnswer(
+  scope: FlashcardScope,
+  item: string,
+  answer: string,
+  responseTimeMs: number | null,
+): Promise<Verdict> {
+  return invoke('submit_flashcard_answer', { scope, item, answer, responseTimeMs })
 }

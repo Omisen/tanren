@@ -6,6 +6,7 @@
 
 use chrono::Utc;
 use tanren_core::features::flashcards::deck::{self as flashcards, Deck, DeckSummary, Flashcard};
+use tanren_core::features::flashcards::session as flashcard_session;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, table};
 use tanren_core::features::kana::session as kana;
 use tanren_core::features::kanji::levels::{Kanji, Level, table as levels_table};
@@ -414,4 +415,57 @@ pub async fn delete_flashcard(
     card: String,
 ) -> Result<(), CoreError> {
     flashcards::delete_card(&state.db, &card, Utc::now()).await
+}
+
+/// Comincia un giro su un mazzo: la coda mescolata e la prima domanda.
+///
+/// Tre passi e non uno perche' due toccano il database e quello in mezzo no: leggere
+/// il mazzo e leggere la carta da chiedere sono attese, mescolare vuole il generatore
+/// di numeri casuali, che non deve attraversarne nessuna. Il generatore vive dentro il
+/// blocco e muore li', altrimenti il future non sarebbe `Send` e Tauri lo rifiuterebbe.
+#[tauri::command]
+pub async fn start_flashcard_session(
+    state: State<'_, AppState>,
+    scope: flashcard_session::Scope,
+) -> Result<Step, CoreError> {
+    let tasks = flashcard_session::plan(&state.db, &scope).await?;
+    let queue = {
+        let mut rng = rand::rng();
+        flashcard_session::shuffle(tasks, &mut rng)
+    };
+    flashcard_session::open(&state.db, &scope, queue).await
+}
+
+/// Come continua il giro dopo una risposta.
+///
+/// Non riceve se la risposta era giusta, e non e' una dimenticanza: qui un giro passa
+/// una volta sola su ogni carta, e far tornare quella sbagliata e' mestiere dei voti e
+/// delle scadenze, che ancora non ci sono.
+#[tauri::command]
+pub async fn next_flashcard_step(
+    state: State<'_, AppState>,
+    scope: flashcard_session::Scope,
+    queue: Vec<Task>,
+) -> Result<Step, CoreError> {
+    flashcard_session::advance(&state.db, &scope, &queue).await
+}
+
+/// Corregge una risposta e la registra nello storico.
+#[tauri::command]
+pub async fn submit_flashcard_answer(
+    state: State<'_, AppState>,
+    scope: flashcard_session::Scope,
+    item: String,
+    answer: String,
+    response_time_ms: Option<i64>,
+) -> Result<Verdict, CoreError> {
+    flashcard_session::submit(
+        &state.db,
+        &scope,
+        &ItemId::new(item),
+        &Answer::new(answer),
+        response_time_ms,
+        Utc::now(),
+    )
+    .await
 }

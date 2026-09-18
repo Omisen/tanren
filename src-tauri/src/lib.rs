@@ -77,6 +77,9 @@ pub fn run() {
             commands::create_flashcard,
             commands::update_flashcard,
             commands::delete_flashcard,
+            commands::start_flashcard_session,
+            commands::next_flashcard_step,
+            commands::submit_flashcard_answer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

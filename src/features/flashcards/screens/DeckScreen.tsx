@@ -9,24 +9,48 @@ import {
   updateFlashcard,
   type Deck,
   type Flashcard,
+  type FlashcardDirection,
 } from '@/shared/bridge'
 import { Button } from '@/shared/ui/Button'
 import { Note } from '@/shared/ui/Card'
+import { Chip } from '@/shared/ui/Chip'
 import { Confirm } from '@/shared/ui/Confirm'
 import { Screen } from '@/shared/ui/Screen'
 import { Sheet } from '@/shared/ui/Sheet'
 
 import { CardForm } from '../CardForm'
 import { TextInput } from '../TextInput'
+import { FlashcardSessionScreen } from './SessionScreen'
 
 /**
- * Dentro un mazzo: le sue carte, e come si correggono.
+ * I due versi in cui si puo' studiare un mazzo.
  *
- * # Le azioni del mazzo non stanno nella fascia in fondo
+ * L'etichetta dice **cosa si vede per primo**, non cosa si deve fare: e' la cosa che
+ * si riconosce a colpo d'occhio guardando la schermata di studio, e la riga sopra lo
+ * stimolo dira' comunque cosa si vuole.
+ */
+const DIRECTIONS: { value: FlashcardDirection; label: string }[] = [
+  { value: 'jp_to_meaning', label: 'Japanese first' },
+  { value: 'meaning_to_jp', label: 'Meaning first' },
+]
+
+/**
+ * Dentro un mazzo: le sue carte, e come si studia.
  *
- * Quella e' della cosa che si fa ogni volta che si entra, cioe' aggiungere una carta.
- * Rinominare ed eliminare si fanno una volta nella vita del mazzo, quindi stanno
- * dietro il ⋯ in cima, che e' la via secondaria che `Screen` prevede.
+ * # Cosa sta nella fascia in fondo, e perche' e' cambiato
+ *
+ * Adesso ci stanno il verso e il tasto di avvio. Prima ci stava «Add card», e andava
+ * bene finche' un mazzo si poteva solo riempire: ora la cosa che si fa ogni volta che
+ * si entra e' studiarlo, e quella e' la fascia di chi si fa trovare dal pollice.
+ * Aggiungere una carta scende in fondo all'elenco, dove si guarda quando si sta
+ * costruendo il mazzo; rinominare ed eliminare restano dietro il ⋯ in cima, perche' si
+ * fanno una volta nella vita di un mazzo.
+ *
+ * # Il verso si sceglie qui e non dentro il giro
+ *
+ * Perche' decide cosa sara' l'intera sessione, e cambiarlo a meta' vorrebbe dire
+ * cambiare esercizio mentre lo si sta facendo. E' la stessa collocazione che ha la
+ * scelta fra riconoscimento e scrittura sui kana.
  */
 export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void }) {
   // Il nome puo' cambiare da qui dentro, quindi non basta quello con cui si e' entrati.
@@ -40,6 +64,11 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
   const [options, setOptions] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [removing, setRemoving] = useState<Flashcard | 'deck' | null>(null)
+
+  // Il verso e la sessione vivono qui, come il mazzo aperto: sono scelte che muoiono
+  // uscendo, e nessun'altra schermata deve conoscerle.
+  const [direction, setDirection] = useState<FlashcardDirection>('jp_to_meaning')
+  const [studying, setStudying] = useState(false)
 
   const load = useCallback(() => {
     flashcardCards(deck.id)
@@ -67,6 +96,18 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
     load()
   }
 
+  if (studying) {
+    return (
+      <FlashcardSessionScreen
+        deck={name}
+        scope={{ deck: deck.id, direction }}
+        onBack={() => setStudying(false)}
+      />
+    )
+  }
+
+  const total = cards?.length ?? 0
+
   return (
     <>
       <Screen
@@ -82,7 +123,24 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
             ⋯
           </button>
         }
-        action={<Button onClick={() => setEditing('new')}>Add card</Button>}
+        action={
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              {DIRECTIONS.map((d) => (
+                <Chip
+                  key={d.value}
+                  pressed={direction === d.value}
+                  onClick={() => setDirection(d.value)}
+                >
+                  {d.label}
+                </Chip>
+              ))}
+            </div>
+            <Button onClick={() => setStudying(true)} disabled={total === 0}>
+              {total === 0 ? 'Start' : `Start with ${total} ${total === 1 ? 'card' : 'cards'}`}
+            </Button>
+          </div>
+        }
       >
         <div className="flex flex-col gap-2 pt-2">
           {failed && <Note>Could not read this deck.</Note>}
@@ -102,6 +160,12 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
               <span className="text-muted text-sm">{card.meaning}</span>
             </button>
           ))}
+
+          {cards && (
+            <Button variant="quiet" className="mt-2" onClick={() => setEditing('new')}>
+              Add card
+            </Button>
+          )}
         </div>
       </Screen>
 

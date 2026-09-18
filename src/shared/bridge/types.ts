@@ -360,3 +360,22 @@ export interface Flashcard {
   japanese: string
   meaning: string
 }
+
+/**
+ * In che verso va la domanda su una carta.
+ *
+ * Sono **due carte di studio distinte** e non due modi di guardare la stessa:
+ * riconoscere e produrre si imparano in tempi diversi, come il riconoscimento e la
+ * scrittura sui kana.
+ */
+export type FlashcardDirection =
+  /** Si vede il giapponese e si risponde col significato. */
+  | 'jp_to_meaning'
+  /** Si vede il significato e si scrive il giapponese. */
+  | 'meaning_to_jp'
+
+/** Cosa si sta studiando: quale mazzo, e in che verso. */
+export interface FlashcardScope {
+  deck: string
+  direction: FlashcardDirection
+}
