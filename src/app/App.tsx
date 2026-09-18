@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { FlashcardsHomeScreen } from '@/features/flashcards/screens/HomeScreen'
 import { KanaHomeScreen } from '@/features/kana/screens/HomeScreen'
 import { KanaSessionScreen } from '@/features/kana/screens/SessionScreen'
 import { KanjiLevelsScreen } from '@/features/kanji/screens/LevelsScreen'
@@ -33,9 +34,10 @@ export default function App() {
   // nessun altro deve saperlo, e chiudendo l'app va perso come si deve.
   const [settings, setSettings] = useState(false)
 
-  if (screen === 'session') {
-    return subject === 'kana' ? <KanaSessionScreen /> : <KanjiStudyScreen />
-  }
+  // Una materia alla volta, e per nome: le flashcard non hanno ancora un giro di
+  // studio, e un ternario le avrebbe mandate dentro quello dei kana.
+  if (screen === 'session' && subject === 'kana') return <KanaSessionScreen />
+  if (screen === 'session' && subject === 'kanji') return <KanjiStudyScreen />
 
   // I livelli sono solo dei kanji: e' il loro percorso, e i kana un percorso non ce
   // l'hanno.
@@ -50,10 +52,10 @@ export default function App() {
   const about = <SettingsButton onOpen={() => setSettings(true)} />
   return (
     <>
-      {subject === 'kana' ? (
-        <KanaHomeScreen subjects={subjects} about={about} />
-      ) : (
-        <KanjiHomeScreen subjects={subjects} about={about} />
+      {subject === 'kana' && <KanaHomeScreen subjects={subjects} about={about} />}
+      {subject === 'kanji' && <KanjiHomeScreen subjects={subjects} about={about} />}
+      {subject === 'flashcards' && (
+        <FlashcardsHomeScreen subjects={subjects} about={about} />
       )}
 
       {settings && (

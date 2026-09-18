@@ -1,0 +1,10 @@
+//! Le flashcard, cioe' i mazzi di carte che l'utente si scrive da solo.
+//!
+//! E' la prima materia il cui **contenuto lo fa chi studia**. Kana e kanji sono
+//! tabelle generate da uno script, versionate e uguali per tutti; qui i mazzi e le
+//! carte nascono nel database dell'utente e cambiano quando lui decide.
+//!
+//! La conseguenza pratica e' che questa materia non ha un modulo `data`: ha [`deck`],
+//! che e' la raccolta di quello che l'utente ha scritto e cosa se ne puo' fare.
+
+pub mod deck;

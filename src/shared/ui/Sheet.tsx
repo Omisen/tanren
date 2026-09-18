@@ -16,10 +16,20 @@ import { Button } from './Button'
 export function Sheet({
   title,
   onClose,
+  action,
   children,
 }: {
   title: string
   onClose: () => void
+  /**
+   * Cosa si puo' fare qui dentro, in fondo e sopra la chiusura.
+   *
+   * Un pannello che mostra e basta non ne ha, e resta con la sola chiusura. Dove
+   * invece c'e' qualcosa da salvare, l'azione sta sopra e il neutro sotto, che e' la
+   * stessa disposizione della conferma e per la stessa ragione: il pollice trova per
+   * primo quello che non cambia niente.
+   */
+  action?: ReactNode
   children: ReactNode
 }) {
   const titleId = useId()
@@ -58,7 +68,8 @@ export function Sheet({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">{children}</div>
 
-        <footer className="px-5 pt-2 pb-5">
+        <footer className="flex flex-col gap-2 px-5 pt-2 pb-5">
+          {action}
           <Button variant="quiet" onClick={onClose}>
             Close
           </Button>

@@ -31,8 +31,14 @@ import type {
 
 export type ScreenName = 'home' | 'session' | 'levels' | 'about'
 
-/** Quale materia si sta guardando. */
-export type Subject = 'kana' | 'kanji'
+/**
+ * Quale materia si sta guardando.
+ *
+ * Le flashcard sono la terza, e l'unica il cui contenuto lo scrive l'utente. Quale
+ * mazzo si sta guardando **non** sta qui: e' uno sguardo dentro la materia, non una
+ * scelta di materia, e vive nella schermata come il livello che si consulta.
+ */
+export type Subject = 'kana' | 'kanji' | 'flashcards'
 
 interface UiState {
   screen: ScreenName

@@ -309,6 +309,8 @@ export type CoreError =
   | { kind: 'item_not_supported'; exercise: string; id: string }
   | { kind: 'storage'; message: string }
   | { kind: 'scheduling'; message: string }
+  /** Un campo che vuole del testo e' arrivato vuoto. `field` dice quale. */
+  | { kind: 'empty_field'; field: string }
 
 /** Riconosce un errore del core tra quelli che possono arrivare da `invoke`. */
 export function isCoreError(error: unknown): error is CoreError {
@@ -326,4 +328,35 @@ export interface Settings {
   dailyNew: number
   dailyNewMin: number
   dailyNewMax: number
+}
+
+/* --- Le flashcard: i mazzi e le carte che l'utente si scrive --------------- */
+
+/** Un mazzo, come lo vede chi lo ha creato. */
+export interface Deck {
+  id: string
+  name: string
+}
+
+/**
+ * Un mazzo nell'elenco, con quante carte contiene.
+ *
+ * Il conteggio non e' una proprieta' del mazzo ma una cosa che si calcola: per questo
+ * e' un tipo a se' e non un campo in piu' su `Deck`.
+ */
+export interface DeckSummary extends Deck {
+  cards: number
+}
+
+/**
+ * Una carta: il giapponese da una parte, il significato dall'altra.
+ *
+ * Il testo e' quello che l'utente ha scritto, non normalizzato: la normalizzazione
+ * serve al confronto e si fa al momento del confronto.
+ */
+export interface Flashcard {
+  id: string
+  deckId: string
+  japanese: string
+  meaning: string
 }

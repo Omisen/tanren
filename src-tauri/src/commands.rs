@@ -5,6 +5,7 @@
 //! qualcosa, quella decisione e' finita nel posto sbagliato.
 
 use chrono::Utc;
+use tanren_core::features::flashcards::deck::{self as flashcards, Deck, DeckSummary, Flashcard};
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, table};
 use tanren_core::features::kana::session as kana;
 use tanren_core::features::kanji::levels::{Kanji, Level, table as levels_table};
@@ -332,4 +333,85 @@ pub async fn submit_kanji_study_answer(
         Utc::now(),
     )
     .await
+}
+
+// ---------------------------------------------------------------------------
+// Le flashcard: i mazzi e le carte che l'utente si scrive.
+//
+// E' l'unica materia il cui contenuto non sta nel binario ma nel database, quindi e'
+// anche l'unica che ha comandi per **scriverlo** e non solo per leggerlo.
+// ---------------------------------------------------------------------------
+
+/// Tutti i mazzi, in ordine alfabetico, con quante carte contengono.
+#[tauri::command]
+pub async fn flashcard_decks(state: State<'_, AppState>) -> Result<Vec<DeckSummary>, CoreError> {
+    flashcards::decks(&state.db).await
+}
+
+/// Crea un mazzo. Serve solo il nome: cosa ci va dentro si decide dopo.
+#[tauri::command]
+pub async fn create_flashcard_deck(
+    state: State<'_, AppState>,
+    name: String,
+) -> Result<Deck, CoreError> {
+    flashcards::create_deck(&state.db, &name, Utc::now()).await
+}
+
+/// Cambia il nome di un mazzo.
+#[tauri::command]
+pub async fn rename_flashcard_deck(
+    state: State<'_, AppState>,
+    deck: String,
+    name: String,
+) -> Result<(), CoreError> {
+    flashcards::rename_deck(&state.db, &deck, &name, Utc::now()).await
+}
+
+/// Elimina un mazzo con tutte le sue carte, e ne ritira la pianificazione.
+#[tauri::command]
+pub async fn delete_flashcard_deck(
+    state: State<'_, AppState>,
+    deck: String,
+) -> Result<(), CoreError> {
+    flashcards::delete_deck(&state.db, &deck, Utc::now()).await
+}
+
+/// Le carte di un mazzo, nell'ordine in cui sono state aggiunte.
+#[tauri::command]
+pub async fn flashcard_cards(
+    state: State<'_, AppState>,
+    deck: String,
+) -> Result<Vec<Flashcard>, CoreError> {
+    flashcards::cards(&state.db, &deck).await
+}
+
+/// Aggiunge una carta a un mazzo.
+#[tauri::command]
+pub async fn create_flashcard(
+    state: State<'_, AppState>,
+    deck: String,
+    japanese: String,
+    meaning: String,
+) -> Result<Flashcard, CoreError> {
+    flashcards::create_card(&state.db, &deck, &japanese, &meaning, Utc::now()).await
+}
+
+/// Corregge una carta gia' scritta. **Non tocca lo stato di studio.**
+#[tauri::command]
+pub async fn update_flashcard(
+    state: State<'_, AppState>,
+    card: String,
+    japanese: String,
+    meaning: String,
+) -> Result<(), CoreError> {
+    flashcards::update_card(&state.db, &card, &japanese, &meaning, Utc::now()).await
+}
+
+/// Elimina una carta, e con lei la sua pianificazione.
+#[tauri::command]
+pub async fn delete_flashcard(
+    state: State<'_, AppState>,
+    card: String,
+) -> Result<(), CoreError> {
+    flashcards::delete_card(&state.db, &card, Utc::now()).await
 }

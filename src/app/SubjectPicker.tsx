@@ -13,6 +13,7 @@ import { useUi, type Subject } from '@/shared/store/ui'
 const SUBJECTS: { value: Subject; label: string; caption: string }[] = [
   { value: 'kana', label: 'かな', caption: 'Kana' },
   { value: 'kanji', label: '漢字', caption: 'Kanji' },
+  { value: 'flashcards', label: 'カード', caption: 'Flashcards' },
 ]
 
 export function SubjectPicker() {
@@ -20,7 +21,7 @@ export function SubjectPicker() {
 
   return (
     <Field label="Subject">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {SUBJECTS.map((s) => (
           <Card
             key={s.value}

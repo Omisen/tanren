@@ -69,6 +69,14 @@ pub fn run() {
             commands::start_kanji_study,
             commands::next_kanji_study_step,
             commands::submit_kanji_study_answer,
+            commands::flashcard_decks,
+            commands::create_flashcard_deck,
+            commands::rename_flashcard_deck,
+            commands::delete_flashcard_deck,
+            commands::flashcard_cards,
+            commands::create_flashcard,
+            commands::update_flashcard,
+            commands::delete_flashcard,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -11,6 +11,7 @@
 //! sono il guardrail.
 
 use serde_json::json;
+use tanren_core::features::flashcards::deck::{Deck, DeckSummary, Flashcard};
 use tanren_core::features::kana::data::{KanaGroup, Syllabary};
 use tanren_core::features::kana::session::{Mode, Scope, Step};
 use tanren_core::features::kanji::levels::Level;
@@ -347,5 +348,58 @@ fn gli_errori_arrivano_riconoscibili() {
         })
         .unwrap(),
         json!({ "kind": "storage", "message": "disco pieno" })
+    );
+}
+
+#[test]
+fn un_mazzo_e_le_sue_carte() {
+    let deck = Deck {
+        id: "0195e0c1-0000-7000-8000-000000000000".into(),
+        name: "N5".into(),
+    };
+    assert_eq!(
+        serde_json::to_value(&deck).unwrap(),
+        json!({ "id": "0195e0c1-0000-7000-8000-000000000000", "name": "N5" })
+    );
+
+    // Nell'elenco il mazzo porta anche quante carte contiene, che non e' una sua
+    // proprieta' ma un conteggio: per questo e' un tipo a se' e non un campo in piu'.
+    let riga = DeckSummary {
+        id: deck.id.clone(),
+        name: deck.name.clone(),
+        cards: 12,
+    };
+    assert_eq!(
+        serde_json::to_value(&riga).unwrap(),
+        json!({ "id": "0195e0c1-0000-7000-8000-000000000000", "name": "N5", "cards": 12 })
+    );
+
+    let card = Flashcard {
+        id: "0195e0c2-0000-7000-8000-000000000000".into(),
+        deck_id: deck.id,
+        japanese: "ねこ".into(),
+        meaning: "cat".into(),
+    };
+    assert_eq!(
+        serde_json::to_value(&card).unwrap(),
+        json!({
+            "id": "0195e0c2-0000-7000-8000-000000000000",
+            "deckId": "0195e0c1-0000-7000-8000-000000000000",
+            "japanese": "ねこ",
+            "meaning": "cat"
+        })
+    );
+}
+
+#[test]
+fn un_campo_vuoto_si_riconosce_da_quale_campo_era() {
+    // Il nome del campo attraversa il confine perche' l'interfaccia deve poter dire
+    // **quale** casella manca, non che ne manca una.
+    assert_eq!(
+        serde_json::to_value(CoreError::EmptyField {
+            field: "japanese".into()
+        })
+        .unwrap(),
+        json!({ "kind": "empty_field", "field": "japanese" })
     );
 }

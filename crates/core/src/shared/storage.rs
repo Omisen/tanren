@@ -190,6 +190,20 @@ impl Database {
         Ok(())
     }
 
+    /// La connessione al database, per le materie che hanno tabelle proprie.
+    ///
+    /// Le tabelle di questo modulo (`cards`, `answers`, `settings`) valgono per tutte
+    /// le materie, e i loro metodi stanno qui. Una materia che porta un **contenuto
+    /// suo**, come i mazzi di flashcard scritti dall'utente, scrive invece le proprie
+    /// query: metterle qui vorrebbe dire far sapere al livello condiviso cosa sia un
+    /// mazzo, che e' proprio la regola di dipendenza che il progetto si e' dato.
+    ///
+    /// Il livello condiviso possiede quindi **la connessione e lo schema**, non ogni
+    /// tabella che ci sta dentro.
+    pub fn pool(&self) -> &SqlitePool {
+        &self.pool
+    }
+
     /// Lo stato di studio di una carta, se esiste.
     pub async fn card(&self, item_id: &str, exercise_type: &str) -> Result<Option<Card>> {
         let card = sqlx::query_as::<_, Card>(
@@ -276,6 +290,34 @@ impl Database {
 
         tx.commit().await?;
         Ok(nuove)
+    }
+
+    /// Ritira le carte di studio indicate.
+    ///
+    /// Serve a chi cancella un elemento: la sua pianificazione non deve sopravvivergli
+    /// e tornare a scadere fra un mese. Lo storico invece resta dov'e', perche'
+    /// `answers` e' in sola aggiunta e una risposta data e' successa davvero.
+    ///
+    /// E' una lapide e non una riga tolta: `deleted_at` esiste proprio perche' un sync
+    /// futuro possa dire «questa e' stata eliminata» invece di limitarsi a non
+    /// trovarla piu'.
+    pub async fn retire_cards(&self, item_ids: &[String], now: DateTime<Utc>) -> Result<u64> {
+        if item_ids.is_empty() {
+            return Ok(0);
+        }
+
+        let mut query = QueryBuilder::new("UPDATE cards SET deleted_at = ");
+        query.push_bind(now);
+        query.push(", updated_at = ");
+        query.push_bind(now);
+        query.push(", rev = rev + 1 WHERE deleted_at IS NULL AND item_id IN (");
+        let mut elenco = query.separated(", ");
+        for item in item_ids {
+            elenco.push_bind(item.as_str());
+        }
+        query.push(")");
+
+        Ok(query.build().execute(&self.pool).await?.rows_affected())
     }
 
     /// Tutte le carte che rientrano nel filtro, studiate o no.

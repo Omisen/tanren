@@ -34,6 +34,14 @@ pub enum CoreError {
     #[error("errore di pianificazione: {message}")]
     Scheduling { message: String },
 
+    /// Un campo che deve avere del testo dentro e' arrivato vuoto.
+    ///
+    /// Vale per il contenuto che scrive l'utente, cioe' oggi i mazzi e le carte. Non
+    /// e' un difetto nostro come gli altri errori qui dentro: e' una cosa che puo'
+    /// capitare a chi digita, e l'interfaccia la mostra invece di scrivere la riga.
+    #[error("{field} non puo' essere vuoto")]
+    EmptyField { field: String },
+
     /// Una preferenza e' stata scritta con un valore che non sta nei limiti.
     ///
     /// Chi passa di qui e' un comando, non una persona: l'interfaccia offre solo i

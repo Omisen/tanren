@@ -14,6 +14,9 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 
 import type {
   Credit,
+  Deck,
+  DeckSummary,
+  Flashcard,
   Kanji,
   KanjiCell,
   LevelSummary,
@@ -198,4 +201,59 @@ export function submitKanjiStudyAnswer(
   responseTimeMs: number | null,
 ): Promise<Verdict> {
   return invoke('submit_kanji_study_answer', { mode, task, answer, responseTimeMs })
+}
+
+/* --- Le flashcard ---------------------------------------------------------- */
+
+/** Tutti i mazzi, in ordine alfabetico, con quante carte contengono. */
+export function flashcardDecks(): Promise<DeckSummary[]> {
+  return invoke('flashcard_decks')
+}
+
+/** Crea un mazzo. Serve solo il nome: cosa ci va dentro si decide dopo. */
+export function createFlashcardDeck(name: string): Promise<Deck> {
+  return invoke('create_flashcard_deck', { name })
+}
+
+/** Cambia il nome di un mazzo. Le carte e i loro progressi non si toccano. */
+export function renameFlashcardDeck(deck: string, name: string): Promise<void> {
+  return invoke('rename_flashcard_deck', { deck, name })
+}
+
+/** Elimina un mazzo con tutte le sue carte, e ne ritira la pianificazione. */
+export function deleteFlashcardDeck(deck: string): Promise<void> {
+  return invoke('delete_flashcard_deck', { deck })
+}
+
+/** Le carte di un mazzo, nell'ordine in cui sono state aggiunte. */
+export function flashcardCards(deck: string): Promise<Flashcard[]> {
+  return invoke('flashcard_cards', { deck })
+}
+
+/** Aggiunge una carta a un mazzo. */
+export function createFlashcard(
+  deck: string,
+  japanese: string,
+  meaning: string,
+): Promise<Flashcard> {
+  return invoke('create_flashcard', { deck, japanese, meaning })
+}
+
+/**
+ * Corregge una carta gia' scritta.
+ *
+ * **Non tocca lo stato di studio**: se la correzione abbia invalidato quello che si e'
+ * imparato lo sa solo chi ha corretto, quindi lo decide lui.
+ */
+export function updateFlashcard(
+  card: string,
+  japanese: string,
+  meaning: string,
+): Promise<void> {
+  return invoke('update_flashcard', { card, japanese, meaning })
+}
+
+/** Elimina una carta, e con lei la sua pianificazione. */
+export function deleteFlashcard(card: string): Promise<void> {
+  return invoke('delete_flashcard', { card })
 }
