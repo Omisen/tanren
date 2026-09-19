@@ -23,10 +23,14 @@ env:
 
 jobs:
   android:
-    runs-on: ubuntu-latest
+    # **Il runner e' fissato e non `ubuntu-latest`.** Oggi sono la stessa cosa, ma
+    # `latest` diventera' Ubuntu 26 il 19 ottobre 2026, e una release e' il momento
+    # peggiore per scoprire che il sistema sotto e' cambiato: qui si firma un APK che
+    # la gente installa. Va rialzato quando la 24.04 verra' ritirata.
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Leggi la versione e controlla che il tag corrisponda
         id: v
@@ -62,17 +66,17 @@ jobs:
             echo "il tag $tag corrisponde"
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
 
       - name: NDK
         run: |
