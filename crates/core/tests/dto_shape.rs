@@ -14,7 +14,7 @@ use serde_json::json;
 use tanren_core::features::flashcards::deck::{Deck, DeckSummary, Flashcard};
 use tanren_core::features::flashcards::exercise::Direction;
 use tanren_core::features::flashcards::session::Scope as FlashcardScope;
-use tanren_core::features::kana::data::{KanaGroup, Syllabary};
+use tanren_core::features::kana::data::{KanaGroup, Syllabary, Vowel};
 use tanren_core::features::kana::session::{Mode, Scope, Step};
 use tanren_core::features::kanji::levels::Level;
 use tanren_core::features::kanji::progress::{Blocked, Gate, LevelProgress, LevelSummary};
@@ -233,6 +233,27 @@ fn l_ambito_attraversa_il_confine_nei_due_versi() {
     // L'ambito arriva dal frontend, quindi deve anche potersi rileggere.
     let riletto: Scope = serde_json::from_value(serde_json::to_value(&scope).unwrap()).unwrap();
     assert_eq!(riletto, scope);
+}
+
+/// La colonna della tavola, che la schermata usa per lasciare i buchi al posto giusto.
+///
+/// Non e' un dettaglio di presentazione: se questi nomi cambiassero, la griglia dei
+/// kana disporrebbe i segni sbagliando le colonne senza che niente fallisca.
+#[test]
+fn la_colonna_attraversa_il_confine() {
+    for (v, atteso) in [
+        (Vowel::A, "a"),
+        (Vowel::I, "i"),
+        (Vowel::U, "u"),
+        (Vowel::E, "e"),
+        (Vowel::O, "o"),
+    ] {
+        assert_eq!(serde_json::to_value(v).unwrap(), json!(atteso));
+    }
+
+    // ん non ha colonna, e il frontend riconosce il caso da `null`: e' il segno che
+    // nella tavola sta da solo.
+    assert_eq!(serde_json::to_value(None::<Vowel>).unwrap(), json!(null));
 }
 
 /// Come la porta del Learning attraversa il confine.

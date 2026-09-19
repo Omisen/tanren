@@ -48,6 +48,21 @@ pub enum KanaGroup {
     Gairaion,
 }
 
+/// La colonna della tavola, cioe' a quale vocale appartiene un segno.
+///
+/// Serve a disporre i segni come stanno nella tavola vera, buchi compresi: la riga
+/// `ya` ha や, ゆ e よ ma non ha niente nelle colonne `i` ed `e`, e quei due posti
+/// devono restare vuoti invece di far scalare よ dove sta ゆ.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Vowel {
+    A,
+    I,
+    U,
+    E,
+    O,
+}
+
 /// Un singolo segno del sillabario.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Kana {
@@ -60,6 +75,35 @@ pub struct Kana {
     /// La riga del gojuon a cui appartiene, sonorizzazione compresa: か e きゃ stanno
     /// in `ka`, が in `ga`.
     pub row: String,
+}
+
+impl Kana {
+    /// In quale colonna della tavola sta il segno, e `None` se non ne ha una.
+    ///
+    /// # Perche' si ricava invece di stare nel file
+    ///
+    /// Perche' e' gia' scritta nella trascrizione canonica: la colonna e' la sua
+    /// **ultima lettera**, e aggiungere un campo vorrebbe dire rigenerare le due
+    /// tabelle per un'informazione che il dato porta gia'. Verificato su tutte e 233
+    /// le voci dei due file, e l'unico segno la cui trascrizione non finisce per
+    /// vocale e' ん, che nella tavola sta appunto da solo. I casi che sembrano
+    /// scomodi tornano da soli: ウォ e' `who` e finisce nella colonna `o`, トゥ e'
+    /// `twu` e finisce nella `u`.
+    ///
+    /// # Perche' sta qui e non nella schermata
+    ///
+    /// Perche' «を sta nella colonna o» e' sapere sulla tavola del gojuon, cioe'
+    /// dominio, e la UI non ne contiene (principio 4).
+    pub fn vowel(&self) -> Option<Vowel> {
+        match self.romaji.first()?.chars().last()? {
+            'a' => Some(Vowel::A),
+            'i' => Some(Vowel::I),
+            'u' => Some(Vowel::U),
+            'e' => Some(Vowel::E),
+            'o' => Some(Vowel::O),
+            _ => None,
+        }
+    }
 }
 
 /// La tabella di un sillabario, con la versione del contenuto che l'ha prodotta.
@@ -253,6 +297,64 @@ mod tests {
             // controllano a vicenda.
             assert_eq!(normalize_reading(&k.character), h.character);
         }
+    }
+
+    #[test]
+    fn solo_n_non_ha_una_colonna() {
+        for s in SILLABARI {
+            let senza: Vec<_> = table(s).all().iter().filter(|k| k.vowel().is_none()).collect();
+            assert_eq!(senza.len(), 1, "sillabario {s:?}");
+            // E' ん, che nella tavola sta da solo: ogni altro segno ha un posto in
+            // una colonna, altrimenti disporre la tavola vorrebbe dire indovinare.
+            assert_eq!(normalize_reading(&senza[0].character), "ん");
+        }
+    }
+
+    #[test]
+    fn le_colonne_dicono_dove_stanno_i_buchi() {
+        let t = table(Syllabary::Hiragana);
+
+        let ya: Vec<_> = t.row("ya").map(|k| k.vowel()).collect();
+        assert_eq!(
+            ya,
+            vec![Some(Vowel::A), Some(Vowel::U), Some(Vowel::O)],
+            "や ゆ よ lasciano vuote le colonne i ed e"
+        );
+
+        let wa: Vec<_> = t.row("wa").map(|k| k.vowel()).collect();
+        assert_eq!(wa, vec![Some(Vowel::A), Some(Vowel::O)], "fra わ e を ci sono tre buchi");
+
+        // La riga piena non ne ha nessuno, ed e' il caso normale.
+        let ka: Vec<_> = t
+            .group(KanaGroup::Base)
+            .filter(|k| k.row == "ka")
+            .map(|k| k.vowel())
+            .collect();
+        assert_eq!(
+            ka,
+            vec![
+                Some(Vowel::A),
+                Some(Vowel::I),
+                Some(Vowel::U),
+                Some(Vowel::E),
+                Some(Vowel::O)
+            ]
+        );
+    }
+
+    #[test]
+    fn le_colonne_reggono_anche_le_trascrizioni_storte() {
+        // I 外来音 hanno trascrizioni scelte per l'IME e non per il suono, ed e' la
+        // ragione per cui la colonna si guarda misurandola invece di darla per buona:
+        // ウォ e' `who` e トゥ e' `twu`, cioe' non cominciano nemmeno per la
+        // consonante della riga, ma finiscono comunque dove devono.
+        let t = table(Syllabary::Katakana);
+        let trova = |c: &str| t.all().iter().find(|k| k.character == c).unwrap().vowel();
+
+        assert_eq!(trova("ウォ"), Some(Vowel::O));
+        assert_eq!(trova("トゥ"), Some(Vowel::U));
+        assert_eq!(trova("ヴ"), Some(Vowel::U));
+        assert_eq!(trova("チェ"), Some(Vowel::E));
     }
 
     #[test]

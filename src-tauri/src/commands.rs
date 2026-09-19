@@ -10,7 +10,7 @@ use tanren_core::features::flashcards::deck::{
 };
 use tanren_core::features::flashcards::session::{self as flashcard_session, Answered};
 use tanren_core::features::flashcards::steps as flashcard_steps;
-use tanren_core::features::kana::data::{KanaGroup, Syllabary, table};
+use tanren_core::features::kana::data::{KanaGroup, KanaTable, Syllabary, Vowel, table};
 use tanren_core::features::kana::session as kana;
 use tanren_core::features::kanji::levels::{Kanji, Level, table as levels_table};
 use tanren_core::features::kanji::progress::{self, LevelProgress, LevelSummary};
@@ -25,11 +25,69 @@ use tauri::State;
 
 use crate::AppState;
 
-/// Cosa si puo' allenare: le famiglie di un sillabario con quanti segni contengono.
+/// Un segno nel catalogo: quello che serve a disegnarlo nella tavola.
+#[derive(Debug, serde::Serialize)]
+pub struct KanaCell {
+    character: String,
+    /// La trascrizione canonica, quella da mostrare sotto il segno.
+    romaji: String,
+    /// In quale colonna va messo, e `None` per ん, che sta da solo.
+    column: Option<Vowel>,
+}
+
+/// Una riga della tavola, coi segni che la compongono.
+#[derive(Debug, serde::Serialize)]
+pub struct KanaRow {
+    /// La riga del gojuon. **Non e' unica fra famiglie**: lo yoon riusa `ka`, `ga`,
+    /// `sa`... quindi a identificarla e' la coppia con la famiglia, non questo da solo.
+    row: String,
+    cells: Vec<KanaCell>,
+}
+
+/// Cosa si puo' allenare: una famiglia di un sillabario, coi suoi segni in tavola.
+///
+/// # Perche' porta i segni e non solo il conteggio
+///
+/// Perche' la schermata li mostra tutti, aperti a cascata, e senza questi non avrebbe
+/// in mano nient'altro che cinque numeri. Il confine cresce, il **modello dati no**:
+/// i file dei kana non cambiano, non c'e' nessuna migrazione, e `Scope`, `items()` e
+/// gli esercizi restano quelli. Quello che passa di qui e' gia' tutto nella tabella.
+///
+/// `size` resta anche se e' la somma dei segni: e' quello che alimenta il conteggio
+/// sul bottone di avvio, e ricavarlo di la' vorrebbe dire contare cio' che il core
+/// sa gia'.
 #[derive(Debug, serde::Serialize)]
 pub struct KanaSet {
     group: KanaGroup,
     size: usize,
+    rows: Vec<KanaRow>,
+}
+
+/// I segni di una famiglia, raccolti nelle righe della tavola.
+///
+/// Le righe escono nell'ordine in cui compaiono nella tabella, che e' quello
+/// tradizionale: あ, か, さ... Si cerca la riga gia' aperta invece di fidarsi che le
+/// voci di una riga siano contigue, perche' costa niente (sono al massimo dodici) e
+/// non lega questa funzione a come il generatore ordina il file.
+fn rows(t: &KanaTable, group: KanaGroup) -> Vec<KanaRow> {
+    let mut rows: Vec<KanaRow> = Vec::new();
+
+    for k in t.group(group) {
+        let cell = KanaCell {
+            character: k.character.clone(),
+            romaji: k.romaji.first().cloned().unwrap_or_default(),
+            column: k.vowel(),
+        };
+        match rows.iter_mut().find(|r| r.row == k.row) {
+            Some(r) => r.cells.push(cell),
+            None => rows.push(KanaRow {
+                row: k.row.clone(),
+                cells: vec![cell],
+            }),
+        }
+    }
+
+    rows
 }
 
 /// Il catalogo di un sillabario, per costruire la schermata di scelta.
@@ -55,6 +113,7 @@ pub fn kana_catalogue(syllabary: Syllabary) -> Vec<KanaSet> {
         .map(|group| KanaSet {
             group,
             size: t.group(group).count(),
+            rows: rows(t, group),
         })
         .collect()
 }

@@ -26,9 +26,35 @@ export interface KanaScope {
   mode: KanaMode
 }
 
+/**
+ * La colonna della tavola: a quale vocale appartiene un segno.
+ *
+ * Serve a disporre i segni come stanno nella tavola vera, buchi compresi. Chi la
+ * decide e' il core: dedurre qui che を sta nella colonna o vorrebbe dire mettere la
+ * tavola del gojuon dalla parte sbagliata del confine.
+ */
+export type Vowel = 'a' | 'i' | 'u' | 'e' | 'o'
+
+/** Un segno nel catalogo, con quello che serve a disegnarlo in tavola. */
+export interface KanaCell {
+  character: string
+  /** La trascrizione canonica, da mostrare sotto il segno. */
+  romaji: string
+  /** In quale colonna va messo. `null` solo per ん, che sta da solo. */
+  column: Vowel | null
+}
+
+/** Una riga della tavola. `row` non e' unico fra famiglie: lo yoon riusa `ka`, `ga`... */
+export interface KanaRow {
+  row: string
+  cells: KanaCell[]
+}
+
 export interface KanaSet {
   group: KanaGroup
+  /** Quanti segni contiene: e' quello che alimenta il conteggio sul bottone di avvio. */
   size: number
+  rows: KanaRow[]
 }
 
 /* --- Il percorso sui kanji: livelli, faccette, tre modalita' --------------- */
