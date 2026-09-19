@@ -19,7 +19,18 @@ export function Sheet({
   action,
   children,
 }: {
-  title: string
+  /**
+   * Il titolo del pannello.
+   *
+   * E' un **nodo** e non una stringa perche' un titolo puo' portare uno stato, e uno
+   * stato non si scrive tutto nello stesso modo: la scheda di un kanji ci mette la
+   * parola di servizio nello stile dell'etichetta e la percentuale e il grado in
+   * chiaro, che nella maiuscola spaziata si leggerebbero male. L'alternativa era
+   * rifare questa intestazione dentro una feature, cioe' due copie della stessa cosa.
+   *
+   * Chi passa una stringa non si accorge di niente, ed e' quasi sempre il caso.
+   */
+  title: ReactNode
   onClose: () => void
   /**
    * Cosa si puo' fare qui dentro, in fondo e sopra la chiusura.

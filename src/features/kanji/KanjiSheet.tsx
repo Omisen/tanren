@@ -64,10 +64,8 @@ export function KanjiSheet({
   }, [level, character])
 
   return (
-    <Sheet title={character} onClose={onClose}>
+    <Sheet title={<Status standing={standing} progress={progress} />} onClose={onClose}>
       <div className="flex flex-col gap-5">
-        <Status standing={standing} progress={progress} />
-
         <div className="flex gap-2">
           <Tab active={tab === 'info'} onClick={() => setTab('info')}>
             Info
@@ -106,14 +104,17 @@ export function KanjiSheet({
 }
 
 /**
- * A che punto e' questo kanji.
+ * A che punto e' questo kanji. **E' il titolo del pannello**, dov'era prima.
  *
- * # Perche' e' una riga sua e non piu' il titolo del pannello
+ * # Perche' il titolo e non una riga sotto
  *
- * Perche' adesso porta tre cose invece di una, e il titolo e' un'etichetta piccola,
- * maiuscola e spaziata: tre informazioni li' dentro si leggono male. Il titolo torna a
- * dire di **cosa** parla il pannello, cioe' il kanji, e lo stato si prende la riga che
- * gli serve.
+ * Perche' li' c'era gia', e mettendoci il carattere si erano ottenute due cose
+ * sbagliate insieme: il kanji scritto due volte, in piccolo in cima e grande in mezzo,
+ * e lo stato declassato a sottotitolo di una ripetizione.
+ *
+ * Il titolo e' un'etichetta piccola, maiuscola e spaziata, e va bene per la parola di
+ * servizio; **la percentuale e il grado no**, che cosi' si leggerebbero male, quindi si
+ * riportano in chiaro. Per questo `Sheet` prende un nodo.
  *
  * # Le tre forme
  *
@@ -131,21 +132,27 @@ export function KanjiSheet({
  * «100% · Shihan» su un kanji che maturo non e'.
  */
 function Status({ standing, progress }: { standing: Standing; progress: number | null }) {
-  if (standing === 'mature') return <p className="text-muted text-sm">COMPLETED</p>
-
-  if (progress === null) return <p className="text-muted text-sm">NOT MET YET</p>
+  // Le due forme senza numeri sono una parola sola, e prendono lo stile del titolo
+  // senza dire niente: sono esattamente com'erano prima di questo lavoro.
+  if (standing === 'mature') return <>COMPLETED</>
+  if (progress === null) return <>NOT MET YET</>
 
   const percent = Math.min(99, Math.floor(progress * 100))
   const { name, colour } = rank(progress)
 
+  // `normal-case` e `tracking-normal` disfanno lo stile dell'etichetta sulle sole parti
+  // che si leggono davvero: la maiuscola spaziata sta bene a «IN PROGRESS», che e' una
+  // parola di servizio, e malissimo a un numero e a un nome.
+  const vivo = 'normal-case tracking-normal'
+
   return (
-    <p className="text-sm">
-      <span className="text-muted">IN PROGRESS</span>
+    <>
+      IN PROGRESS
       <span className="text-inactive"> · </span>
-      <span className="text-paper tabular-nums">{percent}%</span>
+      <span className={`text-paper tabular-nums ${vivo}`}>{percent}%</span>
       <span className="text-inactive"> · </span>
-      <span className={`${colour} font-medium`}>{name}</span>
-    </p>
+      <span className={`${colour} ${vivo}`}>{name}</span>
+    </>
   )
 }
 
