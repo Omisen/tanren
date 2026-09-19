@@ -175,6 +175,38 @@
      dall'accento diventa la seconda piu' grande invece della piu' piccola. */
   --color-type-flashcard: #a50089;
 
+  /* --- I quattro gradi di consolidamento di un kanji ---
+     Dicono a che punto e' il ricordo, cioe' quanta parte della soglia di maturita' la
+     stabilita' ha gia' coperto. **Non sono `--color-srs-*`**, che restano da definire:
+     quelli diranno a che punto e' un item dentro il ciclo della ripetizione, questi
+     sono i nomi di una scala che si legge in una scheda.
+
+     Misurati sul pannello su cui compaiono, che e' `ink-soft`, e a `text-sm`, quindi
+     con la soglia del testo normale, 4,50x:
+       Kohai    8,81x     Senpai   5,20x     Sensei   7,61x     Shihan   9,15x
+
+     **Senpai e Sensei sono i valori scelti, schiariti.** Erano `#294ddb` e `#a100f1` e
+     davano 2,52x e 3,00x, cioe' illeggibili proprio dove vanno letti. Schiariti **a
+     tinta invariata**, che e' la stessa correzione gia' fatta due volte, sul
+     verde-azzurro dei kana e sul rosso del bottone primario: si sposta la luminosita',
+     non il colore.
+
+     Il blu aveva un secondo problema, piu' serio del contrasto: distava **0,049** da
+     `type-kanji`, e quell'indaco sta **nello stesso pannello**, grande, sotto la riga
+     di stato, perche' e' il blocco del carattere. Ora dista 0,161.
+     **Una cosa va detta perche' e' aritmetica e non scelta**: fra `type-kanji` e
+     `grade-easy` ci sono 0,230, quindi un blu leggibile che stia in mezzo **non puo'**
+     distare 0,153 da entrambi. Si e' tenuto il vincolo su `type-kanji`, che coesiste,
+     e lasciato cadere quello su `grade-easy`, che vive sui bottoni del voto delle
+     flashcard e in una scheda di kanji non compare mai. E' la stessa difesa che il
+     progetto ha gia' accettato per i colori dei voti.
+     Vale anche per Kohai, che sta a 0,052 da `grade-good`: due verdi che non si
+     incontrano. */
+  --color-rank-kohai: #06d6a0;
+  --color-rank-senpai: #608aff;
+  --color-rank-sensei: #ce99fe;
+  --color-rank-shihan: #f0b800;
+
   /* Ancora da definire: `--color-type-radical`, `--color-type-vocab` e la scala
      `--color-srs-*`. Si scelgono quando quei tipi e quegli stati esisteranno
      davvero, perche' inventarli adesso vuol dire indovinare.

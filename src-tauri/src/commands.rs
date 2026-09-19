@@ -322,6 +322,12 @@ pub async fn kanji_current_level(state: State<'_, AppState>) -> Result<Level, Co
 pub struct KanjiCell {
     character: String,
     standing: tanren_core::features::kanji::progress::Standing,
+    /// Quanto e' consolidato, da 0 a 1, e `None` se non e' mai stato incontrato.
+    ///
+    /// Viaggia **con la cella e non con la scheda**, perche' la scheda si apre dalla
+    /// griglia e riceve gia' la cella: un comando in piu' chiederebbe all'archivio una
+    /// cosa che il chiamante ha gia' in mano.
+    progress: Option<f32>,
 }
 
 /// I kanji di un livello con lo stato di ciascuno, nell'ordine della tabella.
@@ -338,9 +344,10 @@ pub async fn kanji_grid(
 
     Ok(stati
         .into_iter()
-        .map(|(character, standing)| KanjiCell {
-            character,
-            standing,
+        .map(|k| KanjiCell {
+            character: k.character,
+            standing: k.standing,
+            progress: k.progress,
         })
         .collect())
 }

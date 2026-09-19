@@ -142,6 +142,7 @@ export function KanjiLevelsScreen() {
           level={selected}
           character={opened.character}
           standing={opened.standing}
+          progress={opened.progress}
           onClose={() => setOpened(null)}
         />
       )}

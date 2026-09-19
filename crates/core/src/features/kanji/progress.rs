@@ -144,6 +144,41 @@ pub enum Standing {
     Mature,
 }
 
+/// Come sta un kanji: lo stato a tre valori, e quanto e' consolidato.
+#[derive(Debug, Clone, PartialEq)]
+pub struct KanjiStanding {
+    pub character: String,
+    pub standing: Standing,
+    /// Quanto e' consolidato, da 0 a 1, e `None` se il kanji non e' mai stato
+    /// incontrato: li' non c'e' un progresso basso, non c'e' proprio niente da
+    /// misurare.
+    ///
+    /// # Da dove viene, e perche' non e' il tasso di riuscite
+    ///
+    /// Dalla **stabilita'** di FSRS rapportata alla soglia di maturita', non da quante
+    /// risposte sono andate bene. Una media storica non sa che la memoria decade: un
+    /// kanji azzeccato mesi fa e mai piu' rivisto avrebbe un tasso alto e un ricordo
+    /// che non regge piu'. La stabilita' tiene conto del tempo e della spaziatura dei
+    /// ripassi, quindi dice quanto il ricordo regge **adesso**.
+    ///
+    /// **Non cala da sola col passare del tempo**, e non serve un accorgimento perche'
+    /// non cali: la stabilita' cambia solo quando si risponde. A decadere e' la
+    /// retrievability, che infatti non si usa qui.
+    ///
+    /// # Perche' la faccetta piu' debole e non la media
+    ///
+    /// Perche' cosi' il 100% e «maturo» sono **lo stesso predicato**: il minimo tocca 1
+    /// se e solo se ogni faccetta sta sopra la soglia, che e' gia' la definizione di
+    /// [`Standing::Mature`]. Con la media servirebbe cappare ogni faccetta prima di
+    /// mediare per ottenere la stessa coincidenza, cioe' due formule da tenere
+    /// d'accordo per sempre. Ed e' anche la stessa frase che il progetto usa gia' per
+    /// lo sblocco: un kanji e' consolidato quando lo e' la faccetta rimasta indietro.
+    ///
+    /// Una faccetta senza carta, o con la stabilita' ancora a NULL, vale **zero**: la
+    /// piu' debole e' quella che non si sa affatto.
+    pub progress: Option<f32>,
+}
+
 /// A che punto e' un livello.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -225,6 +260,22 @@ fn card_for<'a>(cards: &'a [Card], item: &Item) -> Option<&'a Card> {
 fn is_mature(card: Option<&Card>, pacing: &Pacing) -> bool {
     card.and_then(|c| c.stability)
         .is_some_and(|s| s >= pacing.mature_days)
+}
+
+/// Quanto e' consolidato un kanji, da 0 a 1: la **faccetta piu' debole**.
+///
+/// Sta accanto a [`is_mature`] perche' ne e' la versione continua, e le due devono
+/// leggere la stessa soglia: se divergessero, un kanji potrebbe risultare al 100% e non
+/// maturo, o maturo e sotto il 100%.
+fn consolidation(carte: &[Option<&Card>], pacing: &Pacing) -> f32 {
+    carte
+        .iter()
+        .map(|c| {
+            let stabilita = c.and_then(|c| c.stability).unwrap_or(0.0);
+            (stabilita / pacing.mature_days).clamp(0.0, 1.0)
+        })
+        .fold(f32::INFINITY, f32::min)
+        .min(1.0)
 }
 
 /// A che punto e' un livello, con quanto regge e se e' aperto.
@@ -367,7 +418,7 @@ pub async fn standings(
     db: &Database,
     level: Level,
     pacing: &Pacing,
-) -> Result<Vec<(String, Standing)>> {
+) -> Result<Vec<KanjiStanding>> {
     let (elenco, cards) = cards_of(db, level).await?;
 
     let mut per_kanji: std::collections::HashMap<String, Vec<&Item>> = Default::default();
@@ -383,21 +434,27 @@ pub async fn standings(
         .iter()
         .map(|k| {
             let facce = per_kanji.get(&k.character);
-            let stato = match facce {
-                None => Standing::New,
+            let (stato, progress) = match facce {
+                None => (Standing::New, None),
                 Some(facce) => {
                     let carte: Vec<Option<&Card>> =
                         facce.iter().map(|i| card_for(&cards, i)).collect();
                     if carte.iter().all(Option::is_none) {
-                        Standing::New
+                        (Standing::New, None)
                     } else if carte.iter().all(|c| is_mature(*c, pacing)) {
-                        Standing::Mature
+                        // Maturo e' esattamente il pieno: la stessa soglia, letta dalla
+                        // stessa parte.
+                        (Standing::Mature, Some(1.0))
                     } else {
-                        Standing::Learning
+                        (Standing::Learning, Some(consolidation(&carte, pacing)))
                     }
                 }
             };
-            (k.character.clone(), stato)
+            KanjiStanding {
+                character: k.character.clone(),
+                standing: stato,
+                progress,
+            }
         })
         .collect())
 }
@@ -410,7 +467,7 @@ pub async fn level_progress(
 ) -> Result<LevelProgress> {
     let stati = standings(db, level, pacing).await?;
 
-    let conta = |cercato: Standing| stati.iter().filter(|(_, s)| *s == cercato).count();
+    let conta = |cercato: Standing| stati.iter().filter(|k| k.standing == cercato).count();
     let new = conta(Standing::New);
     let learning = conta(Standing::Learning);
     let mature = conta(Standing::Mature);
@@ -603,6 +660,14 @@ mod tests {
     }
 
     /// Tutte le faccette di un kanji, portate alla stabilita' chiesta.
+    /// Le faccette di un kanji solo.
+    fn items_of(level: Level, kanji: &str) -> Vec<Item> {
+        items(level)
+            .into_iter()
+            .filter(|i| kanji_of(i) == kanji)
+            .collect()
+    }
+
     async fn impara(db: &Database, level: Level, kanji: &str, stability: f32, quando: DateTime<Utc>) {
         for item in items(level).into_iter().filter(|i| kanji_of(i) == kanji) {
             carta(db, &item.id, item.facet, stability, quando).await;
@@ -693,11 +758,74 @@ mod tests {
         let stati = standings(&db, primo(), &pacing).await.unwrap();
         assert_eq!(stati.len(), tabella.len());
         // Una griglia che si riordina a ogni risposta non si potrebbe guardare.
-        for (i, (kanji, _)) in stati.iter().enumerate() {
-            assert_eq!(kanji, &tabella[i].character);
+        for (i, k) in stati.iter().enumerate() {
+            assert_eq!(k.character, tabella[i].character);
         }
-        assert_eq!(stati[0].1, Standing::New);
-        assert_eq!(stati[1].1, Standing::Mature);
+        assert_eq!(stati[0].standing, Standing::New);
+        assert_eq!(stati[1].standing, Standing::Mature);
+    }
+
+    #[tokio::test]
+    async fn il_consolidamento_e_la_faccetta_piu_debole() {
+        let db = db().await;
+        let pacing = Pacing::default();
+        let now = Utc::now();
+        let kanji = &table(primo()).all()[0].character.clone();
+        let facce: Vec<_> = items_of(primo(), kanji);
+
+        // Mai incontrato: non c'e' un progresso basso, non c'e' niente da misurare.
+        let cerca = |stati: &Vec<KanjiStanding>| {
+            stati.iter().find(|k| &k.character == kanji).unwrap().clone()
+        };
+        assert_eq!(cerca(&standings(&db, primo(), &pacing).await.unwrap()).progress, None);
+
+        // Tutte le faccette a meta' strada tranne una ferma a zero: comanda quella.
+        for item in &facce {
+            carta(&db, &item.id, item.facet, 21.0, now).await;
+        }
+        carta(&db, &facce[0].id, facce[0].facet, 0.0, now).await;
+
+        let k = cerca(&standings(&db, primo(), &pacing).await.unwrap());
+        assert_eq!(k.standing, Standing::Learning);
+        assert_eq!(k.progress, Some(0.0), "la media direbbe quasi uno");
+
+        // Portata su anche quella, il pieno coincide con la maturita'.
+        carta(&db, &facce[0].id, facce[0].facet, 21.0, now).await;
+        let k = cerca(&standings(&db, primo(), &pacing).await.unwrap());
+        assert_eq!(k.standing, Standing::Mature);
+        assert_eq!(k.progress, Some(1.0));
+    }
+
+    #[tokio::test]
+    async fn meta_strada_verso_la_soglia_e_meta_del_consolidamento() {
+        let db = db().await;
+        let pacing = Pacing::default();
+        let now = Utc::now();
+        let kanji = &table(primo()).all()[0].character.clone();
+
+        for item in items_of(primo(), kanji) {
+            carta(&db, &item.id, item.facet, pacing.mature_days / 2.0, now).await;
+        }
+
+        let k = standings(&db, primo(), &pacing)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|k| &k.character == kanji)
+            .unwrap();
+        assert_eq!(k.progress, Some(0.5));
+
+        // E oltre la soglia non si va: il pieno e' il pieno.
+        for item in items_of(primo(), kanji) {
+            carta(&db, &item.id, item.facet, pacing.mature_days * 3.0, now).await;
+        }
+        let k = standings(&db, primo(), &pacing)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|k| &k.character == kanji)
+            .unwrap();
+        assert_eq!(k.progress, Some(1.0));
     }
 
     #[tokio::test]

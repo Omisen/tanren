@@ -195,6 +195,15 @@ export type Standing =
 export interface KanjiCell {
   character: string
   standing: Standing
+  /**
+   * Quanto e' consolidato, da 0 a 1, e `null` se non e' mai stato incontrato: li' non
+   * c'e' un progresso basso, non c'e' niente da misurare.
+   *
+   * E' la **stabilita' di FSRS** rapportata alla soglia di maturita', presa sulla
+   * faccetta piu' debole, non un tasso di risposte giuste. Non cala da sola col tempo,
+   * perche' la stabilita' cambia solo quando si risponde.
+   */
+  progress: number | null
 }
 
 /** Una forma scritta col suo okurigana: 生きる, che si legge いきる. */
