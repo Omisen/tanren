@@ -2,4 +2,5 @@
 
 pub mod data;
 pub mod exercise;
+pub mod patterns;
 pub mod session;

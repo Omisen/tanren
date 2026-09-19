@@ -57,6 +57,39 @@ export interface KanaSet {
   rows: KanaRow[]
 }
 
+/**
+ * Le due regole di scrittura che si mostrano e non si chiedono.
+ *
+ * Non sono famiglie dell'ambito e **non sono un `KanaGroup`**, che e' il tipo che vive
+ * dentro `KanaScope.groups`: se lo fossero diventerebbero selezionabili, entrerebbero
+ * nel conteggio e potrebbero finire in una sessione. Qui l'isolamento sta nel tipo.
+ */
+export type PatternGroup =
+  /** Il sokuon: っ raddoppia la consonante che segue. */
+  | 'double'
+  /** Le vocali lunghe. */
+  | 'long'
+
+export interface PatternCell {
+  /** Quello che si vede, che nel sokuon non e' nemmeno tutto giapponese: `っ+k`. */
+  character: string
+  romaji: string
+  /**
+   * In quale colonna va messa, e `null` quando non ne ha una.
+   *
+   * A differenza delle tabelle, qui la colonna arriva **scritta nel dato**: えい e' una
+   * e lunga con la trascrizione che finisce per `i`, quindi ricavarla dal romaji la
+   * metterebbe nella colonna sbagliata.
+   */
+  column: Vowel | null
+}
+
+/** Una regola, con le sue caselle disposte in righe. Le righe non hanno un nome. */
+export interface KanaPattern {
+  group: PatternGroup
+  rows: PatternCell[][]
+}
+
 /* --- Il percorso sui kanji: livelli, faccette, tre modalita' --------------- */
 
 /** Un livello del percorso. Quanti siano lo dice la dashboard, una riga per livello. */

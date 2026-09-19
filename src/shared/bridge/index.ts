@@ -32,6 +32,7 @@ import type {
   StudySession,
   Level,
   Task,
+  KanaPattern,
   KanaScope,
   KanaSet,
   Queue,
@@ -99,6 +100,16 @@ export function setKanjiDailyNew(value: number): Promise<void> {
 /** Le famiglie di un sillabario, con quanti segni contengono. */
 export function kanaCatalogue(syllabary: Syllabary): Promise<KanaSet[]> {
   return invoke('kana_catalogue', { syllabary })
+}
+
+/**
+ * Le due regole di scrittura che si mostrano e non si chiedono.
+ *
+ * Sta in una chiamata sua e non nel catalogo perche' il catalogo dice cosa si puo'
+ * **allenare**: da li' escono il conteggio e la regola che senza famiglie non si parte.
+ */
+export function kanaPatterns(syllabary: Syllabary): Promise<KanaPattern[]> {
+  return invoke('kana_patterns', { syllabary })
 }
 
 /** Comincia una sessione sui kana: la coda mescolata e la prima domanda. */

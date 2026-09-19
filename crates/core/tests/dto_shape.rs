@@ -15,6 +15,7 @@ use tanren_core::features::flashcards::deck::{Deck, DeckSummary, Flashcard};
 use tanren_core::features::flashcards::exercise::Direction;
 use tanren_core::features::flashcards::session::Scope as FlashcardScope;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, Vowel};
+use tanren_core::features::kana::patterns::{Pattern, PatternCell, PatternGroup};
 use tanren_core::features::kana::session::{Mode, Scope, Step};
 use tanren_core::features::kanji::levels::Level;
 use tanren_core::features::kanji::progress::{Blocked, Gate, LevelProgress, LevelSummary};
@@ -233,6 +234,36 @@ fn l_ambito_attraversa_il_confine_nei_due_versi() {
     // L'ambito arriva dal frontend, quindi deve anche potersi rileggere.
     let riletto: Scope = serde_json::from_value(serde_json::to_value(&scope).unwrap()).unwrap();
     assert_eq!(riletto, scope);
+}
+
+/// Le due regole di sola consultazione, che viaggiano per conto loro.
+///
+/// Attraversano il confine **fuori dal catalogo**, e il test lo fissa insieme ai nomi:
+/// se finissero dentro `KanaSet` entrerebbero nel conteggio e nella regola che senza
+/// famiglie non si parte.
+#[test]
+fn le_regole_di_consultazione_attraversano_il_confine() {
+    let p = Pattern {
+        group: PatternGroup::Double,
+        rows: vec![vec![PatternCell {
+            character: "っ+k".into(),
+            romaji: "kk".into(),
+            column: None,
+        }]],
+    };
+
+    assert_eq!(
+        serde_json::to_value(&p).unwrap(),
+        json!({
+            "group": "double",
+            "rows": [[{ "character": "っ+k", "romaji": "kk", "column": null }]]
+        })
+    );
+
+    assert_eq!(
+        serde_json::to_value(PatternGroup::Long).unwrap(),
+        json!("long")
+    );
 }
 
 /// La colonna della tavola, che la schermata usa per lasciare i buchi al posto giusto.

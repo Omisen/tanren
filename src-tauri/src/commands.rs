@@ -11,6 +11,7 @@ use tanren_core::features::flashcards::deck::{
 use tanren_core::features::flashcards::session::{self as flashcard_session, Answered};
 use tanren_core::features::flashcards::steps as flashcard_steps;
 use tanren_core::features::kana::data::{KanaGroup, KanaTable, Syllabary, Vowel, table};
+use tanren_core::features::kana::patterns::{Pattern, patterns};
 use tanren_core::features::kana::session as kana;
 use tanren_core::features::kanji::levels::{Kanji, Level, table as levels_table};
 use tanren_core::features::kanji::progress::{self, LevelProgress, LevelSummary};
@@ -116,6 +117,19 @@ pub fn kana_catalogue(syllabary: Syllabary) -> Vec<KanaSet> {
             rows: rows(t, group),
         })
         .collect()
+}
+
+/// Le due regole di scrittura che si mostrano e non si chiedono: il sokuon e le vocali
+/// lunghe.
+///
+/// **E' un comando a parte e non una voce del catalogo**, ed e' la ragione per cui
+/// esiste: il catalogo dice cosa si puo' **allenare**, e da li' escono il conteggio sul
+/// bottone di avvio e la regola che senza famiglie non si parte. Queste due cose non si
+/// allenano, quindi metterle li' vorrebbe dire o farle entrare in una sessione o
+/// riempire il catalogo di eccezioni per tenerle fuori.
+#[tauri::command]
+pub fn kana_patterns(syllabary: Syllabary) -> Vec<Pattern> {
+    patterns(syllabary).to_vec()
 }
 
 /// Riduce un testo alla forma con cui viene confrontato, sillabario compreso.

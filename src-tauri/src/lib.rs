@@ -55,6 +55,7 @@ pub fn run() {
             commands::app_version,
             commands::normalize_input,
             commands::kana_catalogue,
+            commands::kana_patterns,
             commands::start_kana_session,
             commands::next_kana_step,
             commands::submit_kana_answer,

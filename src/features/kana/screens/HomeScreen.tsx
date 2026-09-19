@@ -2,10 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react'
 
 import {
   kanaCatalogue,
+  kanaPatterns,
   type KanaCell,
   type KanaGroup,
-  type KanaRow,
+  type KanaPattern,
   type KanaSet,
+  type PatternCell,
+  type PatternGroup,
   type Syllabary,
   type Vowel,
 } from '@/shared/bridge'
@@ -74,6 +77,24 @@ const TABLE: Record<KanaGroup, { columns: Vowel[]; grid: string }> = {
   gairaion: { columns: VOWELS, grid: 'grid-cols-5' },
 }
 
+const PATTERN_LABELS: Record<PatternGroup, string> = {
+  double: 'Double',
+  long: 'Long',
+}
+
+/**
+ * La geometria delle due regole.
+ *
+ * `columns` a `null` vuol dire che la riga **non e' una tavola di vocali**: le caselle
+ * si mettono una dopo l'altra, nell'ordine in cui arrivano. E' il caso del sokuon, che
+ * in una colonna non ci sta, mentre le vocali lunghe ce l'hanno e infatti i loro buchi
+ * cadono dove devono, sotto ええ e おお.
+ */
+const PATTERN_TABLE: Record<PatternGroup, { columns: Vowel[] | null; grid: string }> = {
+  double: { columns: null, grid: 'grid-cols-5' },
+  long: { columns: VOWELS, grid: 'grid-cols-5' },
+}
+
 /**
  * La scelta dell'ambito sui kana.
  *
@@ -116,6 +137,20 @@ export function KanaHomeScreen({
   const [catalogues, setCatalogues] = useState<
     Partial<Record<Syllabary, KanaSet[] | null>>
   >({})
+  /**
+   * Le due regole di sola consultazione, tenute a parte dal catalogo.
+   *
+   * Sono una seconda chiamata e non un pezzo della prima perche' rispondono a due
+   * domande diverse: il catalogo dice cosa si puo' allenare, e da li' escono il
+   * conteggio e lo stato di Start; queste dicono cosa c'e' da sapere e basta. Tenute
+   * separate, non possono influenzare niente di quello per sbaglio.
+   *
+   * Se non arrivano non si dice niente e non si mostra niente: il resto della schermata
+   * funziona, perche' qui non c'e' nessuna scelta da fare che possa restare a meta'.
+   */
+  const [references, setReferences] = useState<Partial<Record<Syllabary, KanaPattern[]>>>(
+    {},
+  )
 
   // **Si chiedono tutti e due all'apertura, una volta sola.**
   //
@@ -137,6 +172,10 @@ export function KanaHomeScreen({
       kanaCatalogue(value)
         .then((sets) => current && setCatalogues((c) => ({ ...c, [value]: sets })))
         .catch(() => current && setCatalogues((c) => ({ ...c, [value]: null })))
+
+      kanaPatterns(value)
+        .then((p) => current && setReferences((r) => ({ ...r, [value]: p })))
+        .catch(() => {})
     }
 
     return () => {
@@ -215,6 +254,12 @@ export function KanaHomeScreen({
             onToggle={() => toggleGroup(set.group)}
           />
         ))}
+
+        {/* In fondo, dopo le famiglie che si allenano: sono cose da sapere, non da
+            scegliere, e l'ordine lo dice. */}
+        {references[scope.syllabary]?.map((pattern) => (
+          <Reference key={pattern.group} pattern={pattern} />
+        ))}
       </div>
     </Screen>
   )
@@ -268,20 +313,26 @@ function Family({
 
       <div className="flex flex-col gap-1.5">
         {set.rows.map((row) => (
-          <Row key={row.row} row={row} columns={columns} grid={grid} />
+          <Row key={row.row} cells={row.cells} columns={columns} grid={grid} />
         ))}
       </div>
     </section>
   )
 }
 
-/** La casella di spunta. Piena vuol dire che la famiglia entra nel giro. */
-function Box({ chosen }: { chosen: boolean }) {
+/**
+ * La casella di spunta. Piena vuol dire che la famiglia entra nel giro.
+ *
+ * Spenta porta il bordo di cio' che e' inattivo, che e' il token fatto apposta e fa
+ * coppia con `inactive`. Il nome della famiglia resta invece leggibile come le altre:
+ * quello che non si puo' fare e' sceglierla, non leggerla.
+ */
+function Box({ chosen, off = false }: { chosen: boolean; off?: boolean }) {
   return (
     <span
       aria-hidden="true"
       className={`flex size-5 shrink-0 items-center justify-center rounded text-xs transition-colors ${
-        chosen ? 'bg-selected text-paper' : 'border-hairline border'
+        chosen ? 'bg-selected text-paper' : off ? 'border-hairline-soft border' : 'border-hairline border'
       }`}
     >
       {chosen ? '✓' : ''}
@@ -290,24 +341,93 @@ function Box({ chosen }: { chosen: boolean }) {
 }
 
 /**
- * Una riga della tavola, coi buchi al posto loro.
+ * Una regola che si mostra e non si sceglie: il sokuon e le vocali lunghe.
  *
- * Ogni segno va nella casella della sua colonna, che decide il core; le caselle che
- * nessun segno reclama restano vuote. ん non ha colonna e va nella prima, che e' come
- * sta nella tavola vera, da solo in fondo.
+ * # Perche' la casella c'e' lo stesso, spenta
+ *
+ * Perche' il gruppo **esiste** e va visto, ma non e' ancora qualcosa che si possa
+ * allenare: una casella spenta lo dice senza che serva scriverlo, com'e' spenta la
+ * barra del progresso nelle celle. Resta un bottone e non diventa un pezzo di testo
+ * perche' cosi' chi naviga da tastiera ci arriva e sente che c'e' e che non e'
+ * disponibile: con l'attributo `disabled` il bottone uscirebbe dal giro dei fuochi e di
+ * quel gruppo non saprebbe niente, che e' l'opposto di quello che serve qui.
+ *
+ * # Perche' al posto del numero c'e' una parola
+ *
+ * Perche' accanto alle altre famiglie quel numero ha un significato solo, **quanti
+ * segni aggiunge al giro**, e qui sarebbe zero: scriverlo direbbe il falso proprio dove
+ * si sta dicendo che questo gruppo non entra da nessuna parte. Al suo posto, nello
+ * stesso angolo dove l'occhio lo cerca gia', c'e' il motivo per cui la casella e'
+ * spenta.
  */
-function Row({ row, columns, grid }: { row: KanaRow; columns: Vowel[]; grid: string }) {
-  const slots: (KanaCell | null)[] = columns.map(() => null)
+function Reference({ pattern }: { pattern: KanaPattern }) {
+  const label = PATTERN_LABELS[pattern.group]
+  const { columns, grid } = PATTERN_TABLE[pattern.group]
 
-  for (const cell of row.cells) {
-    const at = cell.column ? columns.indexOf(cell.column) : 0
-    if (at >= 0) slots[at] = cell
+  return (
+    <section className="flex flex-col gap-2">
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={false}
+        aria-disabled="true"
+        className="flex min-h-11 w-full items-center gap-3 text-left"
+      >
+        <Box chosen={false} off />
+        <span className="text-muted text-sm">{label}</span>
+        <span className="text-muted ml-auto text-xs">Reference</span>
+      </button>
+
+      <div className="flex flex-col gap-1.5">
+        {pattern.rows.map((cells, i) => (
+          <Row key={i} cells={cells} columns={columns} grid={grid} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/**
+ * Quello che serve a disegnare una casella.
+ *
+ * Le due fonti hanno la stessa faccia ma non sono la stessa cosa, ed e' voluto che i
+ * tipi restino due: `KanaCell` viene dal catalogo di cio' che si allena, `PatternCell`
+ * da una regola che non si allena. Qui si guarda solo come si disegnano.
+ */
+type Cella = KanaCell | PatternCell
+
+/**
+ * Una riga, coi buchi al posto loro.
+ *
+ * Con delle `columns` ogni segno va nella casella della sua colonna, che decide il
+ * core, e le caselle che nessun segno reclama restano vuote. ん non ha colonna e va
+ * nella prima, che e' come sta nella tavola vera, da solo in fondo.
+ *
+ * Senza `columns` la riga non e' una tavola di vocali e le caselle si mettono una dopo
+ * l'altra: e' il sokuon, che in una colonna non ci sta.
+ */
+function Row({
+  cells,
+  columns,
+  grid,
+}: {
+  cells: Cella[]
+  columns: Vowel[] | null
+  grid: string
+}) {
+  const slots: (Cella | null)[] = columns ? columns.map(() => null) : [...cells]
+
+  if (columns) {
+    for (const cell of cells) {
+      const at = cell.column ? columns.indexOf(cell.column) : 0
+      if (at >= 0) slots[at] = cell
+    }
   }
 
   return (
     <div className={`grid gap-1.5 ${grid}`}>
       {slots.map((cell, i) => (
-        <Cell key={cell?.character ?? `${row.row}-${i}`} cell={cell} />
+        <Cell key={cell?.character ?? `vuota-${i}`} cell={cell} />
       ))}
     </div>
   )
@@ -321,7 +441,7 @@ function Row({ row, columns, grid }: { row: KanaRow; columns: Vowel[]; grid: str
  * riempire. Sta qui perche' il posto e' suo, e quando il learning arrivera' si
  * accendera' senza far ballare la griglia.
  */
-function Cell({ cell }: { cell: KanaCell | null }) {
+function Cell({ cell }: { cell: Cella | null }) {
   if (!cell) return <div aria-hidden="true" />
 
   return (

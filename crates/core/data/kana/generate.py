@@ -8,6 +8,12 @@ Unicode a distanza 0x60.
 lingue. Quelli l'hiragana non ce li ha, quindi non si derivano da niente e sono scritti
 a mano qui sotto: e' l'unico punto in cui i due sillabari smettono di essere la stessa
 tabella in due grafie.
+
+**Scrive anche un terzo file, `patterns.json`**, che non e' una tabella di segni ma due
+regole di scrittura da mostrare e basta: il sokuon, che raddoppia la consonante dopo di
+se', e le vocali lunghe. Sta qui perche' il contenuto dei kana deve avere un punto
+d'autore solo, ma non entra nelle tabelle: quelle le interroga il motore d'esercizio, e
+queste due cose non si chiedono.
 """
 import json
 
@@ -77,6 +83,57 @@ GAIRAION = [
 ]
 
 
+# --- I due gruppi di sola consultazione -------------------------------------------
+#
+# Non sono segni con una lettura isolata, sono **regole**: っ raddoppia la consonante
+# che segue, e le vocali lunghe allungano. Il motore d'esercizio chiede «che lettura ha
+# questo segno», e a queste due quella domanda non si puo' porre, quindi stanno fuori
+# dalle tabelle e finiscono in un file loro.
+#
+# La consonante si scrive in latino di proposito: il sokuon non e' un carattere che si
+# legge, e `っ+k` dice la regola meglio di qualunque segno.
+DOUBLE = [("+k", "kk"), ("+s", "ss"), ("+t", "tt"), ("+p", "pp")]
+
+# **La colonna qui e' scritta e non ricavata dal romaji**, a differenza delle tabelle.
+# Li' la colonna e' l'ultima lettera della trascrizione, ed e' vero per costruzione;
+# qui no: えい e' una **e** lunga ma la sua trascrizione finisce per `i`, e おう e' una
+# **o** lunga che finisce per `u`. Ricavarla le metterebbe nelle colonne sbagliate.
+LONG_HIRAGANA = [
+    [("ああ", "aa", "a"), ("いい", "ii", "i"), ("うう", "uu", "u"),
+     ("ええ", "ee", "e"), ("おお", "oo", "o")],
+    [("えい", "ei", "e"), ("おう", "ou", "o")],
+]
+
+# **Il katakana non si deriva, e non e' pigrizia del generatore.** La vocale lunga in
+# katakana si scrive col choonpu ー, non raddoppiando: アア sarebbe ortograficamente
+# sbagliato, e un gruppo che esiste per fare da riferimento grammaticale non puo'
+# mostrare una forma scorretta. Anche la seconda riga sparisce, perche' えい e おう sono
+# convenzioni dell'hiragana e in katakana non esistono: inventarle sarebbe lo stesso
+# errore detto in un altro modo.
+LONG_KATAKANA = [
+    [("アー", "aa", "a"), ("イー", "ii", "i"), ("ウー", "uu", "u"),
+     ("エー", "ee", "e"), ("オー", "oo", "o")],
+]
+
+
+def double(sokuon):
+    return [[{"character": sokuon + tail, "romaji": r, "column": None} for tail, r in DOUBLE]]
+
+
+def long_rows(table):
+    return [
+        [{"character": c, "romaji": r, "column": col} for c, r, col in row]
+        for row in table
+    ]
+
+
+def patterns(sokuon, long_table):
+    return [
+        {"group": "double", "rows": double(sokuon)},
+        {"group": "long", "rows": long_rows(long_table)},
+    ]
+
+
 def entries():
     out = []
     for group, table in (("base", BASE), ("dakuten", DAKUTEN), ("handakuten", HANDAKUTEN)):
@@ -118,3 +175,13 @@ hira = entries()
 kata = [dict(e, character=to_katakana(e["character"])) for e in hira] + estesi()
 write("crates/core/data/kana/hiragana.json", "hiragana", hira)
 write("crates/core/data/kana/katakana.json", "katakana", kata)
+
+doc = {
+    "version": 1,
+    "hiragana": patterns("っ", LONG_HIRAGANA),
+    "katakana": patterns("ッ", LONG_KATAKANA),
+}
+with open("crates/core/data/kana/patterns.json", "w", encoding="utf-8") as f:
+    json.dump(doc, f, ensure_ascii=False, indent=2)
+    f.write("\n")
+print("crates/core/data/kana/patterns.json: 2 gruppi per sillabario")

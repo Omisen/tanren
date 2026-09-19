@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "hiragana": [
+    {
+      "group": "double",
+      "rows": [
+        [
+          {
+            "character": "っ+k",
+            "romaji": "kk",
+            "column": null
+          },
+          {
+            "character": "っ+s",
+            "romaji": "ss",
+            "column": null
+          },
+          {
+            "character": "っ+t",
+            "romaji": "tt",
+            "column": null
+          },
+          {
+            "character": "っ+p",
+            "romaji": "pp",
+            "column": null
+          }
+        ]
+      ]
+    },
+    {
+      "group": "long",
+      "rows": [
+        [
+          {
+            "character": "ああ",
+            "romaji": "aa",
+            "column": "a"
+          },
+          {
+            "character": "いい",
+            "romaji": "ii",
+            "column": "i"
+          },
+          {
+            "character": "うう",
+            "romaji": "uu",
+            "column": "u"
+          },
+          {
+            "character": "ええ",
+            "romaji": "ee",
+            "column": "e"
+          },
+          {
+            "character": "おお",
+            "romaji": "oo",
+            "column": "o"
+          }
+        ],
+        [
+          {
+            "character": "えい",
+            "romaji": "ei",
+            "column": "e"
+          },
+          {
+            "character": "おう",
+            "romaji": "ou",
+            "column": "o"
+          }
+        ]
+      ]
+    }
+  ],
+  "katakana": [
+    {
+      "group": "double",
+      "rows": [
+        [
+          {
+            "character": "ッ+k",
+            "romaji": "kk",
+            "column": null
+          },
+          {
+            "character": "ッ+s",
+            "romaji": "ss",
+            "column": null
+          },
+          {
+            "character": "ッ+t",
+            "romaji": "tt",
+            "column": null
+          },
+          {
+            "character": "ッ+p",
+            "romaji": "pp",
+            "column": null
+          }
+        ]
+      ]
+    },
+    {
+      "group": "long",
+      "rows": [
+        [
+          {
+            "character": "アー",
+            "romaji": "aa",
+            "column": "a"
+          },
+          {
+            "character": "イー",
+            "romaji": "ii",
+            "column": "i"
+          },
+          {
+            "character": "ウー",
+            "romaji": "uu",
+            "column": "u"
+          },
+          {
+            "character": "エー",
+            "romaji": "ee",
+            "column": "e"
+          },
+          {
+            "character": "オー",
+            "romaji": "oo",
+            "column": "o"
+          }
+        ]
+      ]
+    }
+  ]
+}
