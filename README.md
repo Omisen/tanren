@@ -5,7 +5,7 @@
 <h1>Tanren</h1>
 
 <p>
-  <b>Japanese training: kana, kanji, grammar.</b>
+  <b>Japanese training: kana, kanji, and flashcards you write yourself.</b>
 </p>
 
 <p>
@@ -39,10 +39,10 @@ one specific technique, but rather to the groundwork that has to come first.
 
 ## 錬 The project
 
-<b>Tanren</b> is an open-source Japanese training app: hiragana, katakana,<br>
-kanji and, in a later phase, grammar.
+<b>Tanren</b> is an open-source Japanese training app: hiragana and katakana,<br>
+the 2,136 jōyō kanji, and flashcards you write yourself. Grammar comes later.
 
-Every subject is trained in two complementary ways.
+Whatever you are studying, you answer in one of two ways.
 
 <table>
 <tr>
@@ -59,7 +59,43 @@ Multiple choice matching, to build immediate reading.
 ### 入力
 **Direct input**
 
-Typing the answer with the device's real Japanese IME.
+Typing it yourself, with the device's real Japanese IME where the answer is Japanese.
+
+</td>
+</tr>
+</table>
+
+<br>
+
+## 科目 The subjects
+
+<table>
+<tr>
+<td align="center" width="33%">
+
+### かな
+**Kana**
+
+Both syllabaries, with the whole table on screen: you tick the families you want and the
+round repeats a sign until you get it right.
+
+</td>
+<td align="center" width="33%">
+
+### 漢字
+**Kanji**
+
+A path of 86 levels ordered by the pieces kanji are built from. Meaning and readings are
+scheduled apart, and each card says how consolidated it is.
+
+</td>
+<td align="center" width="33%">
+
+### カード
+**Flashcards**
+
+Decks and cards you write yourself, studied in either direction, with extra accepted
+answers and a furigana per card.
 
 </td>
 </tr>
@@ -82,7 +118,8 @@ No account, no server. Your data stays on the device.
 
 **Spaced repetition**
 
-An SRS algorithm decides what to review, just before you would forget it.
+FSRS decides what to review just before you would forget it, on kanji and flashcards.
+Kana stay out of it on purpose: an alphabet needs minutes, not days.
 
 </td>
 <td align="center" width="33%">
@@ -227,7 +264,7 @@ in <code>public/fonts/OFL.txt</code>.
 <br>
 
 <sub>
-The app carries a <b>Sources and licences</b> screen, reachable from either home screen,
+The app carries a <b>Sources and licences</b> screen, a row inside the Settings tab,
 because these licences ask for attribution<br>inside the medium the work travels in, and
 for an app that is the installed APK rather than this page.
 </sub>
