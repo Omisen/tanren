@@ -76,7 +76,7 @@ export function KanjiStudyScreen() {
     <SessionScreen
       title={MODE_LABELS[scope.mode]}
       accent="bg-type-kanji"
-      unit="questions"
+      unit={{ one: 'question', many: 'questions' }}
       session={session}
       onHome={() => goTo('home')}
       // Finito il giro si torna al percorso e basta: rifarlo da qui duplicherebbe il

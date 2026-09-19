@@ -30,7 +30,7 @@ export function KanaSessionScreen() {
     <SessionScreen
       title={MODE_LABELS[kana.mode]}
       accent="bg-type-kana"
-      unit="characters"
+      unit={{ one: 'character', many: 'characters' }}
       session={session}
       onHome={() => goTo('home')}
       // Scrivendo, il prompt e' una trascrizione, e `ka` vale sia per か sia per カ:

@@ -54,6 +54,12 @@ export interface Reveal {
   script: 'japanese' | 'latin'
 }
 
+/** Il nome di cio' che si conta, al singolare e al plurale. */
+export interface Unit {
+  one: string
+  many: string
+}
+
 export interface StudyProps {
   /** Il titolo della fascia in alto: di norma la modalita'. */
   title: string
@@ -63,8 +69,18 @@ export interface StudyProps {
    * a colpo d'occhio cosa si sta allenando (sezione 4, regole 1 e 2).
    */
   accent: string
-  /** Come si chiama al plurale quello che si conta: «characters», «readings». */
-  unit: string
+  /**
+   * Come si chiama quello che si conta, **nei due numeri**: «character» e
+   * «characters», «card» e «cards».
+   *
+   * Era una stringa sola, gia' al plurale, e con un solo item indovinato la conferma
+   * d'uscita diceva «The 1 characters you got right ... are lost». Le due forme
+   * arrivano dalla materia invece di ricavarsi qui aggiungendo una `s`, perche' non
+   * tutti i sostantivi la prendono: «kanji» al plurale resta «kanji», e la materia che
+   * un domani lo conta cosi' non deve scoprire che il livello condiviso ha deciso al
+   * posto suo.
+   */
+  unit: Unit
   session: Session
   onHome: () => void
   /**
@@ -225,8 +241,13 @@ export function SessionScreen({
           onConfirm={onHome}
           onCancel={() => setLeaving(false)}
         >
-          The {tally.correct} {unit} you got right in this round are lost: every session
-          starts from zero.
+          {/* Due frasi intere e non un numero incollato a un sostantivo: e' il modo
+              che il riepilogo qui sotto usa gia' per «nessuno, uno, molti», e l'unico
+              che fa accordare anche il verbo. */}
+          {tally.correct === 1
+            ? `The one ${unit.one} you got right in this round is lost: `
+            : `The ${tally.correct} ${unit.many} you got right in this round are lost: `}
+          every session starts from zero.
         </Confirm>
       )}
     </>
@@ -252,7 +273,7 @@ function Actions({
   state: SessionState
   tally: Tally
   busy: boolean
-  unit: string
+  unit: Unit
   reveal: (question: Question) => Reveal
   grades?: StudyProps['grades']
   input?: StudyProps['input']
@@ -278,7 +299,9 @@ function Actions({
     return (
       <div className="flex flex-col gap-2">
         <Button onClick={onRestart}>
-          {tally.total > 0 ? `Redo the ${tally.total} ${unit}` : 'Redo the round'}
+          {tally.total > 0
+            ? `Redo the ${tally.total} ${tally.total === 1 ? unit.one : unit.many}`
+            : 'Redo the round'}
         </Button>
         <Button variant="quiet" onClick={onHome}>
           {exitLabel}
@@ -526,7 +549,7 @@ function Summary({ tally }: { tally: Tally }) {
  * Avanza sugli item indovinati, non sulle risposte date: sbagliando si risponde di
  * più senza avvicinarsi alla fine, ed è giusto che la barra lo dica.
  */
-function Meter({ tally, unit }: { tally: Tally; unit: string }) {
+function Meter({ tally, unit }: { tally: Tally; unit: Unit }) {
   const ratio = tally.total > 0 ? tally.correct / tally.total : 0
 
   return (
@@ -536,7 +559,7 @@ function Meter({ tally, unit }: { tally: Tally; unit: string }) {
         aria-valuemin={0}
         aria-valuemax={tally.total}
         aria-valuenow={tally.correct}
-        aria-label={`${unit} guessed in this round`}
+        aria-label={`${unit.many} guessed in this round`}
         className="bg-ink-soft h-1 flex-1 overflow-hidden rounded-full"
       >
         <div

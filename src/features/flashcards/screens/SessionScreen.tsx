@@ -52,7 +52,7 @@ export function FlashcardSessionScreen({
     <SessionScreen
       title={deck}
       accent="bg-type-flashcard"
-      unit="cards"
+      unit={{ one: 'card', many: 'cards' }}
       session={session}
       onHome={onBack}
       // Rifare il giro da qui non si puo', ed e' la stessa scelta presa sui kanji: un
