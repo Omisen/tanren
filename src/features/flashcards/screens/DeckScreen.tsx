@@ -23,6 +23,7 @@ import { Screen } from '@/shared/ui/Screen'
 import { Sheet } from '@/shared/ui/Sheet'
 
 import { CardForm } from '../CardForm'
+import { ImportSheet } from '../ImportSheet'
 import { TextInput } from '../TextInput'
 import { FlashcardSessionScreen } from './SessionScreen'
 
@@ -69,6 +70,7 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
   // Un pannello alla volta: sono modali, e due aperti insieme non avrebbero senso.
   const [editing, setEditing] = useState<Flashcard | 'new' | null>(null)
   const [options, setOptions] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [removing, setRemoving] = useState<Flashcard | 'deck' | null>(null)
   // La carta appena corretta, se c'e' da decidere cosa farne dei progressi.
@@ -201,10 +203,20 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
             </button>
           ))}
 
+          {/* Aggiungere una carta e importarne un file sono la stessa cosa fatta in due
+              modi, quindi stanno insieme e in coda all'elenco, che e' la parte della
+              schermata che si guarda mentre si costruisce il mazzo. Impilati e non
+              affiancati: affiancarli dimezzerebbe il bersaglio di «Add card», che e'
+              quello di ogni giorno, e direbbe che i due si usano altrettanto spesso. */}
           {cards && (
-            <Button variant="quiet" className="mt-2" onClick={() => setEditing('new')}>
-              Add card
-            </Button>
+            <>
+              <Button variant="quiet" className="mt-2" onClick={() => setEditing('new')}>
+                Add card
+              </Button>
+              <Button variant="quiet" onClick={() => setImporting(true)}>
+                Import cards
+              </Button>
+            </>
           )}
         </div>
       </Screen>
@@ -224,6 +236,17 @@ export function DeckScreen({ deck, onBack }: { deck: Deck; onBack: () => void })
                 }
           }
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {importing && (
+        <ImportSheet
+          deck={deck.id}
+          name={name}
+          // Le carte sono cambiate, quindi il conteggio letto entrando non vale piu':
+          // e' la stessa ragione per cui l'elenco si rilegge tornando da un giro.
+          onImported={load}
+          onClose={() => setImporting(false)}
         />
       )}
 
