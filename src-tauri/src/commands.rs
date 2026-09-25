@@ -8,6 +8,7 @@ use chrono::Utc;
 use tanren_core::features::flashcards::deck::{
     self as flashcards, Content, Deck, DeckSummary, Flashcard,
 };
+use tanren_core::features::flashcards::import::{self as flashcard_import, Review};
 use tanren_core::features::flashcards::session::{self as flashcard_session, Answered};
 use tanren_core::features::flashcards::steps as flashcard_steps;
 use tanren_core::features::kana::data::{KanaGroup, KanaTable, Syllabary, Vowel, table};
@@ -717,4 +718,49 @@ pub async fn set_flashcard_good(
     value: i64,
 ) -> Result<(), CoreError> {
     flashcard_steps::set_good(&state.db, value, Utc::now()).await
+}
+
+/// Il file da compilare: la sola riga di intestazione, con le colonne in ordine.
+///
+/// Lo scrive il core e non la schermata perche' **quali colonne ci sono e quante ne
+/// sono** e' dominio: il numero di caselle per le risposte in piu' e' lo stesso tetto
+/// che il modulo di scrittura gia' riceve da qui.
+#[tauri::command]
+pub fn flashcard_import_template() -> String {
+    flashcard_import::template()
+}
+
+/// Guarda un CSV e dice cosa ne verrebbe, **senza scrivere niente**.
+///
+/// Sono due comandi e non uno, come gia' per correggere e registrare una risposta: chi
+/// importa deve poter vedere «150 carte» oppure «riga 14: ...» **prima** di confermare,
+/// e una scrittura che si annuncia dopo averla fatta non e' un'anteprima.
+///
+/// Il CSV arriva **gia' decodificato**: la domanda «questo file e' UTF-8?» ha risposta
+/// dove il file si legge, e una `String` che e' arrivata fin qui lo e' per costruzione.
+#[tauri::command]
+pub fn check_flashcard_import(csv: String) -> Review {
+    flashcard_import::review(&csv)
+}
+
+/// Importa un CSV dentro un mazzo, in **una transazione sola**.
+///
+/// Ricontrolla il file invece di fidarsi di chi ha gia' chiamato il controllo: la regola
+/// e' del dominio, e un comando che scrive non puo' dare per buono cio' che gli viene
+/// detto. Se il file non va torna `Rejected` e **non scrive nessuna riga**.
+#[tauri::command]
+pub async fn import_flashcards(
+    state: State<'_, AppState>,
+    deck: String,
+    csv: String,
+) -> Result<Review, CoreError> {
+    let righe = match flashcard_import::read(&csv) {
+        Ok(righe) => righe,
+        Err(errors) => return Ok(Review::Rejected { errors }),
+    };
+
+    let contenuti: Vec<Content<'_>> = righe.iter().map(flashcard_import::Row::content).collect();
+    let cards = flashcards::create_cards(&state.db, &deck, &contenuti, Utc::now()).await?;
+
+    Ok(Review::Ready { cards })
 }

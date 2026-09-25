@@ -29,6 +29,14 @@ pub fn run() {
         // Non e' un fastidio estetico: quei link sono attribuzione obbligatoria, e una
         // licenza che si raggiunge solo rompendo l'app non e' raggiungibile.
         .plugin(tauri_plugin_opener::init())
+        // I due plugin dell'import CSV: `dialog` apre i selettori di sistema, `fs`
+        // legge e scrive quello che il selettore restituisce.
+        //
+        // Su Android quel «quello» e' un `content://` e non un percorso, e il plugin
+        // fs lo risolve da se' in un file descriptor: per questo non serve nessuna
+        // voce di scope, ne' alcun permesso Android. Misurato sul dispositivo.
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -86,6 +94,9 @@ pub fn run() {
             commands::submit_flashcard_answer,
             commands::set_flashcard_again,
             commands::set_flashcard_good,
+            commands::flashcard_import_template,
+            commands::check_flashcard_import,
+            commands::import_flashcards,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -8,9 +8,11 @@
 //! che e' la raccolta di quello che l'utente ha scritto e cosa se ne puo' fare.
 //! [`exercise`] sa in che verso si puo' chiedere una carta, [`session`] fa girare un
 //! giro di studio su un mazzo, [`steps`] tiene i passi brevi con cui una carta nuova
-//! entra in circolo prima che sia FSRS a decidere.
+//! entra in circolo prima che sia FSRS a decidere. [`import`] legge un mazzo intero da
+//! un CSV, che e' l'unico modo che l'app ha di far entrare contenuto da fuori.
 
 pub mod deck;
 pub mod exercise;
+pub mod import;
 pub mod session;
 pub mod steps;

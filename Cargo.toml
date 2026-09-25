@@ -31,4 +31,5 @@ uuid = { version = "1", features = ["v7", "serde"] }
 tokio = { version = "1", features = ["rt", "macros"] }
 tempfile = "3"
 unicode-normalization = "0.1.25"
+csv = "1.4"
 log = "0.4"

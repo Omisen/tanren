@@ -13,6 +13,7 @@
 use serde_json::json;
 use tanren_core::features::flashcards::deck::{Deck, DeckSummary, Flashcard};
 use tanren_core::features::flashcards::exercise::Direction;
+use tanren_core::features::flashcards::import::{Problem, Review, RowError};
 use tanren_core::features::flashcards::session::Scope as FlashcardScope;
 use tanren_core::features::kana::data::{KanaGroup, Syllabary, Vowel};
 use tanren_core::features::kana::patterns::{Pattern, PatternCell, PatternGroup};
@@ -485,4 +486,68 @@ fn l_ambito_di_un_giro_di_flashcard_attraversa_il_confine_nei_due_versi() {
         serde_json::from_value::<FlashcardScope>(json!({ "deck": "x", "direction": "both" }))
             .is_err()
     );
+}
+
+#[test]
+fn l_esito_di_un_import_dice_lo_stato_e_non_un_booleano() {
+    assert_eq!(
+        serde_json::to_value(Review::Ready { cards: 150 }).unwrap(),
+        json!({ "state": "ready", "cards": 150 })
+    );
+
+    assert_eq!(
+        serde_json::to_value(Review::Rejected {
+            errors: vec![RowError {
+                line: 14,
+                problem: Problem::EmptyField {
+                    field: "japanese".into()
+                },
+            }],
+        })
+        .unwrap(),
+        json!({
+            "state": "rejected",
+            "errors": [{
+                "line": 14,
+                "problem": { "kind": "empty_field", "field": "japanese" }
+            }]
+        })
+    );
+}
+
+/// Ogni motivo che la schermata deve saper scrivere, con i campi che gli servono.
+///
+/// Sta qui e non fra i test del modulo perche' questi nomi sono **il contratto**: se
+/// cambiassero, la schermata scriverebbe il messaggio sbagliato, o nessuno, senza che
+/// niente fallisca.
+#[test]
+fn i_motivi_per_cui_una_riga_non_va_attraversano_il_confine_per_intero() {
+    let atteso = [
+        (Problem::Header, json!({ "kind": "header" })),
+        (
+            Problem::EmptyField {
+                field: "meaning".into(),
+            },
+            json!({ "kind": "empty_field", "field": "meaning" }),
+        ),
+        (
+            Problem::TooManyValues {
+                field: "alternatives".into(),
+                max: 8,
+            },
+            json!({ "kind": "too_many_values", "field": "alternatives", "max": 8 }),
+        ),
+        (
+            Problem::TooManyColumns {
+                found: 13,
+                expected: 11,
+            },
+            json!({ "kind": "too_many_columns", "found": 13, "expected": 11 }),
+        ),
+        (Problem::Malformed, json!({ "kind": "malformed" })),
+    ];
+
+    for (problem, json) in atteso {
+        assert_eq!(serde_json::to_value(problem).unwrap(), json);
+    }
 }

@@ -20,6 +20,7 @@ sqlx = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 fsrs = { workspace = true }
+csv = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

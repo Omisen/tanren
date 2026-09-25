@@ -516,6 +516,48 @@ export interface FlashcardSession {
   step: Step
 }
 
+/**
+ * Cosa dice un CSV da importare.
+ *
+ * Lo stesso tipo serve a guardare e a importare: `cards` sono le carte che
+ * **verrebbero** nel primo caso e quelle **scritte** nel secondo.
+ *
+ * **Un rifiuto non e' un errore del ponte**, e' un esito: il file e' arrivato e si e'
+ * capito cosa contiene, ed e' che non si puo' usare.
+ */
+export type ImportReview =
+  | { state: 'ready'; cards: number }
+  /** Nessuna riga e' stata scritta: o tutto o niente. */
+  | { state: 'rejected'; errors: ImportRowError[] }
+
+/** Una riga del file che non va, e perche'. */
+export interface ImportRowError {
+  /**
+   * La riga **del file**, intestazione compresa: e' il numero che si legge nel foglio
+   * di calcolo, cioe' il posto in cui chi corregge deve andare.
+   */
+  line: number
+  problem: ImportProblem
+}
+
+/**
+ * Cosa c'e' che non va in una riga.
+ *
+ * Arriva come **etichetta da mappare** e non come frase: la lingua dell'interfaccia non
+ * entra nel core, come gia' per `asks` e per i motivi di `Gate`.
+ */
+export type ImportProblem =
+  /** La prima riga non porta i nomi delle colonne che servono. */
+  | { kind: 'header' }
+  /** Un campo obbligatorio e' vuoto. `field` dice quale. */
+  | { kind: 'empty_field'; field: string }
+  /** Sono arrivati piu' valori di quanti se ne accettino. */
+  | { kind: 'too_many_values'; field: string; max: number }
+  /** La riga ha piu' colonne dell'intestazione: di solito una virgola non protetta. */
+  | { kind: 'too_many_columns'; found: number; expected: number }
+  /** Il file non si legge affatto: virgolette non chiuse, o simili. */
+  | { kind: 'malformed' }
+
 /** Com'e' andata una correzione, cioe' se c'e' qualcosa da chiedere. */
 export interface Edited {
   /**

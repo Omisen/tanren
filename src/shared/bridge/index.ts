@@ -23,6 +23,7 @@ import type {
   FlashcardScope,
   FlashcardSession,
   Grade,
+  ImportReview,
   Kanji,
   KanjiCell,
   LevelSummary,
@@ -357,6 +358,35 @@ export function submitFlashcardAnswer(
     grade,
     responseTimeMs,
   })
+}
+
+/**
+ * Il file da compilare: la sola riga di intestazione, con le colonne in ordine.
+ *
+ * Lo scrive il core perche' quali colonne ci sono, e quante ne sono, e' dominio.
+ */
+export function flashcardImportTemplate(): Promise<string> {
+  return invoke('flashcard_import_template')
+}
+
+/**
+ * Guarda un CSV e dice cosa ne verrebbe, **senza scrivere niente**.
+ *
+ * Il testo arriva qui gia' decodificato: chi legge il file risponde alla domanda
+ * «questo file e' UTF-8?», e quello che passa di qui lo e' per forza.
+ */
+export function checkFlashcardImport(csv: string): Promise<ImportReview> {
+  return invoke('check_flashcard_import', { csv })
+}
+
+/**
+ * Importa un CSV dentro un mazzo, in una transazione sola.
+ *
+ * Il core ricontrolla il file invece di fidarsi del controllo gia' fatto: se non va
+ * torna `rejected` e non scrive nessuna riga.
+ */
+export function importFlashcards(deck: string, csv: string): Promise<ImportReview> {
+  return invoke('import_flashcards', { deck, csv })
 }
 
 /** Cambia dopo quanti minuti torna una flashcard sbagliata. */

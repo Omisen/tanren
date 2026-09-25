@@ -353,6 +353,79 @@ pub async fn create_card(
     })
 }
 
+/// Aggiunge in blocco un elenco di carte, **in una transazione sola**.
+///
+/// # Perche' non basta chiamare [`create_card`] N volte
+///
+/// Perche' quella apre una transazione per carta, quindi un import interrotto a meta'
+/// lascerebbe dentro le prime N e nessuno saprebbe quali. Qui o entrano tutte o non
+/// entra niente, ed e' la stessa ragione per cui [`Database::ensure_cards`] esiste
+/// accanto a `ensure_card`.
+///
+/// # Si valida tutto prima di scrivere la prima riga
+///
+/// La pulizia passa su **tutte** le carte prima che la transazione si apra: aprirla e
+/// poi accorgersi alla centesima riga che manca un campo vorrebbe dire annullare del
+/// lavoro gia' fatto, e soprattutto vorrebbe dire che l'errore dipende da **quante**
+/// carte c'erano prima, cosa che non deve contare.
+///
+/// E' la **stessa** [`clean`] della creazione manuale, non una seconda copia: chi
+/// importa non deve poter creare una carta che il modulo rifiuterebbe.
+///
+/// # Perche' torna un numero e non le carte
+///
+/// Perche' chi chiama ricarica comunque il mazzo, e rimandare indietro duecento carte
+/// per contarle sarebbe un viaggio sprecato attraverso il confine.
+pub async fn create_cards(
+    db: &Database,
+    deck: &str,
+    contents: &[Content<'_>],
+    now: DateTime<Utc>,
+) -> Result<usize> {
+    let puliti = contents
+        .iter()
+        .map(|c| clean(*c))
+        .collect::<Result<Vec<_>>>()?;
+
+    if !deck_exists(db, deck).await? {
+        return Err(CoreError::UnknownItem {
+            id: deck.to_owned(),
+        });
+    }
+
+    let mut tx = db.pool().begin().await?;
+
+    for (japanese, meaning, alternatives, furigana) in &puliti {
+        // UUID v7 preso uno alla volta e non tutti insieme: il contesto condiviso del
+        // crate tiene un contatore, quindi due identificatori nati nello stesso
+        // millisecondo restano in ordine. Conta, perche' le carte di un mazzo si
+        // leggono ordinate per `created_at` e poi per `id`, e qui `created_at` e'
+        // identico per tutte: senza quell'ordine un file importato uscirebbe mescolato.
+        let id = Uuid::now_v7().to_string();
+
+        sqlx::query(
+            "INSERT INTO flashcards (
+                 id, deck_id, japanese, meaning, furigana, created_at, updated_at, rev
+             )
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1)",
+        )
+        .bind(&id)
+        .bind(deck)
+        .bind(japanese)
+        .bind(meaning)
+        .bind(furigana)
+        .bind(now)
+        .bind(now)
+        .execute(&mut *tx)
+        .await?;
+
+        write_alternatives(&mut tx, &id, alternatives).await?;
+    }
+
+    tx.commit().await?;
+    Ok(puliti.len())
+}
+
 /// Corregge una carta gia' scritta, e dice **se e' davvero cambiata**.
 ///
 /// **Non tocca lo stato di studio**, ed e' una scelta e non una dimenticanza: se la
@@ -435,7 +508,7 @@ async fn write_alternatives(
 /// la stessa liberta' che ci si prende gia' togliendo gli spazi ai bordi, e non si
 /// perde niente, perche' una risposta ripetuta accetta esattamente quello che
 /// accettava gia'. Il furigana vuoto vale come assente.
-fn clean(content: Content<'_>) -> Result<(String, String, Vec<String>, Option<String>)> {
+pub(super) fn clean(content: Content<'_>) -> Result<(String, String, Vec<String>, Option<String>)> {
     let japanese = required("japanese", content.japanese)?;
     let meaning = required("meaning", content.meaning)?;
 
@@ -594,6 +667,108 @@ mod tests {
             alternatives: &[],
             furigana: "",
         }
+    }
+
+    #[tokio::test]
+    async fn create_cards_scrive_tutto_in_un_colpo() {
+        let db = db().await;
+        let m = mazzo(&db).await;
+
+        let quante = create_cards(
+            &db,
+            &m.id,
+            &[testo("猫", "cat"), testo("犬", "dog"), testo("鳥", "bird")],
+            adesso(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(quante, 3);
+        assert_eq!(cards(&db, &m.id).await.unwrap().len(), 3);
+    }
+
+    /// L'ordine del file e' quello in cui si rileggeranno, e non e' scontato: tutte le
+    /// carte nascono nello **stesso istante**, quindi a distinguerle resta il solo
+    /// identificatore. Regge perche' l'UUID v7 e' monotono dentro il millisecondo, ed e'
+    /// il genere di cosa che va provata invece che creduta.
+    #[tokio::test]
+    async fn le_carte_importate_restano_nell_ordine_del_file() {
+        let db = db().await;
+        let m = mazzo(&db).await;
+
+        let attese: Vec<String> = (0..200).map(|i| format!("carta{i:03}")).collect();
+        let contenuti: Vec<Content<'_>> = attese.iter().map(|w| testo(w, "x")).collect();
+
+        create_cards(&db, &m.id, &contenuti, adesso()).await.unwrap();
+
+        let lette: Vec<String> = cards(&db, &m.id)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|c| c.japanese)
+            .collect();
+        assert_eq!(lette, attese);
+    }
+
+    /// La regola vincolante: o tutto o niente.
+    #[tokio::test]
+    async fn una_carta_invalida_non_ne_lascia_entrare_nessuna() {
+        let db = db().await;
+        let m = mazzo(&db).await;
+
+        let esito = create_cards(
+            &db,
+            &m.id,
+            &[testo("猫", "cat"), testo("  ", "orphan"), testo("犬", "dog")],
+            adesso(),
+        )
+        .await;
+
+        assert!(matches!(esito, Err(CoreError::EmptyField { .. })));
+        assert!(
+            cards(&db, &m.id).await.unwrap().is_empty(),
+            "le due buone non devono essere entrate"
+        );
+    }
+
+    #[tokio::test]
+    async fn create_cards_scrive_anche_le_risposte_in_piu() {
+        let db = db().await;
+        let m = mazzo(&db).await;
+
+        let alternativi = vec!["the japanese language".to_owned()];
+        create_cards(
+            &db,
+            &m.id,
+            &[Content {
+                japanese: "日本語",
+                meaning: "japanese",
+                alternatives: &alternativi,
+                furigana: "にほんご",
+            }],
+            adesso(),
+        )
+        .await
+        .unwrap();
+
+        let carta = &cards(&db, &m.id).await.unwrap()[0];
+        assert_eq!(carta.alternatives, ["the japanese language"]);
+        assert_eq!(carta.furigana.as_deref(), Some("にほんご"));
+    }
+
+    #[tokio::test]
+    async fn create_cards_su_un_mazzo_che_non_esiste_non_scrive_niente() {
+        let db = db().await;
+        let esito = create_cards(&db, "nessun-mazzo", &[testo("猫", "cat")], adesso()).await;
+        assert!(matches!(esito, Err(CoreError::UnknownItem { .. })));
+    }
+
+    /// Importare un file vuoto non e' un errore: e' un import che non fa niente.
+    #[tokio::test]
+    async fn create_cards_senza_carte_non_e_un_errore() {
+        let db = db().await;
+        let m = mazzo(&db).await;
+        assert_eq!(create_cards(&db, &m.id, &[], adesso()).await.unwrap(), 0);
     }
 
     #[tokio::test]
